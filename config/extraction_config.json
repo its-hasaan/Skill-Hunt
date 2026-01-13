@@ -1,0 +1,43 @@
+{
+    "roles": [
+        "Data Engineer",
+        "Analytics Engineer",
+        "Data Scientist",
+        "Data Analyst",
+        "Business Intelligence Developer",
+        "Machine Learning Engineer",
+        "AI Engineer",
+        "Computer Vision Engineer",
+        "Backend Developer",
+        "Frontend Developer",
+        "Full Stack Developer",
+        "Mobile Developer",
+        "DevOps Engineer",
+        "Cloud Architect",
+        "Cyber Security Engineer"
+    ],
+    "countries": {
+        "gb": "United Kingdom",
+        "us": "United States",
+        "au": "Australia",
+        "at": "Austria",
+        "be": "Belgium",
+        "br": "Brazil",
+        "ca": "Canada",
+        "de": "Germany",
+        "fr": "France",
+        "in": "India",
+        "it": "Italy",
+        "mx": "Mexico",
+        "nl": "Netherlands",
+        "nz": "New Zealand",
+        "pl": "Poland",
+        "sg": "Singapore",
+        "za": "South Africa"
+    },
+    "api": {
+        "results_per_page": 50,
+        "max_pages_per_role_country": 2,
+        "rate_limit_delay_seconds": 1
+    }
+}

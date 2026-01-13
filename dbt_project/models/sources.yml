@@ -1,0 +1,110 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw data from Adzuna API"
+    schema: raw
+    tables:
+      - name: jobs
+        description: "Raw job postings from Adzuna API"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: job_platform_id
+            description: "Adzuna job ID"
+          - name: search_role
+            description: "Role searched for"
+          - name: country_code
+            description: "Country code (gb, us, etc.)"
+          - name: raw_data
+            description: "Full JSON response from API"
+          - name: extracted_at
+            description: "When the data was extracted"
+          - name: extraction_batch_id
+            description: "UUID of the extraction batch"
+
+  - name: staging
+    description: "Cleaned and normalized staging data"
+    schema: staging
+    tables:
+      - name: stg_jobs
+        description: "Cleaned job postings"
+        columns:
+          - name: job_id
+            description: "Primary key"
+          - name: job_platform_id
+            description: "Adzuna job ID"
+          - name: search_role
+            description: "Role searched for"
+          - name: country_code
+            description: "Country code"
+          - name: title
+            description: "Job title"
+          - name: company_name
+            description: "Company name"
+          - name: description
+            description: "Job description"
+          - name: salary_min
+            description: "Minimum salary"
+          - name: salary_max
+            description: "Maximum salary"
+          - name: salary_is_predicted
+            description: "Whether salary is predicted by Adzuna"
+          - name: salary_currency
+            description: "Currency code"
+          - name: contract_type
+            description: "Contract type (permanent, contract)"
+          - name: contract_time
+            description: "Full time, part time"
+          - name: job_posted_at
+            description: "When job was posted"
+          - name: processed_at
+            description: "When we processed the job"
+      
+      - name: stg_job_skills
+        description: "Skills extracted from job descriptions"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: job_id
+            description: "Foreign key to stg_jobs"
+          - name: skill_id
+            description: "Foreign key to dim_skills"
+          - name: skill_name
+            description: "Skill name (denormalized)"
+          - name: mention_count
+            description: "Times skill mentioned in description"
+      
+      - name: dim_skills
+        description: "Master skills taxonomy"
+        columns:
+          - name: skill_id
+            description: "Primary key"
+          - name: skill_name
+            description: "Canonical skill name"
+          - name: skill_category
+            description: "Category (Programming Language, Cloud, etc.)"
+          - name: skill_subcategory
+            description: "Subcategory"
+      
+      - name: dim_job_roles
+        description: "Target job roles for extraction"
+        columns:
+          - name: role_id
+            description: "Primary key"
+          - name: role_name
+            description: "Role name"
+          - name: role_category
+            description: "Category (Data, Engineering, etc.)"
+          - name: is_active
+            description: "Whether role is being tracked"
+      
+      - name: dim_countries
+        description: "Countries supported by Adzuna"
+        columns:
+          - name: country_code
+            description: "ISO country code"
+          - name: country_name
+            description: "Country display name"
+          - name: is_active
+            description: "Whether country is being tracked"

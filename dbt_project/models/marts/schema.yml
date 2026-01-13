@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: mart_skill_demand
+    description: "Skill demand aggregated by role and country - Top skills per role"
+    columns:
+      - name: skill_name
+        description: "Skill name"
+        tests:
+          - not_null
+      - name: search_role
+        description: "Job role"
+        tests:
+          - not_null
+      - name: job_count
+        description: "Number of jobs requiring this skill"
+      - name: demand_percentage
+        description: "Percentage of jobs requiring this skill"
+      - name: rank_in_role
+        description: "Rank of skill within role (1 = most demanded)"
+  
+  - name: mart_skill_cooccurrence
+    description: "Skills that appear together in job postings"
+    columns:
+      - name: skill_name_1
+        description: "First skill"
+      - name: skill_name_2
+        description: "Second skill"
+      - name: cooccurrence_count
+        description: "Jobs where both skills appear"
+      - name: jaccard_similarity
+        description: "Jaccard similarity coefficient"
+  
+  - name: mart_company_leaderboard
+    description: "Top hiring companies by role and country"
+    columns:
+      - name: company_name
+        description: "Company name"
+      - name: job_count
+        description: "Number of job postings"
+      - name: search_role
+        description: "Role category"
+      - name: country_code
+        description: "Country"
+      - name: rank_in_category
+        description: "Ranking within category"
+  
+  - name: mart_role_similarity
+    description: "Skill overlap between different job roles"
+    columns:
+      - name: role_1
+        description: "First role"
+      - name: role_2
+        description: "Second role"
+      - name: shared_skills_count
+        description: "Number of skills in common"
+      - name: jaccard_similarity
+        description: "Similarity score (0-1)"
+  
+  - name: mart_salary_by_skill
+    description: "Salary comparison for jobs with specific skills vs market average"
+    columns:
+      - name: skill_name
+        description: "Skill name"
+      - name: avg_salary_with_skill
+        description: "Average salary for jobs with this skill"
+      - name: market_avg_salary
+        description: "Market average salary"
+      - name: salary_premium_percentage
+        description: "Percentage above/below market"

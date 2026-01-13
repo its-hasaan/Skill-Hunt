@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: int_job_skills_enriched
+    description: "Jobs with their extracted skills, enriched with category info"
+    columns:
+      - name: job_id
+        description: "Job ID from staging"
+        tests:
+          - not_null
+      - name: skill_id
+        description: "Skill ID from taxonomy"
+      - name: skill_name
+        description: "Skill canonical name"
+      - name: skill_category
+        description: "Skill category"
+      - name: mention_count
+        description: "Times mentioned in job"
+      - name: search_role
+        description: "Role searched for"
+      - name: country_code
+        description: "Country code"
+      - name: company_name
+        description: "Hiring company"
+      - name: salary_min
+        description: "Minimum salary"
+      - name: salary_max
+        description: "Maximum salary"
+      - name: salary_currency
+        description: "Currency"
+      - name: job_posted_at
+        description: "When job was posted"

@@ -1,0 +1,21 @@
+name: 'skill_hunt'
+version: '1.0.0'
+config-version: 2
+
+profile: 'skill_hunt'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # Date range for current analysis (can be overridden in CI)
+  analysis_start_date: "{{ (modules.datetime.datetime.now() - modules.datetime.timedelta(days=30)).strftime('%Y-%m-%d') }}"
+  analysis_end_date: "{{ modules.datetime.datetime.now().strftime('%Y-%m-%d') }}"

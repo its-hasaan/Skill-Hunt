@@ -1,0 +1,232 @@
+name: Skill Hunt ETL Pipeline
+
+on:
+  # Run twice a week (Sunday and Wednesday at 3 AM UTC)
+  schedule:
+    - cron: '0 3 * * 0,3'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      run_extraction:
+        description: 'Run data extraction'
+        type: boolean
+        default: true
+      run_transformation:
+        description: 'Run data transformation'
+        type: boolean
+        default: true
+      run_dbt:
+        description: 'Run dbt models'
+        type: boolean
+        default: true
+      test_mode:
+        description: 'Test mode (limited data)'
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: '3.11'
+  ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+  ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
+  SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
+  SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+  SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
+
+jobs:
+  extract:
+    name: Extract Job Data
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.run_extraction == 'true' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run extraction
+        run: |
+          if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
+            python extractor.py --test
+          else
+            python extractor.py --pages 2 --delay 1.5
+          fi
+      
+      - name: Upload extraction log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extraction-log
+          path: extraction.log
+          retention-days: 7
+
+  transform:
+    name: Transform & Extract Skills
+    runs-on: ubuntu-latest
+    needs: extract
+    if: ${{ always() && (github.event_name == 'schedule' || github.event.inputs.run_transformation == 'true') }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run transformation
+        run: python transformer.py --batch-size 500
+      
+      - name: Upload transformation log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: transformation-log
+          path: transformation.log
+          retention-days: 7
+
+  dbt:
+    name: Run dbt Models
+    runs-on: ubuntu-latest
+    needs: transform
+    if: ${{ always() && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Setup dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          skill_hunt:
+            outputs:
+              prod:
+                type: postgres
+                host: ${{ secrets.SUPABASE_HOST }}
+                port: 5432
+                user: ${{ secrets.SUPABASE_USER }}
+                password: ${{ secrets.SUPABASE_PASSWORD }}
+                dbname: ${{ secrets.SUPABASE_DB }}
+                schema: marts
+                threads: 4
+                connect_timeout: 30
+            target: prod
+          EOF
+      
+      - name: Test dbt connection
+        working-directory: dbt_project
+        run: dbt debug
+      
+      - name: Run dbt models
+        working-directory: dbt_project
+        run: |
+          dbt deps
+          dbt run --full-refresh
+      
+      - name: Run dbt tests
+        working-directory: dbt_project
+        run: dbt test
+      
+      - name: Generate dbt docs
+        working-directory: dbt_project
+        run: dbt docs generate
+      
+      - name: Upload dbt artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-artifacts
+          path: |
+            dbt_project/target/manifest.json
+            dbt_project/target/run_results.json
+            dbt_project/target/catalog.json
+          retention-days: 7
+
+  archive:
+    name: Archive Historical Data
+    runs-on: ubuntu-latest
+    needs: dbt
+    if: ${{ always() && github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Archive skill demand snapshot
+        run: |
+          python -c "
+          import psycopg2
+          import os
+          
+          conn = psycopg2.connect(os.getenv('SUPABASE_URL'))
+          cursor = conn.cursor()
+          cursor.execute('SELECT archive_skill_demand()')
+          conn.commit()
+          cursor.close()
+          conn.close()
+          print('Historical snapshot archived successfully')
+          "
+
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [extract, transform, dbt, archive]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          echo "Extract: ${{ needs.extract.result }}"
+          echo "Transform: ${{ needs.transform.result }}"
+          echo "dbt: ${{ needs.dbt.result }}"
+          echo "Archive: ${{ needs.archive.result }}"
+          
+          if [ "${{ needs.extract.result }}" == "failure" ] || \
+             [ "${{ needs.transform.result }}" == "failure" ] || \
+             [ "${{ needs.dbt.result }}" == "failure" ]; then
+            echo "::error::One or more jobs failed!"
+            exit 1
+          fi
+          
+          echo "All jobs completed successfully!"
