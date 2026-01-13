@@ -60,6 +60,7 @@ st.markdown("""
 
 
 # Database connection
+@st.cache_resource
 def get_db_connection():
     """Create database connection using Streamlit secrets or env vars."""
     try:
@@ -67,17 +68,23 @@ def get_db_connection():
         if hasattr(st, 'secrets') and 'database' in st.secrets:
             return psycopg2.connect(
                 host=st.secrets.database.host,
-                port=st.secrets.database.port,
+                port=int(st.secrets.database.port),  # Convert to int
                 user=st.secrets.database.user,
                 password=st.secrets.database.password,
                 dbname=st.secrets.database.dbname,
-                sslmode='require'
+                sslmode='require',
+                connect_timeout=10
             )
         else:
             # Fall back to environment variable
-            return psycopg2.connect(os.getenv("SUPABASE_URL"))
+            db_url = os.getenv("SUPABASE_URL")
+            if not db_url:
+                st.error("❌ No database credentials found. Please configure secrets.")
+                return None
+            return psycopg2.connect(db_url, sslmode='require')
     except Exception as e:
-        st.error(f"Database connection failed: {e}")
+        st.error(f"❌ Database connection failed: {e}")
+        st.info("💡 Check your secrets in Streamlit Cloud: Settings → Secrets")
         return None
 
 
