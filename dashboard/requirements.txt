@@ -1,8 +1,0 @@
-# Dashboard Dependencies for Streamlit Cloud
-# This file is specifically for the dashboard deployment
-
-streamlit>=1.30.0
-pandas>=2.0.0
-plotly>=5.18.0
-psycopg2-binary>=2.9.9
-python-dotenv>=1.0.0

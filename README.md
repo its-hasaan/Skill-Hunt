@@ -1,13 +1,13 @@
 # Skill Hunt 🎯
 
-A data engineering portfolio project that analyzes job market trends and skill demand across 15 tech roles and 17 countries.
+A full-stack data engineering project that analyzes job market trends and skill demand across 15 tech roles and 17 countries.
 
 ## 🎯 What It Does
 
 - **Extracts** job postings from Adzuna API for 15 tech roles across 17 countries
 - **Transforms** raw data and extracts skills using pattern matching
 - **Analyzes** skill demand, salary premiums, company hiring trends, and role similarity
-- **Visualizes** insights on a web dashboard (coming soon)
+- **Visualizes** insights on an interactive React dashboard
 
 ## 📊 Analytics Provided
 
@@ -23,24 +23,41 @@ A data engineering portfolio project that analyzes job market trends and skill d
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Adzuna API    │────▶│   extractor.py  │────▶│   raw.jobs      │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                        │
-                                                        ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Dashboard      │◀────│   dbt models    │◀────│ transformer.py  │
-│  (Streamlit)    │     │   (marts)       │     │ (skill extract) │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Adzuna API    │───>│  ETL Pipeline   │───>│    Supabase     │
+│  (Job Postings) │    │  (Python/dbt)   │    │  (PostgreSQL)   │
+└─────────────────┘    └─────────────────┘    └────────┬────────┘
+                                                       │
+                       ┌─────────────────┐             │
+                       │  FastAPI Backend│<────────────┘
+                       │    (Render)     │
+                       └────────┬────────┘
+                                │
+                       ┌────────▼────────┐
+                       │  React Frontend │
+                       │    (Vercel)     │
+                       └─────────────────┘
 ```
 
 ## 🛠️ Tech Stack
 
-- **Extraction**: Python, Requests, Adzuna API
-- **Storage**: PostgreSQL (Supabase)
-- **Transformation**: Python (skill extraction), dbt (analytics)
-- **Orchestration**: GitHub Actions (scheduled twice weekly)
-- **Dashboard**: Streamlit (coming soon)
+### Data Pipeline
+- **Extraction**: Python + Adzuna API
+- **Transformation**: dbt (Data Build Tool)
+- **Storage**: Supabase (PostgreSQL)
+
+### Backend
+- **Framework**: FastAPI + Uvicorn
+- **Database Client**: asyncpg
+- **Validation**: Pydantic
+- **Hosting**: Render
+
+### Frontend
+- **Framework**: React 18 + Vite
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts + D3.js
+- **Data Fetching**: React Query
+- **Hosting**: Vercel
 
 ## 📁 Project Structure
 

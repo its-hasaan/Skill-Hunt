@@ -1,13 +1,23 @@
 # Skill Hunt - .gitignore
 
-# Environment
+# ================================
+# Environment & Secrets
+# ================================
 .env
 .env.local
+.env.production
+*.env
+
+# Python virtual environments
 venv/
 env/
 .venv/
+backend/venv/
+etl/venv/
 
+# ================================
 # Python
+# ================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,41 +39,75 @@ wheels/
 .installed.cfg
 *.egg
 
+# ================================
+# Node.js / Frontend
+# ================================
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# ================================
 # Logs
+# ================================
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
+# ================================
 # dbt
+# ================================
 dbt_project/target/
 dbt_project/dbt_packages/
 dbt_project/logs/
 
-# IDE
+# ================================
+# IDE & Editors
+# ================================
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
-# OS
+# ================================
+# OS Files
+# ================================
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# Testing
+# ================================
+# Testing & Coverage
+# ================================
 .pytest_cache/
 .coverage
 htmlcov/
+coverage/
+.nyc_output/
 
+# ================================
 # Jupyter
+# ================================
 .ipynb_checkpoints/
 
-# Streamlit secrets (NEVER commit!)
-.streamlit/secrets.toml
-dashboard/.streamlit/secrets.toml
-**/.streamlit/secrets.toml
-
-# Additional data files
+# ================================
+# Data Files (don't commit large data)
+# ================================
 *.csv
 *.xlsx
 *.parquet
-extraction.log
-transformation.log
+*.json.gz
+
+# ================================
+# Build Artifacts
+# ================================
+Dockerfile.backend
+*.tar.gz# ================================
+# Build Artifacts
+# ================================
+*.tar.gz

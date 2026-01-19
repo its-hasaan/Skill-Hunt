@@ -1,0 +1,22 @@
+# Render Blueprint for Skill Hunt Backend
+# Deploy with: render blueprint apply
+
+services:
+  # FastAPI Backend
+  - type: web
+    name: skill-hunt-api
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    envVars:
+      - key: SUPABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: CORS_ORIGINS
+        value: https://skill-hunt.vercel.app,http://localhost:5173
+      - key: DEBUG
+        value: false
+      - key: CACHE_TTL_SECONDS
+        value: 3600
+    healthCheckPath: /health
+    autoDeploy: true
