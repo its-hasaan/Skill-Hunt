@@ -74,7 +74,7 @@ def validate_credentials():
         sys.exit(1)
 
 
-def get_jobs(role: str, country: str = "gb", page: int = 1) -> list:
+def get_jobs(role: str, country: str = "gb", page: int = 1, max_days_old: int = None) -> list:
     """
     Fetches jobs from Adzuna API.
     
@@ -82,6 +82,7 @@ def get_jobs(role: str, country: str = "gb", page: int = 1) -> list:
         role: Job role to search for (e.g., "Data Engineer")
         country: Country code (e.g., "gb", "us", "in")
         page: Page number for pagination
+        max_days_old: Filter for jobs posted within the last N days (optional)
     
     Returns:
         List of job dictionaries from API response
@@ -94,6 +95,10 @@ def get_jobs(role: str, country: str = "gb", page: int = 1) -> list:
         "results_per_page": 50,
         "content-type": "application/json"
     }
+    
+    # Add time filter if specified
+    if max_days_old:
+        params["max_days_old"] = max_days_old
     
     try:
         response = requests.get(url, params=params, timeout=30)
@@ -183,7 +188,7 @@ def save_to_database(jobs: list, role: str, country: str, batch_id: str):
         return 0
 
 
-def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, delay: float = 1.0, test_mode: bool = False):
+def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, delay: float = 1.0, test_mode: bool = False, max_days_old: int = None):
     """
     Main extraction function. Iterates through all roles and countries.
     
@@ -193,6 +198,7 @@ def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, 
         max_pages: Maximum pages to fetch per role/country combination
         delay: Delay between API calls (seconds) to avoid rate limiting
         test_mode: If True, only extract 1 role, 1 country, 1 page
+        max_days_old: Filter for jobs posted within the last N days (optional)
     """
     config = load_config()
     
@@ -211,6 +217,8 @@ def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, 
     batch_id = str(uuid4())
     logger.info(f"Starting extraction batch: {batch_id}")
     logger.info(f"Roles: {len(roles)}, Countries: {len(countries)}, Max pages: {max_pages}")
+    if max_days_old:
+        logger.info(f"Filtering for jobs posted within the last {max_days_old} days")
     
     # Statistics
     total_jobs = 0
@@ -222,7 +230,7 @@ def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, 
             logger.info(f"\n--- Extracting: {role} in {country_name} ({country_code}) ---")
             
             for page in range(1, max_pages + 1):
-                jobs = get_jobs(role, country_code, page)
+                jobs = get_jobs(role, country_code, page, max_days_old)
                 total_jobs += len(jobs)
                 
                 if jobs:
@@ -263,6 +271,8 @@ def main():
     parser.add_argument('--country', type=str, help='Single country code to extract')
     parser.add_argument('--pages', type=int, default=2, help='Max pages per role/country')
     parser.add_argument('--delay', type=float, default=1.0, help='Delay between API calls')
+    parser.add_argument('--days', type=int, help='Filter for jobs posted within last N days (e.g., 60 for 2 months)')
+    parser.add_argument('--months', type=int, help='Filter for jobs posted within last N months (converted to days)')
     parser.add_argument('--test', action='store_true', help='Test mode: 1 role, 1 country, 1 page')
     
     args = parser.parse_args()
@@ -284,13 +294,22 @@ def main():
     if args.country and args.country not in config['countries']:
         logger.warning(f"Country '{args.country}' not in configured countries, but will proceed anyway")
     
+    # Determine max_days_old from either --days or --months
+    max_days_old = None
+    if args.months:
+        max_days_old = args.months * 30  # Approximate conversion
+        logger.info(f"Converting {args.months} months to {max_days_old} days")
+    elif args.days:
+        max_days_old = args.days
+    
     # Run extraction
     result = extract_all(
         roles=roles,
         countries=countries,
         max_pages=args.pages,
         delay=args.delay,
-        test_mode=args.test
+        test_mode=args.test,
+        max_days_old=max_days_old
     )
     
     return result

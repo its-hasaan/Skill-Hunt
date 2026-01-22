@@ -1,18 +1,24 @@
 """
 Skill Hunt - Skill Extraction Transformer
 ==========================================
-Extracts skills from job descriptions using pattern matching and NLP.
+Extracts skills from job descriptions using HYBRID approach:
+- Fast Path: Regex-based matching for known skills (instant, free)
+- Slow Path: LLM-based extraction for skill discovery (Gemini Flash)
+
 Processes raw.jobs -> staging.stg_jobs + staging.stg_job_skills
 
 This transformer:
 1. Reads unprocessed jobs from raw.jobs
 2. Cleans and normalizes job data into staging.stg_jobs
-3. Extracts skills from descriptions into staging.stg_job_skills
+3. Extracts skills using hybrid extractor (regex + LLM discovery)
+4. Tracks new skill discoveries and auto-promotes to taxonomy
 
 Usage:
-    python transformer.py                # Process all unprocessed jobs
-    python transformer.py --batch-size 500  # Process in smaller batches
-    python transformer.py --reprocess    # Reprocess all jobs (dangerous)
+    python transformer.py                    # Process all unprocessed jobs
+    python transformer.py --batch-size 500   # Process in smaller batches
+    python transformer.py --reprocess        # Reprocess all jobs (dangerous)
+    python transformer.py --discovery-mode   # Force LLM extraction for all jobs
+    python transformer.py --fast-only        # Disable LLM, regex only
 """
 
 import os
@@ -43,10 +49,143 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 DB_URL = os.getenv("SUPABASE_URL")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SKILLS_TAXONOMY_PATH = Path(__file__).parent / "config" / "skills_taxonomy.json"
+
+# Hybrid extraction settings (can be overridden via CLI)
+DISCOVERY_SAMPLE_RATE = float(os.getenv("DISCOVERY_SAMPLE_RATE", "0.1"))  # 10% of jobs
+COVERAGE_THRESHOLD = float(os.getenv("COVERAGE_THRESHOLD", "0.3"))  # Trigger slow path below this
+
+
+# =============================================================================
+# HYBRID SKILL EXTRACTOR INTEGRATION
+# =============================================================================
+
+def create_skill_extractor(
+    discovery_mode: bool = False,
+    fast_only: bool = False,
+    db_connection=None
+):
+    """
+    Factory function to create the appropriate skill extractor.
+    
+    Args:
+        discovery_mode: If True, always use LLM for all jobs
+        fast_only: If True, disable LLM entirely
+        db_connection: Database connection for discovery persistence
+    
+    Returns:
+        Configured skill extractor instance
+    """
+    # Try to import hybrid extractor
+    try:
+        from skill_extractor import HybridSkillExtractor, HybridConfig
+        
+        config = HybridConfig(
+            taxonomy_path=SKILLS_TAXONOMY_PATH,
+            gemini_api_key=None if fast_only else GEMINI_API_KEY,
+            coverage_threshold=COVERAGE_THRESHOLD,
+            discovery_sample_rate=DISCOVERY_SAMPLE_RATE if not fast_only else 0,
+            always_discover=discovery_mode,
+            auto_promote=True
+        )
+        
+        extractor = HybridSkillExtractor(
+            config=config,
+            db_connection=db_connection
+        )
+        
+        mode = "discovery" if discovery_mode else ("fast-only" if fast_only else "hybrid")
+        logger.info(f"Initialized HybridSkillExtractor in {mode} mode")
+        logger.info(f"Known skills in taxonomy: {extractor.get_known_skills_count()}")
+        
+        return extractor
+        
+    except ImportError:
+        logger.warning("HybridSkillExtractor not available, falling back to legacy extractor")
+        return LegacySkillExtractor(SKILLS_TAXONOMY_PATH)
+
+
+class LegacySkillExtractor:
+    """
+    Fallback extractor using only regex matching (original behavior).
+    Used when hybrid extractor dependencies are not available.
+    """
+    
+    def __init__(self, taxonomy_path: Path):
+        self.skills = {}
+        self.patterns = []
+        self._load_taxonomy(taxonomy_path)
+    
+    def _load_taxonomy(self, taxonomy_path: Path):
+        try:
+            with open(taxonomy_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            logger.error(f"Skills taxonomy not found: {taxonomy_path}")
+            sys.exit(1)
+        
+        for skill in data.get('skills', []):
+            name = skill['name']
+            category = skill.get('category', 'Unknown')
+            subcategory = skill.get('subcategory', '')
+            aliases = skill.get('aliases', [])
+            
+            self.skills[name.lower()] = {
+                'name': name,
+                'category': category,
+                'subcategory': subcategory
+            }
+            
+            all_terms = [name] + aliases
+            for term in all_terms:
+                escaped_term = re.escape(term)
+                if term in ['C++', 'C#', '.NET']:
+                    pattern = re.compile(rf'(?<![a-zA-Z]){escaped_term}(?![a-zA-Z])', re.IGNORECASE)
+                else:
+                    pattern = re.compile(rf'\b{escaped_term}\b', re.IGNORECASE)
+                self.patterns.append((pattern, name))
+        
+        logger.info(f"LegacyExtractor: Loaded {len(self.skills)} skills")
+    
+    def extract_skills(self, text: str, context: str = "") -> List[Dict]:
+        if not text:
+            return []
+        
+        found_skills = {}
+        for pattern, canonical_name in self.patterns:
+            matches = pattern.findall(text)
+            if matches:
+                if canonical_name not in found_skills:
+                    found_skills[canonical_name] = 0
+                found_skills[canonical_name] += len(matches)
+        
+        results = []
+        for skill_name, count in found_skills.items():
+            skill_info = self.skills.get(skill_name.lower(), {})
+            results.append({
+                'skill_name': skill_name,
+                'category': skill_info.get('category', 'Unknown'),
+                'subcategory': skill_info.get('subcategory', ''),
+                'mention_count': count,
+                'extraction_method': 'legacy'
+            })
+        
+        results.sort(key=lambda x: x['mention_count'], reverse=True)
+        return results
+    
+    def get_stats(self) -> Dict:
+        return {'mode': 'legacy', 'total_skills': len(self.skills)}
+    
+    def get_known_skills_count(self) -> int:
+        return len(self.skills)
 
 
 class SkillExtractor:
+    """
+    DEPRECATED: Legacy class kept for backward compatibility.
+    Use create_skill_extractor() instead.
+    """
     """
     Extracts skills from text using a taxonomy-based approach.
     Uses regex patterns with word boundaries for accurate matching.
@@ -286,21 +425,33 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
-def transform_and_load(batch_size: int = 1000, reprocess: bool = False):
+def transform_and_load(
+    batch_size: int = 1000,
+    reprocess: bool = False,
+    discovery_mode: bool = False,
+    fast_only: bool = False
+):
     """
-    Main transformation function.
+    Main transformation function with hybrid skill extraction.
     
     Args:
         batch_size: Number of jobs to process per batch
         reprocess: If True, reprocess all jobs (truncates staging tables)
+        discovery_mode: If True, use LLM for all jobs (expensive but thorough)
+        fast_only: If True, disable LLM entirely (fast but no discovery)
     """
     logger.info("Starting transformation process...")
+    logger.info(f"Mode: {'discovery' if discovery_mode else 'fast-only' if fast_only else 'hybrid'}")
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Initialize skill extractor
-    skill_extractor = SkillExtractor(SKILLS_TAXONOMY_PATH)
+    # Initialize HYBRID skill extractor
+    skill_extractor = create_skill_extractor(
+        discovery_mode=discovery_mode,
+        fast_only=fast_only,
+        db_connection=conn
+    )
     
     if reprocess:
         logger.warning("REPROCESS MODE: Truncating staging tables...")
@@ -363,17 +514,23 @@ def transform_and_load(batch_size: int = 1000, reprocess: bool = False):
                 
                 job_id = cursor.fetchone()[0]
                 
-                # Extract skills from description + title
+                # Extract skills from description + title using HYBRID extractor
                 text_to_analyze = f"{parsed_job['title']} {parsed_job['description']}"
-                skills = skill_extractor.extract_skills(text_to_analyze)
+                context = f"{parsed_job['title']} @ {parsed_job['company_name']}"
+                skills = skill_extractor.extract_skills(text_to_analyze, context=context)
                 
                 # Insert skills
                 for skill in skills:
+                    # Handle both mention_count (fast path) and confidence (slow path)
+                    mention_count = skill.get('mention_count', 1)
+                    if mention_count == 0 and 'confidence' in skill:
+                        mention_count = 1  # LLM-extracted skills count as 1 mention
+                    
                     skill_id = get_or_create_skill(
                         cursor,
                         skill['skill_name'],
                         skill['category'],
-                        skill['subcategory']
+                        skill.get('subcategory', '')
                     )
                     
                     cursor.execute(
@@ -383,7 +540,7 @@ def transform_and_load(batch_size: int = 1000, reprocess: bool = False):
                         ON CONFLICT (job_id, skill_id) DO UPDATE SET
                             mention_count = EXCLUDED.mention_count
                         """,
-                        (job_id, skill_id, skill['skill_name'], skill['mention_count'])
+                        (job_id, skill_id, skill['skill_name'], mention_count)
                     )
                     total_skills_extracted += 1
                 
@@ -399,33 +556,76 @@ def transform_and_load(batch_size: int = 1000, reprocess: bool = False):
     
     # Final commit
     conn.commit()
+    
+    # Get extraction statistics from hybrid extractor
+    extractor_stats = skill_extractor.get_stats() if hasattr(skill_extractor, 'get_stats') else {}
+    
     cursor.close()
     conn.close()
     
     # Summary
     elapsed = (datetime.now() - start_time).total_seconds()
-    logger.info(f"\n{'='*50}")
+    logger.info(f"\n{'='*60}")
     logger.info(f"TRANSFORMATION COMPLETE")
-    logger.info(f"{'='*50}")
+    logger.info(f"{'='*60}")
     logger.info(f"Jobs processed: {total_processed}")
     logger.info(f"Skills extracted: {total_skills_extracted}")
     logger.info(f"Time elapsed: {elapsed:.2f} seconds")
-    logger.info(f"{'='*50}")
+    
+    # Hybrid extractor stats
+    if extractor_stats:
+        logger.info(f"\n--- Hybrid Extractor Stats ---")
+        logger.info(f"Total extractions: {extractor_stats.get('total_extractions', 'N/A')}")
+        logger.info(f"Fast path only: {extractor_stats.get('fast_path_only', 'N/A')}")
+        logger.info(f"Slow path invoked: {extractor_stats.get('slow_path_invoked', 'N/A')}")
+        logger.info(f"New discoveries: {extractor_stats.get('new_discoveries', 'N/A')}")
+        
+        discovery_stats = extractor_stats.get('discovery', {})
+        if discovery_stats:
+            logger.info(f"\n--- Discovery Stats ---")
+            logger.info(f"Total discovered: {discovery_stats.get('total_discoveries', 0)}")
+            logger.info(f"Promoted to taxonomy: {discovery_stats.get('promoted_count', 0)}")
+            logger.info(f"Pending promotion: {discovery_stats.get('pending_promotion', 0)}")
+            
+            top_pending = discovery_stats.get('top_pending', [])
+            if top_pending:
+                logger.info(f"\nTop pending discoveries:")
+                for skill in top_pending[:5]:
+                    logger.info(f"  - {skill['name']} ({skill['category']}) - seen {skill['occurrences']}x")
+    
+    logger.info(f"{'='*60}")
     
     return {
         "jobs_processed": total_processed,
         "skills_extracted": total_skills_extracted,
-        "elapsed_seconds": elapsed
+        "elapsed_seconds": elapsed,
+        "extractor_stats": extractor_stats
     }
 
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(description='Transform raw job data and extract skills')
+    parser = argparse.ArgumentParser(
+        description='Transform raw job data and extract skills using hybrid approach'
+    )
     parser.add_argument('--batch-size', type=int, default=1000, help='Jobs per batch')
     parser.add_argument('--reprocess', action='store_true', help='Reprocess all jobs (dangerous!)')
+    parser.add_argument(
+        '--discovery-mode',
+        action='store_true',
+        help='Force LLM extraction for all jobs (expensive, use for targeted discovery)'
+    )
+    parser.add_argument(
+        '--fast-only',
+        action='store_true',
+        help='Disable LLM extraction entirely (fast, no new skill discovery)'
+    )
     
     args = parser.parse_args()
+    
+    if args.discovery_mode and args.fast_only:
+        logger.error("Cannot use both --discovery-mode and --fast-only")
+        sys.exit(1)
     
     if args.reprocess:
         confirm = input("WARNING: This will delete all staging data. Type 'YES' to confirm: ")
@@ -433,7 +633,12 @@ def main():
             logger.info("Aborted.")
             return
     
-    transform_and_load(batch_size=args.batch_size, reprocess=args.reprocess)
+    transform_and_load(
+        batch_size=args.batch_size,
+        reprocess=args.reprocess,
+        discovery_mode=args.discovery_mode,
+        fast_only=args.fast_only
+    )
 
 
 if __name__ == "__main__":

@@ -24,6 +24,10 @@ on:
         description: 'Test mode (limited data)'
         type: boolean
         default: false
+      discovery_mode:
+        description: 'Force LLM skill discovery for all jobs'
+        type: boolean
+        default: false
 
 env:
   PYTHON_VERSION: '3.11'
@@ -34,6 +38,11 @@ env:
   SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
   SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
   SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
+  # Gemini API for hybrid skill extraction
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  # Hybrid extractor settings
+  DISCOVERY_SAMPLE_RATE: '0.1'
+  COVERAGE_THRESHOLD: '0.3'
 
 jobs:
   extract:
@@ -74,7 +83,7 @@ jobs:
           retention-days: 7
 
   transform:
-    name: Transform & Extract Skills
+    name: Transform & Extract Skills (Hybrid)
     runs-on: ubuntu-latest
     needs: extract
     if: ${{ always() && (github.event_name == 'schedule' || github.event.inputs.run_transformation == 'true') }}
@@ -94,8 +103,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r etl/requirements.txt
       
-      - name: Run transformation
-        run: cd etl && python transformer.py --batch-size 500
+      - name: Run transformation (Hybrid Skill Extraction)
+        run: |
+          cd etl
+          if [ "${{ github.event.inputs.discovery_mode }}" == "true" ]; then
+            echo "Running in DISCOVERY MODE (LLM for all jobs)"
+            python transformer.py --batch-size 500 --discovery-mode
+          else
+            echo "Running in HYBRID MODE (Fast path + LLM sampling)"
+            python transformer.py --batch-size 500
+          fi
       
       - name: Upload transformation log
         uses: actions/upload-artifact@v4
