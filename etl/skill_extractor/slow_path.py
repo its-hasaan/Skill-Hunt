@@ -1,278 +1,344 @@
 """
-Slow Path Skill Extractor (LLM-Based)
-=====================================
-Uses Google Gemini Flash for intelligent skill extraction from job descriptions.
-This is the "discovery" path - it finds skills not in our taxonomy.
+Slow Path Skill Extractor (GLiNER NER-Based)
+=============================================
+Uses GLiNER (Generalist and Lightweight model for NER) for skill extraction.
+This is the "discovery" path - finds skills not in our taxonomy.
 
 Design Principles:
-- Only invoked when fast path has low confidence or explicit discovery mode
-- Uses structured JSON output for reliable parsing
-- Includes skill categorization in the prompt
-- Rate-limited and batched for cost efficiency
+- Local, free extraction (no API costs)
+- Only invoked when fast path has low confidence or discovery mode enabled
+- Extracted skills validated against taxonomy as "whitelist"
+- Unmatched skills stored as "Unverified" for manual review
+- Normalization (React.js -> React) handled by dbt layer
+
+NOTE: GLiNER may extract variations like "React" and "React.js" separately.
+The dbt transformation layer should handle deduplication and normalization.
 """
 
-import os
-import json
-import time
 import logging
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-# Skill categories for LLM guidance
-SKILL_CATEGORIES = {
-    "Programming Language": "Languages used to write code (Python, Java, Rust, etc.)",
-    "Database": "Database systems and query languages (PostgreSQL, MongoDB, Redis, etc.)",
-    "Cloud Platform": "Cloud providers and their services (AWS, GCP, Azure services)",
-    "Big Data": "Distributed data processing tools (Spark, Kafka, Hadoop, etc.)",
-    "Data Engineering": "Data pipeline and transformation tools (Airflow, dbt, Fivetran, etc.)",
-    "Machine Learning": "ML frameworks and libraries (TensorFlow, PyTorch, scikit-learn, etc.)",
-    "DevOps": "CI/CD, containers, and infrastructure tools (Docker, Kubernetes, Terraform, etc.)",
-    "Web Framework": "Backend and frontend frameworks (React, Django, FastAPI, etc.)",
-    "Data Visualization": "Charting and BI tools (Tableau, Power BI, Matplotlib, etc.)",
-    "Version Control": "Source control systems (Git, GitHub, GitLab, etc.)",
-    "API & Integration": "API technologies and protocols (REST, GraphQL, gRPC, etc.)",
-    "Testing": "Testing frameworks and methodologies (pytest, Jest, Selenium, etc.)",
-    "Security": "Security tools and practices (OAuth, encryption, penetration testing, etc.)",
-    "Operating System": "OS and system administration (Linux, Windows Server, etc.)",
-    "Methodology": "Development methodologies and practices (Agile, Scrum, TDD, etc.)",
-    "Soft Skill": "Non-technical professional skills (communication, leadership, etc.)",
-    "Other": "Skills that don't fit other categories"
-}
-
-# Prompt template for skill extraction
-EXTRACTION_PROMPT = """You are a technical recruiter AI that extracts skills from job descriptions.
-
-TASK: Extract ALL technical skills, tools, frameworks, platforms, and methodologies mentioned in this job description.
-
-RULES:
-1. Be SPECIFIC - extract "Apache Kafka" not just "streaming", "PostgreSQL" not just "database"
-2. Include version-agnostic names (e.g., "Python" not "Python 3.9")
-3. Extract both explicit mentions AND implied skills (e.g., "ETL pipelines" implies data engineering skills)
-4. Categorize each skill appropriately
-5. Do NOT include generic terms like "software", "technology", "data", "systems"
-6. Do NOT include job titles or roles
-7. Extract emerging/newer tools even if uncommon (Polars, DuckDB, Qdrant, etc.)
-
-SKILL CATEGORIES:
-{categories}
-
-JOB DESCRIPTION:
----
-{job_description}
----
-
-Respond with ONLY a JSON array of objects. Each object must have:
-- "skill_name": The canonical/official name of the skill (string)
-- "category": One of the categories listed above (string)
-- "subcategory": More specific classification if applicable (string, can be empty)
-- "confidence": Your confidence 0.0-1.0 that this is a real skill mention (float)
-
-Example response format:
-[
-  {{"skill_name": "Apache Kafka", "category": "Big Data", "subcategory": "Streaming", "confidence": 0.95}},
-  {{"skill_name": "Python", "category": "Programming Language", "subcategory": "General Purpose", "confidence": 1.0}}
+# Skill labels for GLiNER - these guide what entities to extract
+GLINER_SKILL_LABELS = [
+    "programming language",
+    "database",
+    "cloud platform",
+    "cloud service",
+    "big data tool",
+    "data engineering tool",
+    "machine learning framework",
+    "devops tool",
+    "web framework",
+    "frontend framework",
+    "backend framework",
+    "data visualization tool",
+    "version control",
+    "api technology",
+    "testing framework",
+    "security tool",
+    "operating system",
+    "containerization tool",
+    "orchestration tool",
+    "message queue",
+    "data warehouse",
+    "etl tool",
+    "bi tool",
+    "monitoring tool",
+    "ci cd tool"
 ]
 
-JSON Response:"""
+# Map GLiNER labels to our taxonomy categories
+LABEL_TO_CATEGORY = {
+    "programming language": "Programming Language",
+    "database": "Database",
+    "cloud platform": "Cloud Platform",
+    "cloud service": "Cloud Platform",
+    "big data tool": "Big Data",
+    "data engineering tool": "Data Engineering",
+    "machine learning framework": "Machine Learning",
+    "devops tool": "DevOps",
+    "web framework": "Web Framework",
+    "frontend framework": "Web Framework",
+    "backend framework": "Web Framework",
+    "data visualization tool": "Data Visualization",
+    "version control": "Version Control",
+    "api technology": "API & Integration",
+    "testing framework": "Testing",
+    "security tool": "Security",
+    "operating system": "Operating System",
+    "containerization tool": "DevOps",
+    "orchestration tool": "DevOps",
+    "message queue": "Big Data",
+    "data warehouse": "Database",
+    "etl tool": "Data Engineering",
+    "bi tool": "Data Visualization",
+    "monitoring tool": "DevOps",
+    "ci cd tool": "DevOps"
+}
 
 
 @dataclass
 class SlowPathConfig:
-    """Configuration for the slow path extractor."""
-    api_key: str
-    model: str = "gemini-2.0-flash"  # Fast and cheap
-    max_tokens: int = 2048
-    temperature: float = 0.1  # Low for consistency
-    timeout: int = 30
-    max_retries: int = 3
-    retry_delay: float = 1.0
-    min_confidence: float = 0.7  # Filter out low-confidence extractions
+    """Configuration for the GLiNER-based skill extractor."""
+    model_name: str = "urchade/gliner_medium-v2.1"  # Good balance of speed/accuracy
+    threshold: float = 0.4  # Confidence threshold for entity extraction
+    min_confidence: float = 0.5  # Minimum confidence to include in results
+    enabled: bool = True  # Enable GLiNER extraction
+    flat_ner: bool = True  # Use flat NER (no nested entities)
+    multi_label: bool = False  # Allow multiple labels per entity
+    batch_size: int = 8  # Batch size for processing multiple texts
 
 
 class SlowPathExtractor:
     """
-    LLM-based skill extraction using Google Gemini.
+    GLiNER-based skill extraction for discovering new skills.
     
     Features:
-    - Structured JSON output parsing
-    - Automatic retry with exponential backoff
-    - Confidence filtering
-    - Rate limiting support
+    - Local, free extraction (no API costs)
+    - Uses pre-trained NER model fine-tuned for entity extraction
+    - Extracts technical skills, tools, frameworks, platforms
+    - Returns confidence scores for filtering
+    
+    Integration with Taxonomy:
+    - Fast path handles known skills (authoritative)
+    - GLiNER discovers potential new skills
+    - Hybrid layer validates GLiNER findings against taxonomy
+    - Unmatched skills stored as "Unverified" for review
     """
     
-    def __init__(self, config: Optional[SlowPathConfig] = None, api_key: Optional[str] = None):
+    def __init__(self, config: Optional[SlowPathConfig] = None):
         """
-        Initialize the Gemini-based extractor.
+        Initialize the GLiNER extractor.
         
         Args:
-            config: Full configuration object
-            api_key: Just the API key (uses defaults for other settings)
+            config: Configuration object with model settings
         """
-        if config:
-            self.config = config
+        self.config = config or SlowPathConfig()
+        self._model = None
+        self._available = None  # Cached availability check
+        
+        if self.config.enabled:
+            logger.info(f"SlowPath: GLiNER extraction enabled (model: {self.config.model_name})")
         else:
-            key = api_key or os.getenv("GEMINI_API_KEY")
-            if not key:
-                logger.warning("SlowPath: No GEMINI_API_KEY found. LLM extraction disabled.")
-                self.config = None
-            else:
-                self.config = SlowPathConfig(api_key=key)
-        
-        self._client = None
-        self._last_request_time = 0
-        self._min_request_interval = 0.1  # 100ms between requests (10 RPS)
+            logger.info("SlowPath: GLiNER extraction disabled in config")
     
-    def _get_client(self):
-        """Lazy initialization of Gemini client."""
-        if self._client is None and self.config:
+    def _load_model(self):
+        """Lazy load the GLiNER model."""
+        if self._model is None and self.config.enabled:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=self.config.api_key)
-                self._client = genai.GenerativeModel(self.config.model)
-                logger.info(f"SlowPath: Initialized Gemini client with model {self.config.model}")
+                from gliner import GLiNER
+                
+                logger.info(f"SlowPath: Loading GLiNER model '{self.config.model_name}'...")
+                self._model = GLiNER.from_pretrained(self.config.model_name)
+                logger.info("SlowPath: GLiNER model loaded successfully")
+                self._available = True
+                
             except ImportError:
-                logger.error("SlowPath: google-generativeai package not installed")
-                raise
-        return self._client
-    
-    def _rate_limit(self):
-        """Simple rate limiting to avoid API throttling."""
-        elapsed = time.time() - self._last_request_time
-        if elapsed < self._min_request_interval:
-            time.sleep(self._min_request_interval - elapsed)
-        self._last_request_time = time.time()
-    
-    def _build_prompt(self, job_description: str) -> str:
-        """Build the extraction prompt with categories."""
-        categories_str = "\n".join(f"- {k}: {v}" for k, v in SKILL_CATEGORIES.items())
-        return EXTRACTION_PROMPT.format(
-            categories=categories_str,
-            job_description=job_description[:8000]  # Truncate very long descriptions
-        )
-    
-    def _parse_response(self, response_text: str) -> List[Dict]:
-        """Parse and validate the JSON response from Gemini."""
-        # Clean up response - sometimes LLMs add markdown code blocks
-        text = response_text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
+                logger.warning("SlowPath: gliner package not installed. Run: pip install gliner")
+                self._available = False
+            except Exception as e:
+                logger.error(f"SlowPath: Failed to load GLiNER model: {e}")
+                self._available = False
         
+        return self._model
+    
+    def is_available(self) -> bool:
+        """Check if GLiNER is configured and ready."""
+        if self._available is not None:
+            return self._available
+        
+        if not self.config.enabled:
+            self._available = False
+            return False
+        
+        # Try to load model to check availability
         try:
-            skills = json.loads(text)
-            if not isinstance(skills, list):
-                logger.warning("SlowPath: Response is not a list")
-                return []
-            
-            # Validate and filter each skill
-            valid_skills = []
-            for skill in skills:
-                if not isinstance(skill, dict):
-                    continue
-                if 'skill_name' not in skill:
-                    continue
-                
-                # Normalize the skill entry
-                valid_skill = {
-                    'skill_name': str(skill.get('skill_name', '')).strip(),
-                    'category': str(skill.get('category', 'Other')).strip(),
-                    'subcategory': str(skill.get('subcategory', '')).strip(),
-                    'confidence': float(skill.get('confidence', 0.8)),
-                    'extraction_method': 'slow_path'
-                }
-                
-                # Filter by confidence threshold
-                if valid_skill['confidence'] >= self.config.min_confidence:
-                    # Skip empty or too-short skill names
-                    if len(valid_skill['skill_name']) >= 2:
-                        valid_skills.append(valid_skill)
-            
-            return valid_skills
-            
-        except json.JSONDecodeError as e:
-            logger.warning(f"SlowPath: Failed to parse JSON response: {e}")
-            return []
+            self._load_model()
+            return self._available
+        except:
+            self._available = False
+            return False
     
     def extract_skills(self, text: str) -> List[Dict]:
         """
-        Extract skills from text using Gemini LLM.
+        Extract skills from text using GLiNER.
         
         Args:
             text: Job description to analyze
         
         Returns:
-            List of skill dicts with name, category, subcategory, confidence
+            List of skill dicts with:
+            - skill_name: Extracted skill text
+            - category: Mapped category from label
+            - subcategory: Original GLiNER label
+            - confidence: Extraction confidence score
+            - extraction_method: 'gliner'
+            - verified: False (needs validation against taxonomy)
         """
-        if not self.config:
-            logger.debug("SlowPath: Disabled (no API key)")
+        if not self.config.enabled:
             return []
         
         if not text or len(text.strip()) < 50:
             logger.debug("SlowPath: Text too short for analysis")
             return []
         
-        client = self._get_client()
-        if not client:
+        model = self._load_model()
+        if model is None:
             return []
         
-        prompt = self._build_prompt(text)
-        
-        for attempt in range(self.config.max_retries):
-            try:
-                self._rate_limit()
+        try:
+            # Run GLiNER prediction
+            entities = model.predict_entities(
+                text,
+                GLINER_SKILL_LABELS,
+                threshold=self.config.threshold,
+                flat_ner=self.config.flat_ner,
+                multi_label=self.config.multi_label
+            )
+            
+            # Process and filter results
+            skills = []
+            seen_skills = set()  # Deduplicate within same text
+            
+            for entity in entities:
+                skill_name = entity.get('text', '').strip()
+                label = entity.get('label', 'other')
+                score = entity.get('score', 0.0)
                 
-                response = client.generate_content(
-                    prompt,
-                    generation_config={
-                        'temperature': self.config.temperature,
-                        'max_output_tokens': self.config.max_tokens,
-                    }
-                )
+                # Skip low confidence or empty
+                if score < self.config.min_confidence:
+                    continue
+                if not skill_name or len(skill_name) < 2:
+                    continue
                 
-                if response.text:
-                    skills = self._parse_response(response.text)
-                    logger.debug(f"SlowPath: Extracted {len(skills)} skills")
-                    return skills
-                else:
-                    logger.warning("SlowPath: Empty response from Gemini")
-                    
-            except Exception as e:
-                logger.warning(f"SlowPath: Attempt {attempt + 1} failed: {e}")
-                if attempt < self.config.max_retries - 1:
-                    time.sleep(self.config.retry_delay * (2 ** attempt))
-                continue
-        
-        logger.error("SlowPath: All retry attempts exhausted")
-        return []
+                # Skip if already seen (case-insensitive)
+                skill_key = skill_name.lower()
+                if skill_key in seen_skills:
+                    continue
+                seen_skills.add(skill_key)
+                
+                # Skip generic terms
+                if self._is_generic_term(skill_name):
+                    continue
+                
+                # Map label to category
+                category = LABEL_TO_CATEGORY.get(label, "Other")
+                
+                skills.append({
+                    'skill_name': skill_name,
+                    'category': category,
+                    'subcategory': label,
+                    'confidence': round(score, 3),
+                    'extraction_method': 'gliner',
+                    'verified': False  # Needs validation against taxonomy
+                })
+            
+            logger.debug(f"SlowPath: Extracted {len(skills)} skills via GLiNER")
+            return skills
+            
+        except Exception as e:
+            logger.error(f"SlowPath: GLiNER extraction failed: {e}")
+            return []
     
-    def extract_skills_batch(self, texts: List[str], batch_size: int = 5) -> List[List[Dict]]:
+    def _is_generic_term(self, term: str) -> bool:
+        """Filter out generic terms that aren't real skills."""
+        generic_terms = {
+            'software', 'technology', 'data', 'system', 'systems',
+            'application', 'applications', 'tool', 'tools', 'platform',
+            'service', 'services', 'solution', 'solutions', 'product',
+            'products', 'framework', 'frameworks', 'library', 'libraries',
+            'code', 'coding', 'programming', 'development', 'engineering',
+            'analysis', 'analytics', 'database', 'databases', 'cloud',
+            'api', 'apis', 'web', 'mobile', 'backend', 'frontend',
+            'server', 'servers', 'client', 'clients', 'user', 'users',
+            'project', 'projects', 'team', 'teams', 'experience',
+            'skills', 'skill', 'knowledge', 'expertise', 'ability'
+        }
+        return term.lower() in generic_terms
+    
+    def extract_skills_batch(self, texts: List[str], batch_size: int = None) -> List[List[Dict]]:
         """
-        Extract skills from multiple texts.
-        Processes sequentially with rate limiting.
+        Extract skills from multiple texts efficiently.
         
         Args:
             texts: List of job descriptions
-            batch_size: Unused (kept for API compatibility)
+            batch_size: Override default batch size
         
         Returns:
             List of skill lists, one per input text
         """
-        results = []
-        for i, text in enumerate(texts):
-            skills = self.extract_skills(text)
-            results.append(skills)
-            
-            if (i + 1) % 10 == 0:
-                logger.info(f"SlowPath: Processed {i + 1}/{len(texts)} descriptions")
+        if not self.config.enabled or not texts:
+            return [[] for _ in texts]
         
+        model = self._load_model()
+        if model is None:
+            return [[] for _ in texts]
+        
+        batch_size = batch_size or self.config.batch_size
+        results = []
+        
+        # Process in batches for efficiency
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            
+            try:
+                # GLiNER batch prediction
+                batch_entities = model.batch_predict_entities(
+                    batch_texts,
+                    GLINER_SKILL_LABELS,
+                    threshold=self.config.threshold,
+                    flat_ner=self.config.flat_ner,
+                    multi_label=self.config.multi_label
+                )
+                
+                # Process each text's entities
+                for entities in batch_entities:
+                    skills = self._process_entities(entities)
+                    results.append(skills)
+                    
+            except Exception as e:
+                logger.error(f"SlowPath: Batch extraction failed: {e}")
+                # Return empty lists for failed batch
+                results.extend([[] for _ in batch_texts])
+        
+        logger.info(f"SlowPath: Batch processed {len(texts)} texts")
         return results
     
-    def is_available(self) -> bool:
-        """Check if the slow path extractor is configured and ready."""
-        return self.config is not None
+    def _process_entities(self, entities: List[Dict]) -> List[Dict]:
+        """Process raw GLiNER entities into skill dicts."""
+        skills = []
+        seen_skills = set()
+        
+        for entity in entities:
+            skill_name = entity.get('text', '').strip()
+            label = entity.get('label', 'other')
+            score = entity.get('score', 0.0)
+            
+            if score < self.config.min_confidence:
+                continue
+            if not skill_name or len(skill_name) < 2:
+                continue
+            
+            skill_key = skill_name.lower()
+            if skill_key in seen_skills:
+                continue
+            seen_skills.add(skill_key)
+            
+            if self._is_generic_term(skill_name):
+                continue
+            
+            category = LABEL_TO_CATEGORY.get(label, "Other")
+            
+            skills.append({
+                'skill_name': skill_name,
+                'category': category,
+                'subcategory': label,
+                'confidence': round(score, 3),
+                'extraction_method': 'gliner',
+                'verified': False
+            })
+        
+        return skills

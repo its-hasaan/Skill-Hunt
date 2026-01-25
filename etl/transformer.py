@@ -3,22 +3,23 @@ Skill Hunt - Skill Extraction Transformer
 ==========================================
 Extracts skills from job descriptions using HYBRID approach:
 - Fast Path: Regex-based matching for known skills (instant, free)
-- Slow Path: LLM-based extraction for skill discovery (Gemini Flash)
+- Slow Path: GLiNER NER-based extraction for skill discovery (local, free)
 
 Processes raw.jobs -> staging.stg_jobs + staging.stg_job_skills
 
 This transformer:
 1. Reads unprocessed jobs from raw.jobs
 2. Cleans and normalizes job data into staging.stg_jobs
-3. Extracts skills using hybrid extractor (regex + LLM discovery)
-4. Tracks new skill discoveries and auto-promotes to taxonomy
+3. Extracts skills using hybrid extractor (taxonomy + GLiNER discovery)
+4. Tracks new skill discoveries as "Unverified" for manual review
+5. Normalization (React.js -> React) handled by dbt layer
 
 Usage:
     python transformer.py                    # Process all unprocessed jobs
     python transformer.py --batch-size 500   # Process in smaller batches
     python transformer.py --reprocess        # Reprocess all jobs (dangerous)
-    python transformer.py --discovery-mode   # Force LLM extraction for all jobs
-    python transformer.py --fast-only        # Disable LLM, regex only
+    python transformer.py --discovery-mode   # Force GLiNER for all jobs
+    python transformer.py --fast-only        # Disable GLiNER, taxonomy only
 """
 
 import os
@@ -27,12 +28,16 @@ import re
 import json
 import argparse
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import execute_values, RealDictCursor
 from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
 import logging
 from typing import List, Dict, Set, Tuple, Optional
+from multiprocessing import Pool, cpu_count
+import queue
+import threading
 
 # Set up logging
 logging.basicConfig(
@@ -49,17 +54,42 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 DB_URL = os.getenv("SUPABASE_URL")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SKILLS_TAXONOMY_PATH = Path(__file__).parent / "config" / "skills_taxonomy.json"
 
-# Hybrid extraction settings (can be overridden via CLI)
+# GLiNER settings (can be overridden via CLI or env)
+ENABLE_GLINER = os.getenv("ENABLE_GLINER", "true").lower() == "true"
+GLINER_MODEL = os.getenv("GLINER_MODEL", "urchade/gliner_medium-v2.1")
 DISCOVERY_SAMPLE_RATE = float(os.getenv("DISCOVERY_SAMPLE_RATE", "0.1"))  # 10% of jobs
-COVERAGE_THRESHOLD = float(os.getenv("COVERAGE_THRESHOLD", "0.3"))  # Trigger slow path below this
+
+# Parallel processing settings
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", str(max(1, cpu_count() - 2))))  # Leave 1 core free
+DB_POOL_MIN_CONN = int(os.getenv("DB_POOL_MIN_CONN", "2"))
+DB_POOL_MAX_CONN = int(os.getenv("DB_POOL_MAX_CONN", str(MAX_WORKERS + 2)))
+
+# Global connection pool (initialized when needed)
+_connection_pool = None
+
+# Global worker extractor (initialized once per worker process)
+_worker_extractor = None
 
 
 # =============================================================================
 # HYBRID SKILL EXTRACTOR INTEGRATION
 # =============================================================================
+
+def init_worker(discovery_mode: bool, fast_only: bool):
+    """
+    Worker initializer - called ONCE when each worker process starts.
+    Loads the GLiNER model once per worker instead of once per job.
+    """
+    global _worker_extractor
+    _worker_extractor = create_skill_extractor(
+        discovery_mode=discovery_mode,
+        fast_only=fast_only,
+        db_connection=None
+    )
+    logger.info(f"Worker {os.getpid()} initialized with skill extractor")
+
 
 def create_skill_extractor(
     discovery_mode: bool = False,
@@ -67,26 +97,25 @@ def create_skill_extractor(
     db_connection=None
 ):
     """
-    Factory function to create the appropriate skill extractor.
+    Factory function to create the skill extractor.
     
     Args:
-        discovery_mode: If True, always use LLM for all jobs
-        fast_only: If True, disable LLM entirely
+        discovery_mode: If True, always use GLiNER for all jobs
+        fast_only: If True, disable GLiNER entirely (taxonomy only)
         db_connection: Database connection for discovery persistence
     
     Returns:
         Configured skill extractor instance
     """
-    # Try to import hybrid extractor
     try:
         from skill_extractor import HybridSkillExtractor, HybridConfig
         
         config = HybridConfig(
             taxonomy_path=SKILLS_TAXONOMY_PATH,
-            gemini_api_key=None if fast_only else GEMINI_API_KEY,
-            coverage_threshold=COVERAGE_THRESHOLD,
-            discovery_sample_rate=DISCOVERY_SAMPLE_RATE if not fast_only else 0,
+            enable_gliner=ENABLE_GLINER and not fast_only,
+            gliner_model=GLINER_MODEL,
             always_discover=discovery_mode,
+            discovery_sample_rate=DISCOVERY_SAMPLE_RATE if not fast_only else 0,
             auto_promote=True
         )
         
@@ -95,9 +124,11 @@ def create_skill_extractor(
             db_connection=db_connection
         )
         
-        mode = "discovery" if discovery_mode else ("fast-only" if fast_only else "hybrid")
-        logger.info(f"Initialized HybridSkillExtractor in {mode} mode")
+        logger.info(f"Initialized HybridSkillExtractor in '{extractor.mode}' mode")
         logger.info(f"Known skills in taxonomy: {extractor.get_known_skills_count()}")
+        
+        if extractor.mode == 'hybrid':
+            logger.info("GLiNER discovery enabled for finding new skills")
         
         return extractor
         
@@ -282,12 +313,40 @@ class SkillExtractor:
         return results
 
 
+def get_connection_pool():
+    """Get or create the database connection pool."""
+    global _connection_pool
+    if _connection_pool is None:
+        if not DB_URL:
+            logger.error("SUPABASE_URL not set in environment")
+            sys.exit(1)
+        _connection_pool = pool.ThreadedConnectionPool(
+            DB_POOL_MIN_CONN,
+            DB_POOL_MAX_CONN,
+            DB_URL
+        )
+        logger.info(f"Created connection pool: {DB_POOL_MIN_CONN}-{DB_POOL_MAX_CONN} connections")
+    return _connection_pool
+
+
 def get_db_connection():
     """Create and return a database connection."""
     if not DB_URL:
         logger.error("SUPABASE_URL not set in environment")
         sys.exit(1)
     return psycopg2.connect(DB_URL)
+
+
+def get_pooled_connection():
+    """Get a connection from the pool."""
+    conn_pool = get_connection_pool()
+    return conn_pool.getconn()
+
+
+def return_pooled_connection(conn):
+    """Return a connection to the pool."""
+    conn_pool = get_connection_pool()
+    conn_pool.putconn(conn)
 
 
 def get_or_create_skill(cursor, skill_name: str, category: str, subcategory: str) -> int:
@@ -423,6 +482,135 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
     
     columns = ['id', 'job_platform_id', 'search_role', 'country_code', 'raw_data', 'extracted_at']
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+# =============================================================================
+# PARALLEL PROCESSING WORKERS
+# =============================================================================
+
+def process_job_worker(raw_job: dict) -> Optional[Dict]:
+    """
+    Worker function to process a single job (runs in parallel).
+    Uses the pre-initialized extractor from init_worker().
+    
+    Args:
+        raw_job: Raw job record from database
+    
+    Returns:
+        Dict with parsed job + extracted skills, or None if error
+    """
+    global _worker_extractor
+    
+    try:
+        # Use the pre-initialized extractor (loaded once per worker process)
+        extractor = _worker_extractor
+        
+        if extractor is None:
+            logger.error(f"Worker {os.getpid()} has no initialized extractor!")
+            return None
+        
+        # Parse raw JSON
+        raw_data = raw_job['raw_data']
+        if isinstance(raw_data, str):
+            raw_data = json.loads(raw_data)
+        
+        # Parse job
+        parsed_job = parse_raw_job(
+            raw_data,
+            raw_job['id'],
+            raw_job['search_role'],
+            raw_job['country_code']
+        )
+        parsed_job['extracted_at'] = raw_job['extracted_at']
+        
+        # Extract skills
+        text_to_analyze = f"{parsed_job['title']} {parsed_job['description']}"
+        context = f"{parsed_job['title']} @ {parsed_job['company_name']}"
+        skills = extractor.extract_skills(text_to_analyze, context=context)
+        
+        return {
+            'parsed_job': parsed_job,
+            'skills': skills,
+            'raw_job_id': raw_job['id']
+        }
+        
+    except Exception as e:
+        logger.error(f"Worker error processing job {raw_job.get('id', 'unknown')}: {e}")
+        return None
+
+
+def bulk_insert_jobs(cursor, job_data_list: List[Dict]) -> Dict[int, int]:
+    """
+    Bulk insert jobs into staging using execute_values.
+    
+    Args:
+        cursor: Database cursor
+        job_data_list: List of parsed job dicts
+    
+    Returns:
+        Mapping of raw_job_id -> job_id
+    """
+    if not job_data_list:
+        return {}
+    
+    # Prepare bulk insert values
+    insert_values = [
+        (
+            job['job_platform_id'], job['search_role'], job['country_code'],
+            job['title'], job['company_name'], job['description'],
+            job['location_display'], job['location_areas'], job['category_tag'],
+            job['category_label'], job['salary_min'], job['salary_max'],
+            job['salary_is_predicted'], job['salary_currency'], job['contract_type'],
+            job['contract_time'], job['redirect_url'], job['job_posted_at'],
+            job['extracted_at'], job['raw_job_id']
+        )
+        for job in job_data_list
+    ]
+    
+    # Bulk insert with RETURNING to get job_ids
+    result = execute_values(
+        cursor,
+        """
+        INSERT INTO staging.stg_jobs (
+            job_platform_id, search_role, country_code, title, company_name,
+            description, location_display, location_areas, category_tag,
+            category_label, salary_min, salary_max, salary_is_predicted,
+            salary_currency, contract_type, contract_time, redirect_url,
+            job_posted_at, extracted_at, raw_job_id
+        ) VALUES %s
+        ON CONFLICT (job_platform_id, country_code) DO UPDATE SET
+            processed_at = NOW()
+        RETURNING raw_job_id, job_id
+        """,
+        insert_values,
+        fetch=True
+    )
+    
+    # Create mapping: raw_job_id -> job_id
+    return {row[0]: row[1] for row in result}
+
+
+def bulk_insert_skills(cursor, job_skills_data: List[Tuple]) -> None:
+    """
+    Bulk insert job skills using execute_values.
+    
+    Args:
+        cursor: Database cursor
+        job_skills_data: List of (job_id, skill_id, skill_name, mention_count) tuples
+    """
+    if not job_skills_data:
+        return
+    
+    execute_values(
+        cursor,
+        """
+        INSERT INTO staging.stg_job_skills (job_id, skill_id, skill_name, mention_count)
+        VALUES %s
+        ON CONFLICT (job_id, skill_id) DO UPDATE SET
+            mention_count = EXCLUDED.mention_count
+        """,
+        job_skills_data
+    )
 
 
 def transform_and_load(
@@ -603,22 +791,181 @@ def transform_and_load(
     }
 
 
+def transform_and_load_parallel(
+    batch_size: int = 1000,
+    reprocess: bool = False,
+    discovery_mode: bool = False,
+    fast_only: bool = False,
+    num_workers: int = MAX_WORKERS
+):
+    """
+    PARALLEL transformation function using multiprocessing.
+    
+    Significantly faster than sequential processing by:
+    - Processing multiple jobs concurrently (CPU parallelization)
+    - Bulk database inserts (reduces DB round-trips)
+    - Connection pooling (efficient DB resource usage)
+    
+    Args:
+        batch_size: Number of jobs to process per batch
+        reprocess: If True, reprocess all jobs (truncates staging tables)
+        discovery_mode: If True, use GLiNER for all jobs
+        fast_only: If True, disable GLiNER entirely
+        num_workers: Number of parallel worker processes
+    """
+    logger.info("Starting PARALLEL transformation process...")
+    logger.info(f"Mode: {'discovery' if discovery_mode else 'fast-only' if fast_only else 'hybrid'}")
+    logger.info(f"Workers: {num_workers} parallel processes")
+    logger.info(f"Batch size: {batch_size}")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if reprocess:
+        logger.warning("REPROCESS MODE: Truncating staging tables...")
+        cursor.execute("TRUNCATE staging.stg_job_skills CASCADE")
+        cursor.execute("TRUNCATE staging.stg_jobs CASCADE")
+        conn.commit()
+    
+    # Statistics
+    total_processed = 0
+    total_skills_extracted = 0
+    start_time = datetime.now()
+    
+    # Create worker pool with initializer that loads the model ONCE per worker
+    logger.info("Initializing worker pool (each worker will load GLiNER model once)...")
+    
+    with Pool(
+        processes=num_workers,
+        initializer=init_worker,
+        initargs=(discovery_mode, fast_only)
+    ) as pool:
+        while True:
+            # Get batch of unprocessed jobs
+            raw_jobs = get_unprocessed_jobs(cursor, batch_size)
+            
+            if not raw_jobs:
+                logger.info("No more unprocessed jobs found.")
+                break
+            
+            logger.info(f"Processing batch of {len(raw_jobs)} jobs in parallel...")
+            batch_start = datetime.now()
+            
+            # PARALLEL PROCESSING: Map jobs to worker pool
+            # Workers reuse their pre-initialized extractor (no repeated model loading)
+            results = pool.map(process_job_worker, raw_jobs)
+            
+            # Filter out failed jobs
+            successful_results = [r for r in results if r is not None]
+            failed_count = len(results) - len(successful_results)
+            
+            if failed_count > 0:
+                logger.warning(f"{failed_count} jobs failed processing in this batch")
+            
+            if not successful_results:
+                logger.warning("No successful results in this batch, skipping...")
+                continue
+            
+            # Prepare data for bulk insert
+            job_data_list = [r['parsed_job'] for r in successful_results]
+            
+            # BULK INSERT jobs
+            raw_to_job_id = bulk_insert_jobs(cursor, job_data_list)
+            
+            # Prepare skill insert data
+            job_skills_data = []
+            for result in successful_results:
+                raw_job_id = result['raw_job_id']
+                job_id = raw_to_job_id.get(raw_job_id)
+                
+                if not job_id:
+                    logger.warning(f"Could not find job_id for raw_job_id {raw_job_id}")
+                    continue
+                
+                for skill in result['skills']:
+                    # Handle both mention_count (fast path) and confidence (slow path)
+                    mention_count = skill.get('mention_count', 1)
+                    if mention_count == 0 and 'confidence' in skill:
+                        mention_count = 1
+                    
+                    skill_id = get_or_create_skill(
+                        cursor,
+                        skill['skill_name'],
+                        skill['category'],
+                        skill.get('subcategory', '')
+                    )
+                    
+                    job_skills_data.append((
+                        job_id,
+                        skill_id,
+                        skill['skill_name'],
+                        mention_count
+                    ))
+                    total_skills_extracted += 1
+            
+            # BULK INSERT skills
+            bulk_insert_skills(cursor, job_skills_data)
+            
+            # Commit batch
+            conn.commit()
+            
+            total_processed += len(successful_results)
+            batch_elapsed = (datetime.now() - batch_start).total_seconds()
+            jobs_per_sec = len(successful_results) / batch_elapsed if batch_elapsed > 0 else 0
+            
+            logger.info(f"Batch complete: {len(successful_results)} jobs in {batch_elapsed:.2f}s ({jobs_per_sec:.1f} jobs/sec)")
+            logger.info(f"Total processed: {total_processed}")
+    
+    cursor.close()
+    conn.close()
+    
+    # Summary
+    elapsed = (datetime.now() - start_time).total_seconds()
+    logger.info(f"\n{'='*60}")
+    logger.info(f"PARALLEL TRANSFORMATION COMPLETE")
+    logger.info(f"{'='*60}")
+    logger.info(f"Jobs processed: {total_processed}")
+    logger.info(f"Skills extracted: {total_skills_extracted}")
+    logger.info(f"Time elapsed: {elapsed:.2f} seconds")
+    logger.info(f"Average speed: {total_processed / elapsed:.1f} jobs/second")
+    logger.info(f"Workers used: {num_workers}")
+    logger.info(f"{'='*60}")
+    
+    return {
+        "jobs_processed": total_processed,
+        "skills_extracted": total_skills_extracted,
+        "elapsed_seconds": elapsed,
+        "jobs_per_second": total_processed / elapsed if elapsed > 0 else 0
+    }
+
+
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(
-        description='Transform raw job data and extract skills using hybrid approach'
+        description='Transform raw job data and extract skills using hybrid approach (taxonomy + GLiNER)'
     )
     parser.add_argument('--batch-size', type=int, default=1000, help='Jobs per batch')
     parser.add_argument('--reprocess', action='store_true', help='Reprocess all jobs (dangerous!)')
     parser.add_argument(
         '--discovery-mode',
         action='store_true',
-        help='Force LLM extraction for all jobs (expensive, use for targeted discovery)'
+        help='Force GLiNER extraction for ALL jobs (slower, but finds more skills)'
     )
     parser.add_argument(
         '--fast-only',
         action='store_true',
-        help='Disable LLM extraction entirely (fast, no new skill discovery)'
+        help='Disable GLiNER entirely, use only taxonomy-based extraction (fast)'
+    )
+    parser.add_argument(
+        '--parallel',
+        action='store_true',
+        help='Enable parallel processing for faster execution (recommended for large batches)'
+    )
+    parser.add_argument(
+        '--workers',
+        type=int,
+        default=MAX_WORKERS,
+        help=f'Number of parallel workers (default: {MAX_WORKERS}, auto-detected from CPU cores)'
     )
     
     args = parser.parse_args()
@@ -633,12 +980,22 @@ def main():
             logger.info("Aborted.")
             return
     
-    transform_and_load(
-        batch_size=args.batch_size,
-        reprocess=args.reprocess,
-        discovery_mode=args.discovery_mode,
-        fast_only=args.fast_only
-    )
+    # Choose parallel or sequential processing
+    if args.parallel:
+        transform_and_load_parallel(
+            batch_size=args.batch_size,
+            reprocess=args.reprocess,
+            discovery_mode=args.discovery_mode,
+            fast_only=args.fast_only,
+            num_workers=args.workers
+        )
+    else:
+        transform_and_load(
+            batch_size=args.batch_size,
+            reprocess=args.reprocess,
+            discovery_mode=args.discovery_mode,
+            fast_only=args.fast_only
+        )
 
 
 if __name__ == "__main__":

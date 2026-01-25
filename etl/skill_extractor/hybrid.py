@@ -1,14 +1,14 @@
 """
 Hybrid Skill Extractor
 ======================
-Orchestrates fast path (regex) and slow path (LLM) extraction.
-Implements the intelligent routing logic for optimal cost/coverage tradeoff.
+Orchestrates fast path (regex/taxonomy) and slow path (GLiNER) extraction.
 
 Strategy:
-1. Always run fast path first (free, instant)
-2. Analyze coverage confidence
-3. If confidence low OR discovery mode enabled, invoke slow path
-4. Merge results, deduplicate, track discoveries
+1. Always run fast path first (free, instant) for known skills
+2. Optionally run GLiNER for skill discovery
+3. Validate GLiNER findings against taxonomy (whitelist)
+4. Mark unmatched skills as "Unverified" for manual review
+5. Normalization (React.js -> React) handled by dbt layer
 """
 
 import logging
@@ -29,15 +29,16 @@ class HybridConfig:
     # Fast path settings
     taxonomy_path: Path = None
     
-    # Slow path settings
-    gemini_api_key: str = None
-    gemini_model: str = "gemini-2.0-flash"
+    # Slow path (GLiNER) settings
+    enable_gliner: bool = True  # Enable GLiNER for skill discovery
+    gliner_model: str = "urchade/gliner_medium-v2.1"
+    gliner_threshold: float = 0.4
+    gliner_min_confidence: float = 0.5
     
-    # Hybrid routing settings
-    coverage_threshold: float = 0.3  # Below this, invoke slow path
-    min_skills_for_fast_only: int = 3  # If fast path finds >= N skills, skip slow path
-    always_discover: bool = False  # If True, always run slow path for discovery
-    discovery_sample_rate: float = 0.1  # Sample 10% of jobs for discovery even if coverage is good
+    # Routing settings
+    min_skills_for_fast_only: int = 5  # If fast path finds >= N skills, skip GLiNER
+    always_discover: bool = False  # If True, always run GLiNER
+    discovery_sample_rate: float = 0.1  # Sample 10% of jobs for discovery
     
     # Discovery settings
     auto_promote: bool = True  # Auto-promote discoveries meeting threshold
@@ -45,25 +46,21 @@ class HybridConfig:
 
 class HybridSkillExtractor:
     """
-    Production skill extractor combining regex and LLM approaches.
+    Production skill extractor combining taxonomy matching and GLiNER discovery.
     
     Flow:
-    1. Run fast path on all job descriptions
-    2. Calculate coverage confidence
-    3. Route to slow path if:
-       - Coverage below threshold, OR
-       - Too few skills found, OR
-       - Discovery mode enabled, OR
-       - Randomly sampled for discovery
-    4. Merge and deduplicate results
-    5. Track new discoveries for taxonomy growth
+    1. Run fast path on all job descriptions (taxonomy-based)
+    2. Optionally run GLiNER for skill discovery
+    3. Validate GLiNER findings against taxonomy (whitelist)
+    4. Merge results: fast path = verified, GLiNER not in taxonomy = unverified
+    5. Track new discoveries for manual review
     """
     
     def __init__(
         self,
         config: Optional[HybridConfig] = None,
         taxonomy_path: Optional[Path] = None,
-        gemini_api_key: Optional[str] = None,
+        gemini_api_key: Optional[str] = None,  # Deprecated, ignored
         db_connection=None
     ):
         """
@@ -72,35 +69,33 @@ class HybridSkillExtractor:
         Args:
             config: Full configuration object
             taxonomy_path: Path to skills_taxonomy.json
-            gemini_api_key: Google Gemini API key
+            gemini_api_key: DEPRECATED - ignored
             db_connection: Optional database connection for discovery persistence
         """
         # Build config from individual params if not provided
         if config is None:
-            config = HybridConfig(
-                taxonomy_path=taxonomy_path,
-                gemini_api_key=gemini_api_key
-            )
+            config = HybridConfig(taxonomy_path=taxonomy_path)
         
         self.config = config
         
-        # Initialize fast path
+        # Initialize fast path (taxonomy-based extraction)
         if config.taxonomy_path:
             self.fast_path = FastPathExtractor(taxonomy_path=config.taxonomy_path)
         else:
             logger.warning("HybridExtractor: No taxonomy path provided, fast path disabled")
             self.fast_path = None
         
-        # Initialize slow path
-        if config.gemini_api_key:
+        # Initialize slow path (GLiNER)
+        if config.enable_gliner:
             slow_config = SlowPathConfig(
-                api_key=config.gemini_api_key,
-                model=config.gemini_model
+                model_name=config.gliner_model,
+                threshold=config.gliner_threshold,
+                min_confidence=config.gliner_min_confidence,
+                enabled=True
             )
             self.slow_path = SlowPathExtractor(config=slow_config)
         else:
-            logger.info("HybridExtractor: No Gemini API key, slow path disabled")
-            self.slow_path = None
+            self.slow_path = SlowPathExtractor(config=SlowPathConfig(enabled=False))
         
         # Initialize discovery manager
         self.discovery_manager = SkillDiscoveryManager(
@@ -112,38 +107,42 @@ class HybridSkillExtractor:
         self._stats = {
             'total_extractions': 0,
             'fast_path_only': 0,
-            'slow_path_invoked': 0,
-            'new_discoveries': 0
+            'gliner_invoked': 0,
+            'new_discoveries': 0,
+            'verified_skills': 0,
+            'unverified_skills': 0
         }
         
         # For sampling-based discovery
         self._extraction_counter = 0
+        
+        # Determine mode
+        if config.enable_gliner and self.slow_path.is_available():
+            self.mode = 'hybrid'
+        else:
+            self.mode = 'fast_only'
+        
+        logger.info(f"HybridExtractor initialized in '{self.mode}' mode")
     
-    def _should_invoke_slow_path(self, fast_results: List[Dict], coverage_stats: dict) -> bool:
+    def _should_invoke_gliner(self, fast_results: List[Dict]) -> bool:
         """
-        Decide whether to invoke the slow path for a given job.
+        Decide whether to invoke GLiNER for a given job.
         
         Returns:
-            True if slow path should be invoked
+            True if GLiNER should be invoked
         """
-        if not self.slow_path or not self.slow_path.is_available():
+        if not self.config.enable_gliner:
+            return False
+        
+        if not self.slow_path.is_available():
             return False
         
         # Always discover mode
         if self.config.always_discover:
             return True
         
-        # Too few skills found
+        # Too few skills found by fast path
         if len(fast_results) < self.config.min_skills_for_fast_only:
-            return True
-        
-        # Low coverage confidence
-        if coverage_stats.get('coverage_confidence', 1.0) < self.config.coverage_threshold:
-            return True
-        
-        # Has unmatched potential terms
-        unmatched = coverage_stats.get('unmatched_potential_terms', [])
-        if len(unmatched) > 5:  # Many potential skills not in taxonomy
             return True
         
         # Random sampling for discovery
@@ -154,69 +153,111 @@ class HybridSkillExtractor:
         
         return False
     
+    def _validate_against_taxonomy(self, gliner_skills: List[Dict]) -> tuple:
+        """
+        Validate GLiNER findings against taxonomy whitelist.
+        
+        Returns:
+            (verified_skills, unverified_skills)
+        """
+        verified = []
+        unverified = []
+        
+        for skill in gliner_skills:
+            skill_name = skill.get('skill_name', '')
+            
+            # Check if skill is in taxonomy (fast path knows it)
+            if self.fast_path and self.fast_path.is_known_skill(skill_name):
+                # GLiNER found a known skill - mark as verified
+                skill['verified'] = True
+                skill['extraction_method'] = 'gliner_verified'
+                verified.append(skill)
+            else:
+                # New skill not in taxonomy - mark as unverified
+                skill['verified'] = False
+                skill['extraction_method'] = 'gliner_unverified'
+                unverified.append(skill)
+        
+        return verified, unverified
+    
     def _merge_results(
         self,
         fast_results: List[Dict],
-        slow_results: List[Dict]
-    ) -> List[Dict]:
+        gliner_results: List[Dict]
+    ) -> tuple:
         """
-        Merge fast and slow path results, preferring fast path for known skills.
+        Merge fast path and GLiNER results.
+        
+        Strategy:
+        - Fast path results are authoritative for known skills
+        - GLiNER adds new discoveries (unverified)
+        - Deduplication is case-insensitive
         
         Returns:
-            Merged and deduplicated skill list
+            (merged_skills, new_discoveries)
         """
         # Index fast results by normalized name
         merged: Dict[str, Dict] = {}
         
-        # Add fast path results first (authoritative for known skills)
+        # Add fast path results first (authoritative)
         for skill in fast_results:
             key = skill['skill_name'].lower()
+            skill['verified'] = True
+            skill['extraction_method'] = 'taxonomy'
             merged[key] = skill
         
-        # Add slow path results (new discoveries only)
-        new_discoveries = []
-        for skill in slow_results:
+        # Validate GLiNER results against taxonomy
+        verified_gliner, unverified_gliner = self._validate_against_taxonomy(gliner_results)
+        
+        # Add GLiNER verified (already in taxonomy, but found by GLiNER)
+        # Skip if fast path already found it
+        for skill in verified_gliner:
             key = skill['skill_name'].lower()
             if key not in merged:
-                # Check if it's truly new (not in fast path taxonomy)
-                if self.fast_path and not self.fast_path.is_known_skill(skill['skill_name']):
-                    merged[key] = skill
-                    new_discoveries.append(skill)
-                elif not self.fast_path:
-                    merged[key] = skill
-                    new_discoveries.append(skill)
+                merged[key] = skill
+        
+        # Add unverified discoveries
+        new_discoveries = []
+        for skill in unverified_gliner:
+            key = skill['skill_name'].lower()
+            if key not in merged:
+                merged[key] = skill
+                new_discoveries.append(skill)
         
         return list(merged.values()), new_discoveries
     
     def extract_skills(self, text: str, context: str = "") -> List[Dict]:
         """
-        Extract skills from text using the hybrid approach.
+        Extract skills from text using hybrid approach.
         
         Args:
             text: Job description to analyze
             context: Optional context (e.g., job title) for discovery tracking
         
         Returns:
-            List of skill dicts with name, category, subcategory, mention_count/confidence
+            List of skill dicts with:
+            - skill_name: Skill name
+            - category: Skill category
+            - subcategory: More specific classification
+            - mention_count/confidence: Score
+            - verified: True if from taxonomy, False if GLiNER discovery
+            - extraction_method: 'taxonomy', 'gliner_verified', 'gliner_unverified'
         """
         self._stats['total_extractions'] += 1
         
         # Step 1: Fast path (always)
         fast_results = []
-        coverage_stats = {}
-        
         if self.fast_path:
             fast_results = self.fast_path.extract_skills(text)
-            coverage_stats = self.fast_path.get_coverage_stats(text)
         
-        # Step 2: Decide on slow path
-        if self._should_invoke_slow_path(fast_results, coverage_stats):
-            self._stats['slow_path_invoked'] += 1
+        # Step 2: Decide on GLiNER
+        if self._should_invoke_gliner(fast_results):
+            self._stats['gliner_invoked'] += 1
             
-            slow_results = self.slow_path.extract_skills(text)
+            gliner_results = self.slow_path.extract_skills(text)
             
             # Step 3: Merge results
-            merged_results, new_discoveries = self._merge_results(fast_results, slow_results)
+            merged_results, new_discoveries = self._merge_results(fast_results, gliner_results)
             
             # Step 4: Track discoveries
             if new_discoveries:
@@ -225,14 +266,26 @@ class HybridSkillExtractor:
                     context=context
                 )
                 self._stats['new_discoveries'] += new_count
+                self._stats['unverified_skills'] += len(new_discoveries)
                 
                 # Auto-promote if enabled
                 if self.config.auto_promote:
-                    promoted = self.discovery_manager.auto_promote(self.fast_path)
+                    self.discovery_manager.auto_promote(self.fast_path)
+            
+            # Count verified
+            verified_count = sum(1 for s in merged_results if s.get('verified', False))
+            self._stats['verified_skills'] += verified_count
             
             return merged_results
         else:
             self._stats['fast_path_only'] += 1
+            self._stats['verified_skills'] += len(fast_results)
+            
+            # Mark fast path results as verified
+            for skill in fast_results:
+                skill['verified'] = True
+                skill['extraction_method'] = 'taxonomy'
+            
             return fast_results
     
     def extract_skills_batch(
@@ -269,10 +322,12 @@ class HybridSkillExtractor:
             'fast_path_ratio': (
                 self._stats['fast_path_only'] / max(1, self._stats['total_extractions'])
             ),
-            'slow_path_ratio': (
-                self._stats['slow_path_invoked'] / max(1, self._stats['total_extractions'])
+            'gliner_ratio': (
+                self._stats['gliner_invoked'] / max(1, self._stats['total_extractions'])
             ),
-            'discovery': discovery_stats
+            'discovery': discovery_stats,
+            'mode': self.mode,
+            'gliner_available': self.slow_path.is_available() if self.slow_path else False
         }
     
     def reset_stats(self):
@@ -280,25 +335,27 @@ class HybridSkillExtractor:
         self._stats = {
             'total_extractions': 0,
             'fast_path_only': 0,
-            'slow_path_invoked': 0,
-            'new_discoveries': 0
+            'gliner_invoked': 0,
+            'new_discoveries': 0,
+            'verified_skills': 0,
+            'unverified_skills': 0
         }
     
     def force_discover(self, text: str, context: str = "") -> List[Dict]:
         """
-        Force slow path extraction regardless of coverage.
+        Force GLiNER extraction regardless of routing rules.
         Useful for targeted discovery runs.
         """
         if not self.slow_path or not self.slow_path.is_available():
-            logger.warning("force_discover called but slow path unavailable")
+            logger.warning("force_discover called but GLiNER unavailable, using fast path only")
             return self.extract_skills(text, context)
         
         # Run both paths
         fast_results = self.fast_path.extract_skills(text) if self.fast_path else []
-        slow_results = self.slow_path.extract_skills(text)
+        gliner_results = self.slow_path.extract_skills(text)
         
         # Merge and track
-        merged, new_discoveries = self._merge_results(fast_results, slow_results)
+        merged, new_discoveries = self._merge_results(fast_results, gliner_results)
         
         if new_discoveries:
             self.discovery_manager.record_discoveries_batch(new_discoveries, context)
@@ -314,5 +371,5 @@ class HybridSkillExtractor:
         return 0
     
     def get_discovered_skills(self) -> List[Dict]:
-        """Get all discovered skills."""
+        """Get all discovered skills (unverified)."""
         return self.discovery_manager.export_discoveries()

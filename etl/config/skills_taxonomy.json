@@ -4,169 +4,277 @@
       "name": "Python",
       "category": "Programming Language",
       "subcategory": "General Purpose",
-      "aliases": ["python3", "python2", "py", "cpython"]
+      "aliases": [
+        "python3",
+        "python2",
+        "py",
+        "cpython"
+      ]
     },
     {
       "name": "SQL",
       "category": "Programming Language",
       "subcategory": "Query Language",
-      "aliases": ["structured query language", "sql server", "t-sql", "tsql", "pl/sql", "plsql"]
+      "aliases": [
+        "structured query language",
+        "sql server",
+        "t-sql",
+        "tsql",
+        "pl/sql",
+        "plsql"
+      ]
     },
     {
       "name": "R",
       "category": "Programming Language",
       "subcategory": "Statistical",
-      "aliases": ["r programming", "r language", "rstudio", "r-studio"]
+      "aliases": [
+        "r programming",
+        "r language",
+        "rstudio",
+        "r-studio"
+      ]
     },
     {
       "name": "Java",
       "category": "Programming Language",
       "subcategory": "General Purpose",
-      "aliases": ["java8", "java11", "java17", "jdk", "jvm"]
+      "aliases": [
+        "java8",
+        "java11",
+        "java17",
+        "jdk",
+        "jvm"
+      ]
     },
     {
       "name": "Scala",
       "category": "Programming Language",
       "subcategory": "JVM",
-      "aliases": ["scala2", "scala3"]
+      "aliases": [
+        "scala2",
+        "scala3"
+      ]
     },
     {
       "name": "JavaScript",
       "category": "Programming Language",
       "subcategory": "Web",
-      "aliases": ["js", "es6", "es2015", "ecmascript", "vanilla js"]
+      "aliases": [
+        "js",
+        "es6",
+        "es2015",
+        "ecmascript",
+        "vanilla js"
+      ]
     },
     {
       "name": "TypeScript",
       "category": "Programming Language",
       "subcategory": "Web",
-      "aliases": ["ts", "typescript"]
+      "aliases": [
+        "ts",
+        "typescript"
+      ]
     },
     {
       "name": "Go",
       "category": "Programming Language",
       "subcategory": "Systems",
-      "aliases": ["golang", "go lang"]
+      "aliases": [
+        "golang",
+        "go lang"
+      ]
     },
     {
       "name": "Rust",
       "category": "Programming Language",
       "subcategory": "Systems",
-      "aliases": ["rust-lang", "rustlang"]
+      "aliases": [
+        "rust-lang",
+        "rustlang"
+      ]
     },
     {
       "name": "C++",
       "category": "Programming Language",
       "subcategory": "Systems",
-      "aliases": ["cpp", "c plus plus", "cplusplus"]
+      "aliases": [
+        "cpp",
+        "c plus plus",
+        "cplusplus"
+      ]
     },
     {
       "name": "C#",
       "category": "Programming Language",
       "subcategory": ".NET",
-      "aliases": ["csharp", "c sharp", "dotnet", ".net"]
+      "aliases": [
+        "csharp",
+        "c sharp",
+        "dotnet",
+        ".net"
+      ]
     },
     {
       "name": "Kotlin",
       "category": "Programming Language",
       "subcategory": "JVM/Mobile",
-      "aliases": ["kotlin"]
+      "aliases": [
+        "kotlin"
+      ]
     },
     {
       "name": "Swift",
       "category": "Programming Language",
       "subcategory": "Mobile",
-      "aliases": ["swiftui"]
+      "aliases": [
+        "swiftui"
+      ]
     },
     {
       "name": "PHP",
       "category": "Programming Language",
       "subcategory": "Web",
-      "aliases": ["php7", "php8"]
+      "aliases": [
+        "php7",
+        "php8"
+      ]
     },
     {
       "name": "Ruby",
       "category": "Programming Language",
       "subcategory": "Web",
-      "aliases": ["ruby on rails", "ror"]
+      "aliases": [
+        "ruby on rails",
+        "ror"
+      ]
     },
     {
       "name": "Bash",
       "category": "Programming Language",
       "subcategory": "Scripting",
-      "aliases": ["shell", "shell scripting", "bash scripting", "sh", "zsh"]
+      "aliases": [
+        "shell",
+        "shell scripting",
+        "bash scripting",
+        "sh",
+        "zsh"
+      ]
     },
     {
       "name": "PowerShell",
       "category": "Programming Language",
       "subcategory": "Scripting",
-      "aliases": ["powershell core", "pwsh"]
+      "aliases": [
+        "powershell core",
+        "pwsh"
+      ]
     },
     {
       "name": "Apache Spark",
       "category": "Big Data",
       "subcategory": "Processing Framework",
-      "aliases": ["spark", "pyspark", "spark sql", "spark streaming", "databricks spark"]
+      "aliases": [
+        "spark",
+        "pyspark",
+        "spark sql",
+        "spark streaming",
+        "databricks spark"
+      ]
     },
     {
       "name": "Apache Kafka",
       "category": "Big Data",
       "subcategory": "Streaming",
-      "aliases": ["kafka", "kafka streams", "confluent kafka", "confluent"]
+      "aliases": [
+        "kafka",
+        "kafka streams",
+        "confluent kafka",
+        "confluent"
+      ]
     },
     {
       "name": "Apache Airflow",
       "category": "Data Engineering",
       "subcategory": "Orchestration",
-      "aliases": ["airflow", "astronomer"]
+      "aliases": [
+        "airflow",
+        "astronomer"
+      ]
     },
     {
       "name": "Apache Flink",
       "category": "Big Data",
       "subcategory": "Streaming",
-      "aliases": ["flink"]
+      "aliases": [
+        "flink"
+      ]
     },
     {
       "name": "Apache Hadoop",
       "category": "Big Data",
       "subcategory": "Storage/Processing",
-      "aliases": ["hadoop", "hdfs", "mapreduce", "yarn"]
+      "aliases": [
+        "hadoop",
+        "hdfs",
+        "mapreduce",
+        "yarn"
+      ]
     },
     {
       "name": "Apache Hive",
       "category": "Big Data",
       "subcategory": "Query Engine",
-      "aliases": ["hive", "hiveql"]
+      "aliases": [
+        "hive",
+        "hiveql"
+      ]
     },
     {
       "name": "Presto",
       "category": "Big Data",
       "subcategory": "Query Engine",
-      "aliases": ["prestodb", "presto sql", "trino"]
+      "aliases": [
+        "prestodb",
+        "presto sql",
+        "trino"
+      ]
     },
     {
       "name": "dbt",
       "category": "Data Engineering",
       "subcategory": "Transformation",
-      "aliases": ["dbt core", "dbt cloud", "data build tool"]
+      "aliases": [
+        "dbt core",
+        "dbt cloud",
+        "data build tool"
+      ]
     },
     {
       "name": "Dagster",
       "category": "Data Engineering",
       "subcategory": "Orchestration",
-      "aliases": ["dagster cloud"]
+      "aliases": [
+        "dagster cloud"
+      ]
     },
     {
       "name": "Prefect",
       "category": "Data Engineering",
       "subcategory": "Orchestration",
-      "aliases": ["prefect cloud", "prefect 2"]
+      "aliases": [
+        "prefect cloud",
+        "prefect 2"
+      ]
     },
     {
       "name": "Luigi",
       "category": "Data Engineering",
       "subcategory": "Orchestration",
-      "aliases": ["spotify luigi"]
+      "aliases": [
+        "spotify luigi"
+      ]
     },
     {
       "name": "Fivetran",
@@ -184,259 +292,404 @@
       "name": "Stitch",
       "category": "Data Engineering",
       "subcategory": "Data Integration",
-      "aliases": ["stitch data"]
+      "aliases": [
+        "stitch data"
+      ]
     },
     {
       "name": "AWS",
       "category": "Cloud",
       "subcategory": "Platform",
-      "aliases": ["amazon web services", "amazon aws"]
+      "aliases": [
+        "amazon web services",
+        "amazon aws"
+      ]
     },
     {
       "name": "AWS S3",
       "category": "Cloud",
       "subcategory": "AWS Storage",
-      "aliases": ["s3", "simple storage service", "amazon s3"]
+      "aliases": [
+        "s3",
+        "simple storage service",
+        "amazon s3"
+      ]
     },
     {
       "name": "AWS Redshift",
       "category": "Cloud",
       "subcategory": "AWS Data Warehouse",
-      "aliases": ["redshift", "amazon redshift", "redshift spectrum"]
+      "aliases": [
+        "redshift",
+        "amazon redshift",
+        "redshift spectrum"
+      ]
     },
     {
       "name": "AWS Glue",
       "category": "Cloud",
       "subcategory": "AWS Data Integration",
-      "aliases": ["glue", "aws glue etl", "glue catalog"]
+      "aliases": [
+        "glue",
+        "aws glue etl",
+        "glue catalog"
+      ]
     },
     {
       "name": "AWS Lambda",
       "category": "Cloud",
       "subcategory": "AWS Compute",
-      "aliases": ["lambda", "serverless lambda"]
+      "aliases": [
+        "lambda",
+        "serverless lambda"
+      ]
     },
     {
       "name": "AWS EMR",
       "category": "Cloud",
       "subcategory": "AWS Big Data",
-      "aliases": ["emr", "elastic mapreduce", "amazon emr"]
+      "aliases": [
+        "emr",
+        "elastic mapreduce",
+        "amazon emr"
+      ]
     },
     {
       "name": "AWS Athena",
       "category": "Cloud",
       "subcategory": "AWS Analytics",
-      "aliases": ["athena", "amazon athena"]
+      "aliases": [
+        "athena",
+        "amazon athena"
+      ]
     },
     {
       "name": "AWS Kinesis",
       "category": "Cloud",
       "subcategory": "AWS Streaming",
-      "aliases": ["kinesis", "kinesis firehose", "kinesis streams"]
+      "aliases": [
+        "kinesis",
+        "kinesis firehose",
+        "kinesis streams"
+      ]
     },
     {
       "name": "AWS SageMaker",
       "category": "Cloud",
       "subcategory": "AWS ML",
-      "aliases": ["sagemaker", "amazon sagemaker"]
+      "aliases": [
+        "sagemaker",
+        "amazon sagemaker"
+      ]
     },
     {
       "name": "AWS EC2",
       "category": "Cloud",
       "subcategory": "AWS Compute",
-      "aliases": ["ec2", "elastic compute"]
+      "aliases": [
+        "ec2",
+        "elastic compute"
+      ]
     },
     {
       "name": "AWS RDS",
       "category": "Cloud",
       "subcategory": "AWS Database",
-      "aliases": ["rds", "relational database service"]
+      "aliases": [
+        "rds",
+        "relational database service"
+      ]
     },
     {
       "name": "AWS DynamoDB",
       "category": "Cloud",
       "subcategory": "AWS Database",
-      "aliases": ["dynamodb", "dynamo"]
+      "aliases": [
+        "dynamodb",
+        "dynamo"
+      ]
     },
     {
       "name": "Azure",
       "category": "Cloud",
       "subcategory": "Platform",
-      "aliases": ["microsoft azure", "azure cloud"]
+      "aliases": [
+        "microsoft azure",
+        "azure cloud"
+      ]
     },
     {
       "name": "Azure Data Factory",
       "category": "Cloud",
       "subcategory": "Azure Data Integration",
-      "aliases": ["adf", "data factory"]
+      "aliases": [
+        "adf",
+        "data factory"
+      ]
     },
     {
       "name": "Azure Synapse",
       "category": "Cloud",
       "subcategory": "Azure Analytics",
-      "aliases": ["synapse analytics", "synapse", "azure synapse analytics"]
+      "aliases": [
+        "synapse analytics",
+        "synapse",
+        "azure synapse analytics"
+      ]
     },
     {
       "name": "Azure Databricks",
       "category": "Cloud",
       "subcategory": "Azure Big Data",
-      "aliases": ["databricks", "databricks on azure"]
+      "aliases": [
+        "databricks",
+        "databricks on azure"
+      ]
     },
     {
       "name": "Azure Blob Storage",
       "category": "Cloud",
       "subcategory": "Azure Storage",
-      "aliases": ["blob storage", "azure blob", "adls", "azure data lake storage", "data lake"]
+      "aliases": [
+        "blob storage",
+        "azure blob",
+        "adls",
+        "azure data lake storage",
+        "data lake"
+      ]
     },
     {
       "name": "Azure Functions",
       "category": "Cloud",
       "subcategory": "Azure Compute",
-      "aliases": ["azure function"]
+      "aliases": [
+        "azure function"
+      ]
     },
     {
       "name": "Azure DevOps",
       "category": "DevOps",
       "subcategory": "CI/CD",
-      "aliases": ["ado", "azure pipelines"]
+      "aliases": [
+        "ado",
+        "azure pipelines"
+      ]
     },
     {
       "name": "Azure ML",
       "category": "Cloud",
       "subcategory": "Azure ML",
-      "aliases": ["azure machine learning", "azureml"]
+      "aliases": [
+        "azure machine learning",
+        "azureml"
+      ]
     },
     {
       "name": "Google Cloud Platform",
       "category": "Cloud",
       "subcategory": "Platform",
-      "aliases": ["gcp", "google cloud"]
+      "aliases": [
+        "gcp",
+        "google cloud"
+      ]
     },
     {
       "name": "BigQuery",
       "category": "Cloud",
       "subcategory": "GCP Data Warehouse",
-      "aliases": ["google bigquery", "bq"]
+      "aliases": [
+        "google bigquery",
+        "bq"
+      ]
     },
     {
       "name": "Google Cloud Storage",
       "category": "Cloud",
       "subcategory": "GCP Storage",
-      "aliases": ["gcs", "cloud storage"]
+      "aliases": [
+        "gcs",
+        "cloud storage"
+      ]
     },
     {
       "name": "Google Dataflow",
       "category": "Cloud",
       "subcategory": "GCP Processing",
-      "aliases": ["dataflow", "cloud dataflow"]
+      "aliases": [
+        "dataflow",
+        "cloud dataflow"
+      ]
     },
     {
       "name": "Google Dataproc",
       "category": "Cloud",
       "subcategory": "GCP Big Data",
-      "aliases": ["dataproc", "cloud dataproc"]
+      "aliases": [
+        "dataproc",
+        "cloud dataproc"
+      ]
     },
     {
       "name": "Google Pub/Sub",
       "category": "Cloud",
       "subcategory": "GCP Messaging",
-      "aliases": ["pubsub", "pub sub", "cloud pub/sub"]
+      "aliases": [
+        "pubsub",
+        "pub sub",
+        "cloud pub/sub"
+      ]
     },
     {
       "name": "Vertex AI",
       "category": "Cloud",
       "subcategory": "GCP ML",
-      "aliases": ["google vertex ai", "vertex"]
+      "aliases": [
+        "google vertex ai",
+        "vertex"
+      ]
     },
     {
       "name": "Snowflake",
       "category": "Data Warehouse",
       "subcategory": "Cloud Data Warehouse",
-      "aliases": ["snowflake db", "snowflake data cloud"]
+      "aliases": [
+        "snowflake db",
+        "snowflake data cloud"
+      ]
     },
     {
       "name": "Databricks",
       "category": "Data Platform",
       "subcategory": "Lakehouse",
-      "aliases": ["databricks lakehouse", "delta lake", "databricks sql"]
+      "aliases": [
+        "databricks lakehouse",
+        "delta lake",
+        "databricks sql"
+      ]
     },
     {
       "name": "PostgreSQL",
       "category": "Database",
       "subcategory": "Relational",
-      "aliases": ["postgres", "psql", "postgresql"]
+      "aliases": [
+        "postgres",
+        "psql",
+        "postgresql"
+      ]
     },
     {
       "name": "MySQL",
       "category": "Database",
       "subcategory": "Relational",
-      "aliases": ["mariadb"]
+      "aliases": [
+        "mariadb"
+      ]
     },
     {
       "name": "Microsoft SQL Server",
       "category": "Database",
       "subcategory": "Relational",
-      "aliases": ["sql server", "mssql", "ssms"]
+      "aliases": [
+        "sql server",
+        "mssql",
+        "ssms"
+      ]
     },
     {
       "name": "Oracle Database",
       "category": "Database",
       "subcategory": "Relational",
-      "aliases": ["oracle", "oracle db", "oracle sql"]
+      "aliases": [
+        "oracle",
+        "oracle db",
+        "oracle sql"
+      ]
     },
     {
       "name": "MongoDB",
       "category": "Database",
       "subcategory": "NoSQL",
-      "aliases": ["mongo", "mongodb atlas"]
+      "aliases": [
+        "mongo",
+        "mongodb atlas"
+      ]
     },
     {
       "name": "Cassandra",
       "category": "Database",
       "subcategory": "NoSQL",
-      "aliases": ["apache cassandra", "datastax"]
+      "aliases": [
+        "apache cassandra",
+        "datastax"
+      ]
     },
     {
       "name": "Redis",
       "category": "Database",
       "subcategory": "In-Memory",
-      "aliases": ["redis cache", "redis cluster"]
+      "aliases": [
+        "redis cache",
+        "redis cluster"
+      ]
     },
     {
       "name": "Elasticsearch",
       "category": "Database",
       "subcategory": "Search",
-      "aliases": ["elastic", "elk", "elk stack", "opensearch"]
+      "aliases": [
+        "elastic",
+        "elk",
+        "elk stack",
+        "opensearch"
+      ]
     },
     {
       "name": "Neo4j",
       "category": "Database",
       "subcategory": "Graph",
-      "aliases": ["neo4j graph"]
+      "aliases": [
+        "neo4j graph"
+      ]
     },
     {
       "name": "ClickHouse",
       "category": "Database",
       "subcategory": "Analytics",
-      "aliases": ["clickhouse db"]
+      "aliases": [
+        "clickhouse db"
+      ]
     },
     {
       "name": "Tableau",
       "category": "BI/Visualization",
       "subcategory": "BI Tool",
-      "aliases": ["tableau desktop", "tableau server", "tableau cloud", "tableau online"]
+      "aliases": [
+        "tableau desktop",
+        "tableau server",
+        "tableau cloud",
+        "tableau online"
+      ]
     },
     {
       "name": "Power BI",
       "category": "BI/Visualization",
       "subcategory": "BI Tool",
-      "aliases": ["powerbi", "power bi desktop", "power bi service", "pbi"]
+      "aliases": [
+        "powerbi",
+        "power bi desktop",
+        "power bi service",
+        "pbi"
+      ]
     },
     {
       "name": "Looker",
       "category": "BI/Visualization",
       "subcategory": "BI Tool",
-      "aliases": ["looker studio", "google looker", "lookml"]
+      "aliases": [
+        "looker studio",
+        "google looker",
+        "lookml"
+      ]
     },
     {
       "name": "Metabase",
@@ -448,151 +701,232 @@
       "name": "Superset",
       "category": "BI/Visualization",
       "subcategory": "BI Tool",
-      "aliases": ["apache superset"]
+      "aliases": [
+        "apache superset"
+      ]
     },
     {
       "name": "Grafana",
       "category": "BI/Visualization",
       "subcategory": "Monitoring/Dashboards",
-      "aliases": ["grafana cloud"]
+      "aliases": [
+        "grafana cloud"
+      ]
     },
     {
       "name": "QuickSight",
       "category": "BI/Visualization",
       "subcategory": "BI Tool",
-      "aliases": ["aws quicksight", "amazon quicksight"]
+      "aliases": [
+        "aws quicksight",
+        "amazon quicksight"
+      ]
     },
     {
       "name": "Docker",
       "category": "DevOps",
       "subcategory": "Containerization",
-      "aliases": ["docker container", "docker compose", "dockerfile"]
+      "aliases": [
+        "docker container",
+        "docker compose",
+        "dockerfile"
+      ]
     },
     {
       "name": "Kubernetes",
       "category": "DevOps",
       "subcategory": "Container Orchestration",
-      "aliases": ["k8s", "k8", "kubectl", "eks", "aks", "gke"]
+      "aliases": [
+        "k8s",
+        "k8",
+        "kubectl",
+        "eks",
+        "aks",
+        "gke"
+      ]
     },
     {
       "name": "Terraform",
       "category": "DevOps",
       "subcategory": "Infrastructure as Code",
-      "aliases": ["terraform cloud", "hashicorp terraform", "iac"]
+      "aliases": [
+        "terraform cloud",
+        "hashicorp terraform",
+        "iac"
+      ]
     },
     {
       "name": "Ansible",
       "category": "DevOps",
       "subcategory": "Configuration Management",
-      "aliases": ["ansible playbook", "red hat ansible"]
+      "aliases": [
+        "ansible playbook",
+        "red hat ansible"
+      ]
     },
     {
       "name": "Jenkins",
       "category": "DevOps",
       "subcategory": "CI/CD",
-      "aliases": ["jenkins pipeline", "jenkinsfile"]
+      "aliases": [
+        "jenkins pipeline",
+        "jenkinsfile"
+      ]
     },
     {
       "name": "GitHub Actions",
       "category": "DevOps",
       "subcategory": "CI/CD",
-      "aliases": ["gh actions", "github workflows"]
+      "aliases": [
+        "gh actions",
+        "github workflows"
+      ]
     },
     {
       "name": "GitLab CI",
       "category": "DevOps",
       "subcategory": "CI/CD",
-      "aliases": ["gitlab ci/cd", "gitlab pipelines"]
+      "aliases": [
+        "gitlab ci/cd",
+        "gitlab pipelines"
+      ]
     },
     {
       "name": "CircleCI",
       "category": "DevOps",
       "subcategory": "CI/CD",
-      "aliases": ["circle ci"]
+      "aliases": [
+        "circle ci"
+      ]
     },
     {
       "name": "Git",
       "category": "DevOps",
       "subcategory": "Version Control",
-      "aliases": ["github", "gitlab", "bitbucket", "version control"]
+      "aliases": [
+        "github",
+        "gitlab",
+        "bitbucket",
+        "version control"
+      ]
     },
     {
       "name": "Linux",
       "category": "Operating System",
       "subcategory": "Unix",
-      "aliases": ["ubuntu", "centos", "rhel", "debian", "red hat"]
+      "aliases": [
+        "ubuntu",
+        "centos",
+        "rhel",
+        "debian",
+        "red hat"
+      ]
     },
     {
       "name": "TensorFlow",
       "category": "Machine Learning",
       "subcategory": "Deep Learning Framework",
-      "aliases": ["tf", "tensorflow 2", "keras"]
+      "aliases": [
+        "tf",
+        "tensorflow 2",
+        "keras"
+      ]
     },
     {
       "name": "PyTorch",
       "category": "Machine Learning",
       "subcategory": "Deep Learning Framework",
-      "aliases": ["torch", "pytorch lightning"]
+      "aliases": [
+        "torch",
+        "pytorch lightning"
+      ]
     },
     {
       "name": "Scikit-learn",
       "category": "Machine Learning",
       "subcategory": "ML Library",
-      "aliases": ["sklearn", "scikit learn"]
+      "aliases": [
+        "sklearn",
+        "scikit learn"
+      ]
     },
     {
       "name": "XGBoost",
       "category": "Machine Learning",
       "subcategory": "ML Library",
-      "aliases": ["xgb"]
+      "aliases": [
+        "xgb"
+      ]
     },
     {
       "name": "LightGBM",
       "category": "Machine Learning",
       "subcategory": "ML Library",
-      "aliases": ["lgbm"]
+      "aliases": [
+        "lgbm"
+      ]
     },
     {
       "name": "Hugging Face",
       "category": "Machine Learning",
       "subcategory": "NLP/LLM",
-      "aliases": ["huggingface", "transformers", "hf"]
+      "aliases": [
+        "huggingface",
+        "transformers",
+        "hf"
+      ]
     },
     {
       "name": "OpenCV",
       "category": "Machine Learning",
       "subcategory": "Computer Vision",
-      "aliases": ["cv2", "opencv-python"]
+      "aliases": [
+        "cv2",
+        "opencv-python"
+      ]
     },
     {
       "name": "YOLO",
       "category": "Machine Learning",
       "subcategory": "Computer Vision",
-      "aliases": ["yolov5", "yolov8", "ultralytics"]
+      "aliases": [
+        "yolov5",
+        "yolov8",
+        "ultralytics"
+      ]
     },
     {
       "name": "MLflow",
       "category": "Machine Learning",
       "subcategory": "MLOps",
-      "aliases": ["ml flow"]
+      "aliases": [
+        "ml flow"
+      ]
     },
     {
       "name": "Kubeflow",
       "category": "Machine Learning",
       "subcategory": "MLOps",
-      "aliases": ["kube flow"]
+      "aliases": [
+        "kube flow"
+      ]
     },
     {
       "name": "Pandas",
       "category": "Data Science",
       "subcategory": "Data Manipulation",
-      "aliases": ["pd"]
+      "aliases": [
+        "pd"
+      ]
     },
     {
       "name": "NumPy",
       "category": "Data Science",
       "subcategory": "Numerical Computing",
-      "aliases": ["numpy", "np"]
+      "aliases": [
+        "numpy",
+        "np"
+      ]
     },
     {
       "name": "Polars",
@@ -604,85 +938,130 @@
       "name": "Dask",
       "category": "Data Science",
       "subcategory": "Distributed Computing",
-      "aliases": ["dask distributed"]
+      "aliases": [
+        "dask distributed"
+      ]
     },
     {
       "name": "Matplotlib",
       "category": "Data Science",
       "subcategory": "Visualization",
-      "aliases": ["pyplot", "plt"]
+      "aliases": [
+        "pyplot",
+        "plt"
+      ]
     },
     {
       "name": "Seaborn",
       "category": "Data Science",
       "subcategory": "Visualization",
-      "aliases": ["sns"]
+      "aliases": [
+        "sns"
+      ]
     },
     {
       "name": "Plotly",
       "category": "Data Science",
       "subcategory": "Visualization",
-      "aliases": ["plotly express", "dash"]
+      "aliases": [
+        "plotly express",
+        "dash"
+      ]
     },
     {
       "name": "Jupyter",
       "category": "Data Science",
       "subcategory": "Development Environment",
-      "aliases": ["jupyter notebook", "jupyter lab", "jupyterlab", "ipython"]
+      "aliases": [
+        "jupyter notebook",
+        "jupyter lab",
+        "jupyterlab",
+        "ipython"
+      ]
     },
     {
       "name": "Excel",
       "category": "Productivity",
       "subcategory": "Spreadsheet",
-      "aliases": ["microsoft excel", "ms excel", "advanced excel", "vba"]
+      "aliases": [
+        "microsoft excel",
+        "ms excel",
+        "advanced excel",
+        "vba"
+      ]
     },
     {
       "name": "React",
       "category": "Frontend",
       "subcategory": "JavaScript Framework",
-      "aliases": ["reactjs", "react.js", "react native"]
+      "aliases": [
+        "reactjs",
+        "react.js",
+        "react native"
+      ]
     },
     {
       "name": "Angular",
       "category": "Frontend",
       "subcategory": "JavaScript Framework",
-      "aliases": ["angularjs", "angular.js"]
+      "aliases": [
+        "angularjs",
+        "angular.js"
+      ]
     },
     {
       "name": "Vue.js",
       "category": "Frontend",
       "subcategory": "JavaScript Framework",
-      "aliases": ["vue", "vuejs", "vue 3"]
+      "aliases": [
+        "vue",
+        "vuejs",
+        "vue 3"
+      ]
     },
     {
       "name": "Next.js",
       "category": "Frontend",
       "subcategory": "React Framework",
-      "aliases": ["nextjs", "next"]
+      "aliases": [
+        "nextjs",
+        "next"
+      ]
     },
     {
       "name": "Node.js",
       "category": "Backend",
       "subcategory": "JavaScript Runtime",
-      "aliases": ["nodejs", "node"]
+      "aliases": [
+        "nodejs",
+        "node"
+      ]
     },
     {
       "name": "Express.js",
       "category": "Backend",
       "subcategory": "Web Framework",
-      "aliases": ["express", "expressjs"]
+      "aliases": [
+        "express",
+        "expressjs"
+      ]
     },
     {
       "name": "Django",
       "category": "Backend",
       "subcategory": "Python Framework",
-      "aliases": ["django rest framework", "drf"]
+      "aliases": [
+        "django rest framework",
+        "drf"
+      ]
     },
     {
       "name": "FastAPI",
       "category": "Backend",
       "subcategory": "Python Framework",
-      "aliases": ["fast api"]
+      "aliases": [
+        "fast api"
+      ]
     },
     {
       "name": "Flask",
@@ -694,307 +1073,1059 @@
       "name": "Spring Boot",
       "category": "Backend",
       "subcategory": "Java Framework",
-      "aliases": ["spring", "spring framework", "springboot"]
+      "aliases": [
+        "spring",
+        "spring framework",
+        "springboot"
+      ]
     },
     {
       "name": "REST API",
       "category": "Architecture",
       "subcategory": "API Design",
-      "aliases": ["restful", "rest apis", "restful api", "api development"]
+      "aliases": [
+        "restful",
+        "rest apis",
+        "restful api",
+        "api development"
+      ]
     },
     {
       "name": "GraphQL",
       "category": "Architecture",
       "subcategory": "API Design",
-      "aliases": ["graph ql"]
+      "aliases": [
+        "graph ql"
+      ]
     },
     {
       "name": "gRPC",
       "category": "Architecture",
       "subcategory": "API Design",
-      "aliases": ["grpc"]
+      "aliases": [
+        "grpc"
+      ]
     },
     {
       "name": "Microservices",
       "category": "Architecture",
       "subcategory": "Design Pattern",
-      "aliases": ["microservice architecture", "micro services"]
+      "aliases": [
+        "microservice architecture",
+        "micro services"
+      ]
     },
     {
       "name": "ETL",
       "category": "Data Engineering",
       "subcategory": "Process",
-      "aliases": ["elt", "etl pipeline", "etl pipelines", "data pipeline", "data pipelines"]
+      "aliases": [
+        "elt",
+        "etl pipeline",
+        "etl pipelines",
+        "data pipeline",
+        "data pipelines"
+      ]
     },
     {
       "name": "Data Modeling",
       "category": "Data Engineering",
       "subcategory": "Design",
-      "aliases": ["dimensional modeling", "data warehouse modeling", "star schema", "snowflake schema"]
+      "aliases": [
+        "dimensional modeling",
+        "data warehouse modeling",
+        "star schema",
+        "snowflake schema"
+      ]
     },
     {
       "name": "Data Governance",
       "category": "Data Engineering",
       "subcategory": "Management",
-      "aliases": ["data quality", "data lineage", "data catalog"]
+      "aliases": [
+        "data quality",
+        "data lineage",
+        "data catalog"
+      ]
     },
     {
       "name": "CI/CD",
       "category": "DevOps",
       "subcategory": "Process",
-      "aliases": ["continuous integration", "continuous deployment", "continuous delivery"]
+      "aliases": [
+        "continuous integration",
+        "continuous deployment",
+        "continuous delivery"
+      ]
     },
     {
       "name": "Agile",
       "category": "Methodology",
       "subcategory": "Project Management",
-      "aliases": ["scrum", "kanban", "agile methodology", "sprint"]
+      "aliases": [
+        "scrum",
+        "kanban",
+        "agile methodology",
+        "sprint"
+      ]
     },
     {
       "name": "Jira",
       "category": "Productivity",
       "subcategory": "Project Management",
-      "aliases": ["atlassian jira"]
+      "aliases": [
+        "atlassian jira"
+      ]
     },
     {
       "name": "Confluence",
       "category": "Productivity",
       "subcategory": "Documentation",
-      "aliases": ["atlassian confluence"]
+      "aliases": [
+        "atlassian confluence"
+      ]
     },
     {
       "name": "LangChain",
       "category": "Machine Learning",
       "subcategory": "LLM Framework",
-      "aliases": ["langchain python"]
+      "aliases": [
+        "langchain python"
+      ]
     },
     {
       "name": "OpenAI",
       "category": "Machine Learning",
       "subcategory": "LLM Provider",
-      "aliases": ["chatgpt", "gpt-4", "gpt-3", "openai api"]
+      "aliases": [
+        "chatgpt",
+        "gpt-4",
+        "gpt-3",
+        "openai api"
+      ]
     },
     {
       "name": "LLM",
       "category": "Machine Learning",
       "subcategory": "Technology",
-      "aliases": ["large language model", "large language models", "llms"]
+      "aliases": [
+        "large language model",
+        "large language models",
+        "llms"
+      ]
     },
     {
       "name": "RAG",
       "category": "Machine Learning",
       "subcategory": "LLM Technique",
-      "aliases": ["retrieval augmented generation"]
+      "aliases": [
+        "retrieval augmented generation"
+      ]
     },
     {
       "name": "Vector Database",
       "category": "Database",
       "subcategory": "AI/ML",
-      "aliases": ["pinecone", "weaviate", "milvus", "chroma", "chromadb", "vector store", "vector db"]
+      "aliases": [
+        "pinecone",
+        "weaviate",
+        "milvus",
+        "chroma",
+        "chromadb",
+        "vector store",
+        "vector db"
+      ]
     },
     {
       "name": "Apache NiFi",
       "category": "Data Engineering",
       "subcategory": "Data Integration",
-      "aliases": ["nifi"]
+      "aliases": [
+        "nifi"
+      ]
     },
     {
       "name": "Talend",
       "category": "Data Engineering",
       "subcategory": "Data Integration",
-      "aliases": ["talend open studio"]
+      "aliases": [
+        "talend open studio"
+      ]
     },
     {
       "name": "Informatica",
       "category": "Data Engineering",
       "subcategory": "Data Integration",
-      "aliases": ["informatica powercenter", "iics"]
+      "aliases": [
+        "informatica powercenter",
+        "iics"
+      ]
     },
     {
       "name": "SSIS",
       "category": "Data Engineering",
       "subcategory": "Data Integration",
-      "aliases": ["sql server integration services"]
+      "aliases": [
+        "sql server integration services"
+      ]
     },
     {
       "name": "Great Expectations",
       "category": "Data Engineering",
       "subcategory": "Data Quality",
-      "aliases": ["ge", "great_expectations"]
+      "aliases": [
+        "ge",
+        "great_expectations"
+      ]
     },
     {
       "name": "Monte Carlo",
       "category": "Data Engineering",
       "subcategory": "Data Observability",
-      "aliases": ["monte carlo data"]
+      "aliases": [
+        "monte carlo data"
+      ]
     },
     {
       "name": "dbt",
       "category": "Data Engineering",
       "subcategory": "Transformation",
-      "aliases": ["dbt core", "dbt cloud", "data build tool"]
+      "aliases": [
+        "dbt core",
+        "dbt cloud",
+        "data build tool"
+      ]
     },
     {
       "name": "Prometheus",
       "category": "DevOps",
       "subcategory": "Monitoring",
-      "aliases": ["prometheus monitoring"]
+      "aliases": [
+        "prometheus monitoring"
+      ]
     },
     {
       "name": "Datadog",
       "category": "DevOps",
       "subcategory": "Monitoring",
-      "aliases": ["data dog"]
+      "aliases": [
+        "data dog"
+      ]
     },
     {
       "name": "Splunk",
       "category": "DevOps",
       "subcategory": "Log Management",
-      "aliases": ["splunk enterprise"]
+      "aliases": [
+        "splunk enterprise"
+      ]
     },
     {
       "name": "New Relic",
       "category": "DevOps",
       "subcategory": "APM",
-      "aliases": ["newrelic"]
+      "aliases": [
+        "newrelic"
+      ]
     },
     {
       "name": "OWASP",
       "category": "Security",
       "subcategory": "Standards",
-      "aliases": ["owasp top 10"]
+      "aliases": [
+        "owasp top 10"
+      ]
     },
     {
       "name": "Penetration Testing",
       "category": "Security",
       "subcategory": "Assessment",
-      "aliases": ["pen testing", "pentest", "ethical hacking"]
+      "aliases": [
+        "pen testing",
+        "pentest",
+        "ethical hacking"
+      ]
     },
     {
       "name": "SIEM",
       "category": "Security",
       "subcategory": "Monitoring",
-      "aliases": ["security information and event management"]
+      "aliases": [
+        "security information and event management"
+      ]
     },
     {
       "name": "SOC",
       "category": "Security",
       "subcategory": "Operations",
-      "aliases": ["security operations center"]
+      "aliases": [
+        "security operations center"
+      ]
     },
     {
       "name": "Firewall",
       "category": "Security",
       "subcategory": "Network Security",
-      "aliases": ["firewalls", "network firewall"]
+      "aliases": [
+        "firewalls",
+        "network firewall"
+      ]
     },
     {
       "name": "IAM",
       "category": "Security",
       "subcategory": "Identity",
-      "aliases": ["identity and access management", "aws iam", "azure ad"]
+      "aliases": [
+        "identity and access management",
+        "aws iam",
+        "azure ad"
+      ]
     },
     {
       "name": "Encryption",
       "category": "Security",
       "subcategory": "Data Protection",
-      "aliases": ["ssl", "tls", "https", "cryptography"]
+      "aliases": [
+        "ssl",
+        "tls",
+        "https",
+        "cryptography"
+      ]
     },
     {
       "name": "Machine Learning",
       "category": "Machine Learning",
       "subcategory": "General",
-      "aliases": ["ml", "machine learning algorithms"]
+      "aliases": [
+        "ml",
+        "machine learning algorithms"
+      ]
     },
     {
       "name": "Deep Learning",
       "category": "Machine Learning",
       "subcategory": "Neural Networks",
-      "aliases": ["dl", "neural network", "neural networks", "cnn", "rnn", "lstm"]
+      "aliases": [
+        "dl",
+        "neural network",
+        "neural networks",
+        "cnn",
+        "rnn",
+        "lstm"
+      ]
     },
     {
       "name": "NLP",
       "category": "Machine Learning",
       "subcategory": "Specialty",
-      "aliases": ["natural language processing", "text mining", "text analytics"]
+      "aliases": [
+        "natural language processing",
+        "text mining",
+        "text analytics"
+      ]
     },
     {
       "name": "Computer Vision",
       "category": "Machine Learning",
       "subcategory": "Specialty",
-      "aliases": ["image recognition", "object detection", "image processing"]
+      "aliases": [
+        "image recognition",
+        "object detection",
+        "image processing"
+      ]
     },
     {
       "name": "Statistics",
       "category": "Data Science",
       "subcategory": "Foundation",
-      "aliases": ["statistical analysis", "statistical modeling", "hypothesis testing"]
+      "aliases": [
+        "statistical analysis",
+        "statistical modeling",
+        "hypothesis testing"
+      ]
     },
     {
       "name": "A/B Testing",
       "category": "Data Science",
       "subcategory": "Experimentation",
-      "aliases": ["ab testing", "experimentation", "split testing"]
+      "aliases": [
+        "ab testing",
+        "experimentation",
+        "split testing"
+      ]
     },
     {
       "name": "Flutter",
       "category": "Mobile",
       "subcategory": "Cross-Platform",
-      "aliases": ["flutter dart", "dart"]
+      "aliases": [
+        "flutter dart",
+        "dart"
+      ]
     },
     {
       "name": "React Native",
       "category": "Mobile",
       "subcategory": "Cross-Platform",
-      "aliases": ["react-native"]
+      "aliases": [
+        "react-native"
+      ]
     },
     {
       "name": "iOS",
       "category": "Mobile",
       "subcategory": "Platform",
-      "aliases": ["ios development", "iphone"]
+      "aliases": [
+        "ios development",
+        "iphone"
+      ]
     },
     {
       "name": "Android",
       "category": "Mobile",
       "subcategory": "Platform",
-      "aliases": ["android development", "android studio"]
+      "aliases": [
+        "android development",
+        "android studio"
+      ]
     },
     {
       "name": "HTML",
       "category": "Frontend",
       "subcategory": "Markup",
-      "aliases": ["html5"]
+      "aliases": [
+        "html5"
+      ]
     },
     {
       "name": "CSS",
       "category": "Frontend",
       "subcategory": "Styling",
-      "aliases": ["css3", "sass", "scss", "less", "tailwind", "tailwindcss", "bootstrap"]
+      "aliases": [
+        "css3",
+        "sass",
+        "scss",
+        "less",
+        "tailwind",
+        "tailwindcss",
+        "bootstrap"
+      ]
     },
     {
       "name": "Communication",
       "category": "Soft Skills",
       "subcategory": "Interpersonal",
-      "aliases": ["communication skills", "written communication", "verbal communication"]
+      "aliases": [
+        "communication skills",
+        "written communication",
+        "verbal communication"
+      ]
     },
     {
       "name": "Problem Solving",
       "category": "Soft Skills",
       "subcategory": "Analytical",
-      "aliases": ["problem-solving", "analytical thinking", "critical thinking"]
+      "aliases": [
+        "problem-solving",
+        "analytical thinking",
+        "critical thinking"
+      ]
     },
     {
       "name": "Teamwork",
       "category": "Soft Skills",
       "subcategory": "Collaboration",
-      "aliases": ["team player", "collaboration", "cross-functional"]
+      "aliases": [
+        "team player",
+        "collaboration",
+        "cross-functional"
+      ]
     },
     {
       "name": "Leadership",
       "category": "Soft Skills",
       "subcategory": "Management",
-      "aliases": ["team lead", "tech lead", "mentoring"]
+      "aliases": [
+        "team lead",
+        "tech lead",
+        "mentoring"
+      ]
+    },
+    {
+      "name": "GCP",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:55:39.325243",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Airservices Australia",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:56:51.797650",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "security",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:52:42.968512",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Amazon Web Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:56:14.045521",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Warehouse",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:52:40.184994",
+      "_occurrence_count": 5
+    },
+    {
+      "name": "data platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:52:53.063704",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Spark",
+      "category": "Big Data",
+      "subcategory": "big data tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:56:10.866693",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "20tb databases",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:01:07.725769",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Warehouses",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T12:59:16.378269",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "REST",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:40:07.250792",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SOAP",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:41:02.852697",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Microsoft Azure",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:40:58.493490",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "data lakes",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:43:01.904564",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Google Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:42:47.964528",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "PySpark",
+      "category": "Big Data",
+      "subcategory": "big data tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:51:05.163779",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Redshift",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:42:40.234571",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Google BigQuery",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:55:08.261521",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Oracle",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:45:08.207804",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CGI",
+      "category": "Web Framework",
+      "subcategory": "web framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:42:55.655234",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SaaS environment",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:47:04.917627",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Cybersecurity",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:59:43.681259",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "English",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:42:51.111393",
+      "_occurrence_count": 5
+    },
+    {
+      "name": "SQL Server",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:55:34.100783",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Windows",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:03:45.073985",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "data lake",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:50:07.332907",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Factory",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:01:45.148752",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Gitlab",
+      "category": "DevOps",
+      "subcategory": "orchestration tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:54:58.759521",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "macOS",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:03:51.581732",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Proofpoint",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:58:33.157483",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Github",
+      "category": "Version Control",
+      "subcategory": "version control",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:51:31.788738",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "T-SQL",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:01:29.169073",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "relational databases",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:42:44.168943",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "After Effects",
+      "category": "Data Visualization",
+      "subcategory": "data visualization tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:11:15.812588",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Swap",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:13:43.337170",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Lattice OS",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:15:47.731075",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "programming languages",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:16:20.279506",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Analytics Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:14:36.466571",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Mindrift",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:03:29.963507",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CDAI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:44:04.892749",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "dbt Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:17:17.792969",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Amazon",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T13:59:18.028898",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "MDM",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:25:54.696201",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "GenAI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-23T14:16:15.438690",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Ubuntu",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:37:32.423412",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "public cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:37:32.423942",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Microsoft Fabric",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:36:08.902613",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Operating system",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:39:48.360156",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Analysis & Decision Support Frame",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:42:03.843595",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Microsoft Fabric platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:42:26.640965",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "S3",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:39:57.369626",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "RDS",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:42:38.801365",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Airwallex",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:42:01.514017",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Culture Amp",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:46:20.031807",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Generative AI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:41:37.754087",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "tidyr",
+      "category": "Data Engineering",
+      "subcategory": "data engineering tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:50:04.579587",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Epistemix",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:44:24.152285",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Airflow",
+      "category": "Data Engineering",
+      "subcategory": "etl tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:39:57.369626",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Gen AI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:57:46.792333",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DiDi Global Inc.",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:58:56.777542",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "IQVIA",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T12:00:36.950777",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "MS Power Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T12:01:10.017570",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Keras",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T12:01:23.556949",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Natural Language Processing",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T11:52:10.512171",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Statsmodels",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-01-25T12:03:50.405428",
+      "_occurrence_count": 3
     }
   ]
 }
