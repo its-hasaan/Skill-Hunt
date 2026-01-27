@@ -1,0 +1,36 @@
+# SETUP INSTRUCTIONS:
+#    - DB_HOST: Your Supabase database host
+#    - DB_PORT: Database port (typically 6543 for pooler)
+#    - DB_USER: Database username
+#    - DB_PASSWORD: Database password
+#    - DB_NAME: Database name (usually 'postgres')
+
+skill_hunt:
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DB_HOST') }}"
+      port: "{{ env_var('DB_PORT', '6543') | as_number }}"
+      user: "{{ env_var('DB_USER') }}"
+      password: "{{ env_var('DB_PASSWORD') }}"
+      dbname: "{{ env_var('DB_NAME', 'postgres') }}"
+      schema: staging
+      threads: 4
+      keepalives_idle: 0
+      connect_timeout: 10
+      sslmode: require
+    
+    prod:
+      type: postgres
+      host: "{{ env_var('DB_HOST') }}"
+      port: "{{ env_var('DB_PORT', '6543') | as_number }}"
+      user: "{{ env_var('DB_USER') }}"
+      password: "{{ env_var('DB_PASSWORD') }}"
+      dbname: "{{ env_var('DB_NAME', 'postgres') }}"
+      schema: marts
+      threads: 4
+      keepalives_idle: 0
+      connect_timeout: 10
+      sslmode: require
+
+  target: dev
