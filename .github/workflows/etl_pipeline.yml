@@ -1,9 +1,9 @@
 name: Skill Hunt ETL Pipeline
 
 on:
-  # Run twice a week (Sunday and Wednesday at 3 AM UTC)
+  # Run every 2 weeks (1st and 15th of each month at 3 AM UTC)
   schedule:
-    - cron: '0 3 * * 0,3'
+    - cron: '0 3 1,15 * *'
   
   # Allow manual trigger
   workflow_dispatch:
@@ -24,10 +24,6 @@ on:
         description: 'Test mode (limited data)'
         type: boolean
         default: false
-      discovery_mode:
-        description: 'Force LLM skill discovery for all jobs'
-        type: boolean
-        default: false
 
 env:
   PYTHON_VERSION: '3.11'
@@ -38,11 +34,6 @@ env:
   SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
   SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
   SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
-  # Gemini API for hybrid skill extraction
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  # Hybrid extractor settings
-  DISCOVERY_SAMPLE_RATE: '0.1'
-  COVERAGE_THRESHOLD: '0.3'
 
 jobs:
   extract:
@@ -71,7 +62,8 @@ jobs:
           if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
             python extractor.py --test
           else
-            python extractor.py --pages 2 --delay 1.5
+            # Extract jobs from last 60 days only
+            python extractor.py --days 60 --pages 3 --delay 1.5
           fi
       
       - name: Upload extraction log
@@ -103,16 +95,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r etl/requirements.txt
       
-      - name: Run transformation (Hybrid Skill Extraction)
+      - name: Run transformation (Taxonomy-based Skill Extraction)
         run: |
           cd etl
-          if [ "${{ github.event.inputs.discovery_mode }}" == "true" ]; then
-            echo "Running in DISCOVERY MODE (LLM for all jobs)"
-            python transformer.py --batch-size 500 --discovery-mode
-          else
-            echo "Running in HYBRID MODE (Fast path + LLM sampling)"
-            python transformer.py --batch-size 500
-          fi
+          # Use fast-only mode: regex/taxonomy-based extraction only (no GLiNER/LLM)
+          echo "Running in FAST MODE (Taxonomy-based extraction only)"
+          python transformer.py --batch-size 500 --fast-only
       
       - name: Upload transformation log
         uses: actions/upload-artifact@v4

@@ -56,3 +56,5 @@ LEFT JOIN {{ source('staging', 'dim_skills') }} ds
 LEFT JOIN {{ source('staging', 'stg_jobs') }} j 
     ON js.job_id = j.job_id
 WHERE j.job_id IS NOT NULL
+  -- Filter to only include jobs from the last 2 months (60 days)
+  AND j.job_posted_at >= CURRENT_DATE - INTERVAL '60 days'
