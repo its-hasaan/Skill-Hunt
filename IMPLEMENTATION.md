@@ -385,44 +385,65 @@ class FastPathExtractor:
 }
 ```
 
-#### **Slow Path Implementation (LLM-Based)**
+#### **Slow Path Implementation (GLiNER NER-Based)**
 
 ```python
 # etl/skill_extractor/slow_path.py
 class SlowPathExtractor:
-    def __init__(self, model: str = "gemini-flash"):
-        self.model = genai.GenerativeModel(model)
+    def __init__(self, config: SlowPathConfig):
+        self.config = config
+        self._model = None  # Lazy loaded
+    
+    def _load_model(self):
+        """Lazy load the GLiNER model."""
+        if self._model is None and self.config.enabled:
+            from gliner import GLiNER
+            self._model = GLiNER.from_pretrained(self.config.model_name)
+            # Default: urchade/gliner_medium-v2.1
+        return self._model
     
     def extract(self, text: str, known_skills: Set[str]) -> List[Dict]:
         """
-        Use LLM to discover skills not in taxonomy.
+        Use GLiNER NER model to discover skills not in taxonomy.
         """
-        prompt = f"""
-        Extract technical skills, tools, and technologies from the following job description.
+        model = self._load_model()
+        if not model:
+            return []
         
-        IGNORE these skills (already identified): {', '.join(known_skills)}
+        # GLiNER predicts entities with labels
+        entities = model.predict_entities(
+            text,
+            labels=GLINER_SKILL_LABELS,  # Programming language, database, etc.
+            threshold=self.config.threshold
+        )
         
-        Only return NEW skills not in the ignore list. Format as JSON array:
-        [{{"skill": "skill_name", "category": "category", "confidence": 0.0-1.0}}]
+        # Filter out known skills and low confidence
+        results = []
+        for entity in entities:
+            skill_name = entity['text'].strip()
+            if (skill_name.lower() not in known_skills and 
+                entity['score'] >= self.config.min_confidence):
+                results.append({
+                    'skill_name': skill_name,
+                    'category': LABEL_TO_CATEGORY.get(entity['label'], 'Unknown'),
+                    'confidence': entity['score'],
+                    'method': 'gliner'
+                })
         
-        Job Description:
-        {text[:2000]}  # Truncate to reduce cost
-        """
-        
-        response = self.model.generate_content(prompt)
-        return self.parse_response(response.text)
+        return results
 ```
 
 **Slow Path Advantages:**
+- **Local & Free**: Runs on local hardware, no API costs
 - **Discovers New Skills**: Finds emerging technologies not in taxonomy
-- **Context-Aware**: Understands skill mentions in context
-- **Self-Improving**: Discovered skills auto-promote to fast path
+- **Fast Inference**: Medium model balances speed and accuracy
+- **Pre-trained**: No fine-tuning required, works out-of-the-box
 
 **Cost Optimization:**
-- **Sampling**: Only 5-10% of jobs processed via LLM
-- **Truncation**: Limits input tokens to 2000 characters
-- **Caching**: Google Gemini offers context caching
-- **Total Cost**: <$0.10 per 1000 jobs processed
+- **Zero API Costs**: Runs locally using GLiNER
+- **Sampling**: Only 10% of jobs processed via NER model
+- **Efficient Model**: Medium-sized model for faster inference
+- **Lazy Loading**: Model loaded only when needed
 
 #### **Discovery Manager**
 
@@ -567,35 +588,51 @@ app = FastAPI(
 
 ```python
 # backend/app/database.py
-from databases import Database
+import asyncpg
 from app.config import get_settings
 
-settings = get_settings()
-
-class DatabaseManager:
+class Database:
     def __init__(self):
-        self.database = Database(settings.supabase_url)
+        self.pool: Optional[asyncpg.Pool] = None
+        self.settings = get_settings()
     
     async def connect(self):
-        await self.database.connect()
-        logger.info("Database connection pool established")
+        """Create connection pool."""
+        if self.pool is None:
+            self.pool = await asyncpg.create_pool(
+                self.settings.supabase_url,
+                min_size=2,
+                max_size=10,
+                ssl="require",
+                command_timeout=30
+            )
+            logger.info("Database connection pool created")
     
     async def disconnect(self):
-        await self.database.disconnect()
+        if self.pool:
+            await self.pool.close()
+            self.pool = None
     
-    async def fetch_all(self, query: str, values: dict = None):
-        return await self.database.fetch_all(query=query, values=values)
+    async def fetch_all(self, query: str, *args):
+        """Execute query and return all results as list of dicts."""
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(query, *args)
+            return [dict(row) for row in rows]
     
-    async def fetch_one(self, query: str, values: dict = None):
-        return await self.database.fetch_one(query=query, values=values)
+    async def fetch_one(self, query: str, *args):
+        """Execute query and return single result as dict."""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(query, *args)
+            return dict(row) if row else None
 
-db = DatabaseManager()
+db = Database()
 ```
 
-**Connection Pooling Advantages:**
-- Reuses connections instead of creating new ones
-- Reduces latency (connection overhead eliminated)
-- Handles concurrent requests efficiently
+**asyncpg Advantages:**
+- **High Performance**: Fastest PostgreSQL driver for Python
+- **Connection Pooling**: Efficient connection reuse (min 2, max 10)
+- **Async Native**: Built for async/await patterns
+- **SSL Support**: Secure connections to Supabase
 
 ### 4.2 Router Architecture
 
@@ -627,72 +664,68 @@ app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
 
 ```python
 # backend/app/routers/skills.py
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional, List
-from app.database import db
-from app.models.schemas import SkillDemand, SkillDemandResponse
+from ..database import Database, get_db
+from ..models.schemas import SkillDemand, SkillDemandResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/skills", tags=["Skills"])
 
 @router.get("/demand", response_model=SkillDemandResponse)
 async def get_skill_demand(
-    role: Optional[str] = Query(None, description="Filter by job role"),
-    country: Optional[str] = Query(None, description="Filter by country"),
-    limit: int = Query(20, ge=1, le=100, description="Number of results")
+    role: str = Query(..., description="Job role to filter by"),
+    country: Optional[str] = Query(None, description="Country code (e.g., 'gb', 'us')"),
+    limit: int = Query(30, ge=1, le=100, description="Maximum results"),
+    db: Database = Depends(get_db)
 ):
     """
-    Get skill demand metrics with optional filters.
-    
-    Returns skills ranked by job mentions, with salary data.
+    Get skill demand data for a specific role and optionally country.
+    Returns top skills ranked by job count.
     """
-    query = """
-        SELECT 
-            skill_name,
-            mention_count,
-            job_count,
-            percentage_of_jobs,
-            avg_salary_min,
-            avg_salary_max,
-            trend
-        FROM marts.mart_skill_demand
-        WHERE 1=1
-    """
-    values = {}
-    
-    if role:
-        query += " AND role = :role"
-        values['role'] = role
-    
     if country:
-        query += " AND country_code = :country"
-        values['country'] = country
+        query = """
+            SELECT 
+                skill_name, skill_category, search_role, country_code,
+                job_count, demand_percentage, avg_salary_min, avg_salary_max,
+                avg_salary_midpoint, rank_in_role_country, rank_in_role_global
+            FROM staging_marts.mart_skill_demand
+            WHERE search_role = $1 AND country_code = $2
+            ORDER BY rank_in_role_country
+            LIMIT $3
+        """
+        rows = await db.fetch_all(query, role, country, limit)
+    else:
+        # Aggregate across all countries for global view
+        query = """
+            SELECT 
+                skill_name, skill_category, search_role,
+                SUM(job_count) as job_count,
+                AVG(demand_percentage) as demand_percentage,
+                AVG(avg_salary_min) as avg_salary_min,
+                AVG(avg_salary_max) as avg_salary_max,
+                MIN(rank_in_role_global) as rank_in_role_global
+            FROM staging_marts.mart_skill_demand
+            WHERE search_role = $1
+            GROUP BY skill_name, skill_category, search_role
+            ORDER BY job_count DESC
+            LIMIT $2
+        """
+        rows = await db.fetch_all(query, role, limit)
     
-    query += " ORDER BY mention_count DESC LIMIT :limit"
-    values['limit'] = limit
-    
-    results = await db.fetch_all(query=query, values=values)
-    
-    # Get total job count for context
-    count_query = "SELECT COUNT(*) as total FROM staging.stg_jobs WHERE 1=1"
-    if role:
-        count_query += " AND search_role = :role"
-    if country:
-        count_query += " AND country_code = :country"
-    
-    total = await db.fetch_one(query=count_query, values=values)
-    
-    return {
-        "skills": [SkillDemand(**dict(row)) for row in results],
-        "total_jobs": total['total'],
-        "filters": {"role": role, "country": country, "limit": limit}
-    }
+    return SkillDemandResponse(
+        role=role,
+        country=country,
+        total_count=len(rows),
+        data=[SkillDemand(**row) for row in rows]
+    )
 ```
 
 **Best Practices Demonstrated:**
 - **Pydantic Response Models**: Automatic validation and serialization
 - **Query Parameters**: Type-safe with validation (ge=1, le=100)
 - **Dynamic SQL**: Builds query based on provided filters
-- **Parameterized Queries**: Prevents SQL injection
+- **Positional Parameters**: Uses `$1, $2, $3` with asyncpg (not `:named`)
+- **Dependency Injection**: Database instance injected via `Depends(get_db)`
 - **Metadata in Response**: Includes filter context for debugging
 
 ### 4.3 Data Validation with Pydantic
@@ -830,7 +863,7 @@ frontend/src/
 // frontend/src/api/index.js
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -840,214 +873,181 @@ const api = axios.create({
   },
 })
 
-// Request interceptor for logging
-api.interceptors.request.use(
-  (config) => {
-    console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`)
-    return config
-  },
-  (error) => Promise.reject(error)
-)
-
-// Response interceptor for error handling
+// Response interceptor - auto-unwrap data and handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => response.data,  // Auto-unwrap data
   (error) => {
-    if (error.response) {
-      console.error(`API Error: ${error.response.status}`, error.response.data)
-    } else if (error.request) {
-      console.error('API Error: No response received', error.request)
-    } else {
-      console.error('API Error:', error.message)
-    }
-    return Promise.reject(error)
+    console.error('API Error:', error.response?.data || error.message)
+    throw error
   }
 )
 
-export const skillsAPI = {
-  getDemand: (params) => api.get('/skills/demand', { params }),
-  getCooccurrence: (params) => api.get('/skills/cooccurrence', { params }),
-  getNetwork: (params) => api.get('/skills/network', { params }),
-  getByCountry: (params) => api.get('/skills/by-country', { params }),
-}
-
-export const salaryAPI = {
-  getBySkill: (params) => api.get('/salary/by-skill', { params }),
-  getTopPaying: (params) => api.get('/salary/top-paying-skills', { params }),
-  getPremiumSkills: (params) => api.get('/salary/premium-skills', { params }),
-}
-
-export const companiesAPI = {
-  getLeaderboard: (params) => api.get('/companies/leaderboard', { params }),
-  getContractTypes: (params) => api.get('/companies/contract-types', { params }),
-}
-
-export const careerAPI = {
-  getRoleSimilarity: () => api.get('/career/role-similarity'),
-  getTransitions: (role) => api.get(`/career/transitions/${role}`),
-  getSkillGap: (params) => api.get('/career/skill-gap', { params }),
-}
-
-export const statsAPI = {
+// Stats API
+export const statsApi = {
   getSummary: () => api.get('/stats/summary'),
   getFilters: () => api.get('/stats/filters'),
+  getRoles: () => api.get('/stats/roles'),
+  getCountries: () => api.get('/stats/countries'),
 }
 
-export default api
+// Skills API
+export const skillsApi = {
+  getDemand: (role, country = null, limit = 30) => {
+    const params = { role, limit }
+    if (country) params.country = country
+    return api.get('/skills/demand', { params })
+  },
+  getCooccurrence: (role, skill = null, minCount = 5, limit = 100) => {
+    const params = { role, min_count: minCount, limit }
+    if (skill) params.skill = skill
+    return api.get('/skills/cooccurrence', { params })
+  },
+  getNetwork: (role, minCount = 10, limit = 50) => 
+    api.get('/skills/network', { params: { role, min_count: minCount, limit } }),
+  getByCountry: (skill, role) => 
+    api.get('/skills/by-country', { params: { skill, role } }),
+  getCategories: () => api.get('/skills/categories'),
+}
+
+// Companies, Salary, Career APIs follow similar pattern...
 ```
 
 **Architecture Benefits:**
-- **Centralized Configuration**: Single source of truth for base URL
-- **Interceptors**: Global logging and error handling
-- **Modular Exports**: Organized by domain
-- **Type Safety**: Can add TypeScript for autocomplete
+- **Auto Data Unwrapping**: Response interceptor returns `response.data` directly
+- **Flexible Parameters**: Helper functions build query params dynamically
+- **Clean API**: Callers get data directly without `.data` access
+- **Environment Aware**: Default to `/api/v1` for proxy in development
 
-### 5.3 Custom Data Fetching Hook
+### 5.3 Data Fetching with React Query
 
 ```javascript
 // frontend/src/hooks/useData.js
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { statsApi, skillsApi, companiesApi } from '../api'
 
-export function useData(apiFunction, params = {}, dependencies = []) {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    let isMounted = true
-
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const response = await apiFunction(params)
-        if (isMounted) {
-          setData(response.data)
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || 'An error occurred')
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchData()
-
-    return () => {
-      isMounted = false
-    }
-  }, dependencies)
-
-  return { data, loading, error }
+// Stats Hooks
+export function useSummaryStats() {
+  return useQuery({
+    queryKey: ['stats', 'summary'],
+    queryFn: statsApi.getSummary,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  })
 }
+
+export function useFilterOptions() {
+  return useQuery({
+    queryKey: ['stats', 'filters'],
+    queryFn: statsApi.getFilters,
+    staleTime: 1000 * 60 * 30, // 30 minutes
+  })
+}
+
+// Skills Hooks
+export function useSkillDemand(role, country = null, limit = 30) {
+  return useQuery({
+    queryKey: ['skills', 'demand', role, country, limit],
+    queryFn: () => skillsApi.getDemand(role, country, limit),
+    enabled: !!role,  // Only fetch when role is provided
+  })
+}
+
+export function useSkillCooccurrence(role, skill = null, minCount = 5) {
+  return useQuery({
+    queryKey: ['skills', 'cooccurrence', role, skill, minCount],
+    queryFn: () => skillsApi.getCooccurrence(role, skill, minCount),
+    enabled: !!role,
+  })
+}
+
+// More hooks for companies, salary, career...
 ```
 
-**Hook Features:**
-- **Loading States**: Tracks loading, error, and data states
-- **Cleanup**: Prevents state updates on unmounted components
-- **Dependency Tracking**: Re-fetches when dependencies change
-- **Reusable**: Works with any API function
+**React Query Advantages:**
+- **Automatic Caching**: Data cached with configurable stale time
+- **Background Refetching**: Updates data in background
+- **Request Deduplication**: Multiple components share same query
+- **Built-in Loading States**: `isLoading`, `isError`, `data` states
+- **Enabled Flag**: Conditional fetching based on dependencies
+- **Optimistic Updates**: Support for mutations
 
 ### 5.4 Example Page Implementation
 
 ```javascript
-// frontend/src/pages/SkillsPage.jsx
-import { useState } from 'react'
-import { skillsAPI } from '../api'
-import { useData } from '../hooks/useData'
-import { Charts } from '../components/charts/Charts'
+// frontend/src/pages/Dashboard.jsx
+import { useOutletContext } from 'react-router-dom'
+import { Briefcase, Code, Globe, Building2, TrendingUp } from 'lucide-react'
+import { useSummaryStats, useSkillDemand } from '../hooks/useData'
+import { Card, StatCard, ChartLoading, EmptyState } from '../components/ui'
+import { SkillBarChart, CategoryPieChart } from '../components/charts/Charts'
+import { formatNumber } from '../utils/helpers'
 
-export default function SkillsPage() {
-  const [role, setRole] = useState('Data Engineer')
-  const [country, setCountry] = useState(null)
-  const [limit, setLimit] = useState(20)
-
-  const { data, loading, error } = useData(
-    skillsAPI.getDemand,
-    { role, country, limit },
-    [role, country, limit]
+export default function Dashboard() {
+  const { selectedRole, selectedCountry } = useOutletContext()
+  
+  // React Query hooks - automatic caching and refetching
+  const { data: stats, isLoading: statsLoading } = useSummaryStats()
+  const { data: skillDemand, isLoading: skillsLoading } = useSkillDemand(
+    selectedRole, 
+    selectedCountry || null, 
+    20
   )
 
-  if (loading) return <div className="flex justify-center p-8">Loading...</div>
-  if (error) return <div className="text-red-500 p-8">Error: {error}</div>
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Skills Analysis</h1>
-      
-      <div className="flex gap-4 mb-8">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="px-4 py-2 border rounded"
-        >
-          <option value="Data Engineer">Data Engineer</option>
-          <option value="Data Scientist">Data Scientist</option>
-          <option value="Full Stack Developer">Full Stack Developer</option>
-          {/* ... more options */}
-        </select>
-        
-        <select
-          value={country || ''}
-          onChange={(e) => setCountry(e.target.value || null)}
-          className="px-4 py-2 border rounded"
-        >
-          <option value="">All Countries</option>
-          <option value="gb">United Kingdom</option>
-          <option value="us">United States</option>
-          {/* ... more options */}
-        </select>
+    <div className="space-y-6">
+      {/* Hero Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <StatCard
+          title="Total Jobs"
+          value={statsLoading ? '...' : formatNumber(stats?.total_jobs || 0)}
+          icon={Briefcase}
+          color="primary"
+          loading={statsLoading}
+        />
+        <StatCard
+          title="Skills Tracked"
+          value={statsLoading ? '...' : formatNumber(stats?.total_skills || 0)}
+          icon={Code}
+          color="accent"
+          loading={statsLoading}
+        />
+        {/* More stat cards... */}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Charts.BarChart
-          data={data.skills}
-          xKey="skill_name"
-          yKey="mention_count"
-          title="Top Skills by Demand"
-        />
-        
-        <Charts.LineChart
-          data={data.skills}
-          xKey="skill_name"
-          yKey="avg_salary_max"
-          title="Average Salary by Skill"
-        />
-      </div>
+      {/* Main Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card 
+          title={`Top Skills for ${selectedRole || 'All Roles'}`}
+          className="lg:col-span-2"
+        >
+          {skillsLoading ? (
+            <ChartLoading height={400} />
+          ) : skillDemand?.data?.length > 0 ? (
+            <SkillBarChart data={skillDemand.data} height={400} />
+          ) : (
+            <EmptyState description="No skill data available" />
+          )}
+        </Card>
 
-      <div className="mt-8">
-        <h2 className="text-2xl font-semibold mb-4">Skills Table</h2>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-3 text-left">Skill</th>
-              <th className="p-3 text-right">Mentions</th>
-              <th className="p-3 text-right">% of Jobs</th>
-              <th className="p-3 text-right">Avg Salary</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.skills.map((skill) => (
-              <tr key={skill.skill_name} className="border-b">
-                <td className="p-3">{skill.skill_name}</td>
-                <td className="p-3 text-right">{skill.mention_count}</td>
-                <td className="p-3 text-right">{skill.percentage_of_jobs.toFixed(1)}%</td>
-                <td className="p-3 text-right">
-                  ${skill.avg_salary_min?.toLocaleString()} - ${skill.avg_salary_max?.toLocaleString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card title="Skills by Category">
+          {skillsLoading ? (
+            <ChartLoading height={300} />
+          ) : skillDemand?.data?.length > 0 ? (
+            <CategoryPieChart data={skillDemand.data} height={300} />
+          ) : (
+            <EmptyState description="No category data available" />
+          )}
+        </Card>
       </div>
     </div>
   )
 }
 ```
+
+**React Query Benefits in Action:**
+- **Automatic Loading States**: `isLoading` from `useSummaryStats()` and `useSkillDemand()`
+- **Shared State**: Multiple components using same query share cached data
+- **Background Refetch**: Data refreshes in background when stale
+- **Conditional Rendering**: Clean pattern for loading/error/success states
 
 ### 5.5 Network Graph Visualization (D3.js)
 
@@ -1258,71 +1258,93 @@ SELECT * FROM job_skills
 ```sql
 -- models/marts/mart_skill_demand.sql
 {{
-  config(
-    materialized='table',
-    schema='marts',
-    indexes=[
-      {'columns': ['role', 'country_code']},
-      {'columns': ['skill_name']}
-    ]
-  )
+    config(
+        materialized='table',
+        schema='marts'
+    )
 }}
 
-WITH skill_metrics AS (
-    SELECT
+/*
+    Mart: Skill Demand
+    Top skills per role and country with demand percentages
+    Answers: "What are the top 10 skills for Data Engineers?"
+*/
+
+WITH job_counts AS (
+    -- Total unique jobs per role and country
+    SELECT 
+        search_role,
+        country_code,
+        COUNT(DISTINCT job_id) AS total_jobs
+    FROM {{ ref('int_job_skills_enriched') }}
+    GROUP BY search_role, country_code
+),
+
+skill_counts AS (
+    -- Count jobs per skill, role, country
+    SELECT 
+        skill_id,
         skill_name,
         skill_category,
-        search_role AS role,
+        skill_subcategory,
+        search_role,
         country_code,
-        COUNT(*) AS mention_count,
         COUNT(DISTINCT job_id) AS job_count,
         AVG(salary_min) AS avg_salary_min,
         AVG(salary_max) AS avg_salary_max,
-        MIN(salary_min) AS min_salary,
-        MAX(salary_max) AS max_salary
+        AVG(salary_midpoint) AS avg_salary_midpoint
     FROM {{ ref('int_job_skills_enriched') }}
-    WHERE salary_min IS NOT NULL
-    GROUP BY skill_name, skill_category, search_role, country_code
+    GROUP BY skill_id, skill_name, skill_category, skill_subcategory, search_role, country_code
 ),
 
-total_jobs AS (
-    SELECT
-        search_role AS role,
-        country_code,
-        COUNT(DISTINCT job_id) AS total_count
-    FROM {{ source('staging', 'stg_jobs') }}
-    GROUP BY search_role, country_code
+ranked_skills AS (
+    SELECT 
+        sc.*,
+        jc.total_jobs,
+        ROUND((sc.job_count::NUMERIC / NULLIF(jc.total_jobs, 0)) * 100, 2) AS demand_percentage,
+        ROW_NUMBER() OVER (
+            PARTITION BY sc.search_role, sc.country_code 
+            ORDER BY sc.job_count DESC
+        ) AS rank_in_role_country,
+        ROW_NUMBER() OVER (
+            PARTITION BY sc.search_role 
+            ORDER BY sc.job_count DESC
+        ) AS rank_in_role_global
+    FROM skill_counts sc
+    JOIN job_counts jc 
+        ON sc.search_role = jc.search_role 
+        AND sc.country_code = jc.country_code
 )
 
-SELECT
-    sm.skill_name,
-    sm.skill_category,
-    sm.role,
-    sm.country_code,
-    sm.mention_count,
-    sm.job_count,
-    ROUND((sm.job_count::NUMERIC / tj.total_count * 100), 2) AS percentage_of_jobs,
-    ROUND(sm.avg_salary_min, 0) AS avg_salary_min,
-    ROUND(sm.avg_salary_max, 0) AS avg_salary_max,
-    sm.min_salary,
-    sm.max_salary,
-    CASE
-        WHEN sm.mention_count > 100 THEN 'high_demand'
-        WHEN sm.mention_count > 50 THEN 'medium_demand'
-        ELSE 'low_demand'
-    END AS demand_level
-FROM skill_metrics sm
-INNER JOIN total_jobs tj
-    ON sm.role = tj.role
-    AND sm.country_code = tj.country_code
-ORDER BY sm.mention_count DESC
+SELECT 
+    skill_id,
+    skill_name,
+    skill_category,
+    skill_subcategory,
+    search_role,
+    country_code,
+    job_count,
+    total_jobs AS total_jobs_for_role,
+    demand_percentage,
+    avg_salary_min,
+    avg_salary_max,
+    avg_salary_midpoint,
+    rank_in_role_country,
+    rank_in_role_global,
+    CURRENT_DATE - INTERVAL '30 days' AS period_start,
+    CURRENT_DATE AS period_end,
+    NOW() AS updated_at
+FROM ranked_skills
+WHERE rank_in_role_country <= 50  -- Keep top 50 skills per role/country
+ORDER BY search_role, country_code, rank_in_role_country
 ```
 
 **SQL Best Practices:**
-- **CTEs**: Break complex logic into readable chunks
-- **Window Functions**: Calculate percentages and rankings
-- **Aggregations**: Pre-compute metrics for dashboard performance
-- **Indexing**: Optimize for common query patterns
+- **CTEs**: Break complex logic into readable chunks (job_counts, skill_counts, ranked_skills)
+- **Window Functions**: `ROW_NUMBER()` for ranking within partitions
+- **Aggregations**: Pre-compute metrics (counts, averages) for dashboard performance
+- **Null Safety**: `NULLIF()` prevents division by zero
+- **Data Quality**: Filter to top 50 skills to limit result size
 
 ### 6.5 dbt Documentation
 

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet, NavLink, Link } from 'react-router-dom'
 import { 
   Target, BarChart3, DollarSign, Building2, 
-  GitBranch, Globe, Menu, X, ChevronDown 
+  GitBranch, Globe, Menu, X, ChevronDown, FileText
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useFilterOptions } from '../hooks/useData'
@@ -14,6 +14,7 @@ const navigation = [
   { name: 'Companies', href: '/companies', icon: Building2 },
   { name: 'Career Paths', href: '/career', icon: GitBranch },
   { name: 'Global', href: '/global', icon: Globe },
+  { name: 'Resume Analyzer', href: '/resume', icon: FileText },
 ]
 
 export default function Layout() {
@@ -161,7 +162,14 @@ export default function Layout() {
 
         {/* Page content */}
         <main className="p-4 lg:p-6">
-          <Outlet context={{ selectedRole, selectedCountry, setSelectedRole, setSelectedCountry }} />
+          <Outlet context={{ 
+            selectedRole, 
+            selectedCountry, 
+            setSelectedRole, 
+            setSelectedCountry,
+            roles: filters?.roles || [],
+            countries: filters?.countries || []
+          }} />
         </main>
       </div>
     </div>

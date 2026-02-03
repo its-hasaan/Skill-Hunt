@@ -239,6 +239,57 @@ class ResumeAnalysis(BaseModel):
 
 
 # ============================================
+# Resume Analysis Models (Active)
+# ============================================
+
+class ExtractedSkill(BaseModel):
+    """Skill extracted from resume text."""
+    skill_name: str
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    mention_count: int = 1
+
+
+class SkillGapAnalysis(BaseModel):
+    """Skill with market demand data for gap analysis."""
+    skill_name: str
+    skill_category: Optional[str] = None
+    job_count: int
+    demand_percentage: Optional[float] = None
+    avg_salary: Optional[float] = None
+    market_rank: Optional[int] = None
+
+
+class ResumeAnalysisResponse(BaseModel):
+    """Full resume analysis response."""
+    target_role: str
+    country: Optional[str] = None
+    total_resume_skills: int
+    resume_skills: List[ExtractedSkill]
+    match_percentage: float
+    skills_you_have: List[SkillGapAnalysis]
+    skills_you_need: List[SkillGapAnalysis]
+    top_skills_to_learn: List[SkillGapAnalysis]
+
+
+class MatchedSkill(BaseModel):
+    """A skill that matched between resume and role."""
+    skill_name: str
+    category: Optional[str] = None
+    job_count: int
+
+
+class RoleMatchResult(BaseModel):
+    """Result of matching resume against a job role."""
+    role: str
+    match_score: float
+    matched_skills_count: int
+    total_skills_evaluated: int
+    top_matched_skills: List[MatchedSkill]
+    top_missing_skills: List[MatchedSkill]
+
+
+# ============================================
 # Generic Response Models
 # ============================================
 

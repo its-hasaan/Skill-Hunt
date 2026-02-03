@@ -138,4 +138,68 @@ export const careerApi = {
     api.get('/career/skill-gap', { params: { from_role: fromRole, to_role: toRole } }),
 }
 
+// ============================================
+// Resume Analysis API
+// ============================================
+
+export const resumeApi = {
+  /**
+   * Extract skills from uploaded resume
+   * @param {File} file - Resume file (PDF, DOCX, TXT)
+   */
+  extractSkills: async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await axios.post(`${API_BASE_URL}/resume/extract-skills`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    })
+    return response.data
+  },
+
+  /**
+   * Analyze resume against target role (Gap Analysis)
+   * @param {File} file - Resume file
+   * @param {string} targetRole - Target job role
+   * @param {string|null} country - Country code (optional)
+   */
+  analyze: async (file, targetRole, country = null) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('target_role', targetRole)
+    if (country) formData.append('country', country)
+    
+    const response = await axios.post(`${API_BASE_URL}/resume/analyze`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    })
+    return response.data
+  },
+
+  /**
+   * Match resume skills against all roles
+   * @param {File} file - Resume file
+   * @param {string|null} country - Country code (optional)
+   * @param {number} limit - Max roles to return
+   */
+  matchRoles: async (file, country = null, limit = 10) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (country) formData.append('country', country)
+    formData.append('limit', limit)
+    
+    const response = await axios.post(`${API_BASE_URL}/resume/match-roles`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    })
+    return response.data
+  },
+
+  /**
+   * Get list of supported roles for analysis
+   */
+  getSupportedRoles: () => api.get('/resume/supported-roles'),
+}
+
 export default api

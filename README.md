@@ -114,6 +114,7 @@ Skill Hunt leverages a modern, production-ready technology stack designed for sc
 ### **Backend**
 - **[FastAPI](https://fastapi.tiangolo.com/)** - High-performance async Python web framework
 - **[PostgreSQL](https://www.postgresql.org/)** - Robust relational database (Supabase hosted)
+- **[asyncpg](https://github.com/MagicStack/asyncpg)** - High-performance async PostgreSQL driver
 - **[dbt (Data Build Tool)](https://www.getdbt.com/)** - SQL-based data transformation framework
 - **[Pydantic](https://docs.pydantic.dev/)** - Data validation and settings management
 - **[Uvicorn](https://www.uvicorn.org/)** - Lightning-fast ASGI server
@@ -122,18 +123,21 @@ Skill Hunt leverages a modern, production-ready technology stack designed for sc
 - **[React 18](https://react.dev/)** - Modern component-based UI library
 - **[Vite](https://vitejs.dev/)** - Next-generation frontend build tool
 - **[React Router](https://reactrouter.com/)** - Declarative routing for React
+- **[TanStack React Query](https://tanstack.com/query/)** - Powerful data fetching and caching
 - **[Recharts](https://recharts.org/)** - Composable charting library
 - **[D3.js](https://d3js.org/)** - Data-driven visualizations and network graphs
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
 - **[Lucide React](https://lucide.dev/)** - Beautiful, consistent icon set
+- **[Axios](https://axios-http.com/)** - Promise-based HTTP client
 
 ### **Data Pipeline**
 - **[Adzuna API](https://www.adzuna.com/)** - Real-time job posting data source
 - **Hybrid Skill Extraction System**:
   - **Fast Path**: Regex-based pattern matching (95% coverage, instant)
-  - **Slow Path**: Google Gemini Flash LLM for skill discovery
+  - **Slow Path**: GLiNER NER model for skill discovery (local, free)
   - **Discovery Manager**: Automated skill taxonomy enrichment
-- **[psycopg2](https://www.psycopg.org/)** - PostgreSQL adapter for Python
+- **[psycopg2](https://www.psycopg.org/)** - PostgreSQL adapter for Python (ETL)
+- **[asyncpg](https://github.com/MagicStack/asyncpg)** - Async PostgreSQL driver (API)
 
 ### **DevOps & Deployment**
 - **[GitHub Actions](https://github.com/features/actions)** - CI/CD automation
@@ -551,15 +555,17 @@ Skill Hunt uses a **scheduled automated ETL pipeline** that runs **twice weekly*
   - **Fast Path**: Regex-based matching (instant, free, 95% coverage)
     - Matches against 500+ skills in taxonomy
     - Handles aliases and variations
+    - Pre-compiled patterns for performance
     - Zero cost, zero latency
-  - **Slow Path**: LLM-based extraction (Google Gemini Flash)
-    - Discovers new/emerging skills
-    - Processes 5-10% of jobs via sampling
-    - Costs <$0.10 per 1000 jobs
+  - **Slow Path**: GLiNER NER model (local, free)
+    - Uses `urchade/gliner_medium-v2.1` for named entity recognition
+    - Discovers new/emerging skills not in taxonomy
+    - Runs locally with no API costs
+    - Processes 10% of jobs via sampling strategy
   - **Discovery Manager**:
-    - Tracks newly discovered skills
+    - Tracks newly discovered skills in database
     - Auto-promotes frequently seen skills to taxonomy
-    - Manual review for skill categorization
+    - Verification workflow for manual curation
 
 #### 3. **Transformation** (`dbt_project/`)
 - dbt models process staging data into analytical marts

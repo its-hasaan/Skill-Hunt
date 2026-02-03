@@ -23,6 +23,7 @@ from .routers import (
     career_router,
     stats_router
 )
+from .routers.resume import router as resume_router
 
 # Configure logging
 logging.basicConfig(
@@ -64,6 +65,7 @@ app = FastAPI(
     - **Companies**: View top hiring companies
     - **Career**: Explore role similarities and career transitions
     - **Stats**: Dashboard statistics and filter options
+    - **Resume**: Upload resume for skill extraction and gap analysis
     
     ### Data Sources
     - Job postings from Adzuna API
@@ -117,6 +119,7 @@ app.include_router(companies_router, prefix=settings.api_prefix)
 app.include_router(salary_router, prefix=settings.api_prefix)
 app.include_router(career_router, prefix=settings.api_prefix)
 app.include_router(stats_router, prefix=settings.api_prefix)
+app.include_router(resume_router, prefix=settings.api_prefix)
 
 
 # Root endpoints
