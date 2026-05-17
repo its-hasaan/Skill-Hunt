@@ -91,31 +91,31 @@ export default function Dashboard() {
         {skillsLoading ? (
           <div className="space-y-2">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
             ))}
           </div>
         ) : skillDemand?.data?.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Skill</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Category</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Jobs</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Demand %</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Avg Salary</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Skill</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Category</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Avg Salary</th>
                 </tr>
               </thead>
               <tbody>
                 {skillDemand.data.slice(0, 20).map((skill, index) => (
-                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{skill.skill_name}</td>
-                    <td className="py-3 px-4 text-gray-600">{skill.skill_category || '-'}</td>
-                    <td className="py-3 px-4 text-right text-gray-900">{formatNumber(skill.job_count)}</td>
-                    <td className="py-3 px-4 text-right text-gray-600">
+                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{skill.skill_name}</td>
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
+                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
+                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                       {skill.demand_percentage ? `${skill.demand_percentage.toFixed(1)}%` : '-'}
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-600">
+                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                       {skill.avg_salary_midpoint ? `$${formatNumber(Math.round(skill.avg_salary_midpoint))}` : '-'}
                     </td>
                   </tr>
@@ -129,7 +129,7 @@ export default function Dashboard() {
       </Card>
 
       {/* Footer */}
-      <div className="text-center text-sm text-gray-500 py-4">
+      <div className="text-center text-sm text-gray-500 dark:text-gray-500 py-4">
         <p>🎯 Skill Hunt | Data refreshed weekly from job postings</p>
         <p className="mt-1">Built with React + FastAPI • Data Engineering Portfolio Project</p>
       </div>

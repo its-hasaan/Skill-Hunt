@@ -26,8 +26,8 @@ export default function GlobalPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">🌍 Global Skill Comparison</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🌍 Global Skill Comparison</h1>
+        <p className="text-gray-600 dark:text-gray-400">
           Compare skill demand across different countries
         </p>
       </div>
@@ -35,7 +35,7 @@ export default function GlobalPage() {
       {/* Skill Selector */}
       <Card>
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <label className="font-medium text-gray-700">
+          <label className="font-medium text-gray-700 dark:text-gray-300">
             Select a skill to compare:
           </label>
           <select
@@ -49,7 +49,7 @@ export default function GlobalPage() {
             ))}
           </select>
           {selectedSkill && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               Comparing for: <strong>{selectedRole || 'All Roles'}</strong>
             </span>
           )}
@@ -59,13 +59,13 @@ export default function GlobalPage() {
       {!selectedSkill ? (
         <Card>
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🌍</span>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               Select a Skill to Compare
             </h3>
-            <p className="text-gray-500 max-w-md mx-auto">
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
               Choose a skill from the dropdown above to see how its demand varies across different countries.
             </p>
           </div>
@@ -110,28 +110,28 @@ export default function GlobalPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Country</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Jobs with Skill</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Demand %</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Rank</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Country</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs with Skill</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Rank</th>
                 </tr>
               </thead>
               <tbody>
                 {countryData.data
                   .sort((a, b) => b.demand_percentage - a.demand_percentage)
                   .map((row, index) => (
-                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
                         {getCountryDisplay(row.country_code)}
                       </td>
-                      <td className="py-3 px-4 text-right text-gray-900">
+                      <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">
                         {formatNumber(row.job_count)}
                       </td>
-                      <td className="py-3 px-4 text-right text-gray-600">
+                      <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                         {row.demand_percentage?.toFixed(2)}%
                       </td>
-                      <td className="py-3 px-4 text-right text-gray-500">
+                      <td className="py-3 px-4 text-right text-gray-500 dark:text-gray-500">
                         {row.rank_by_country || index + 1}
                       </td>
                     </tr>
@@ -149,7 +149,7 @@ export default function GlobalPage() {
             {filters.countries.map((country) => (
               <span 
                 key={country.country_code}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm"
               >
                 {getCountryDisplay(country.country_code)}
               </span>

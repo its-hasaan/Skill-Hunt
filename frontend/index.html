@@ -11,6 +11,18 @@
     <title>Skill Hunt - Tech Job Market Analysis</title>
   </head>
   <body>
+    <script>
+      // Apply theme class before first paint to prevent flash and ensure Tailwind dark: classes work correctly
+      (function() {
+        var saved = localStorage.getItem('skillhunt-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (saved === 'dark' || (!saved && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -22,8 +22,8 @@ export default function CompaniesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Top Hiring Companies</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Top Hiring Companies</h1>
+        <p className="text-gray-600 dark:text-gray-400">
           {selectedRole ? `Companies hiring for ${selectedRole}` : 'Select a role to see companies'}
         </p>
       </div>
@@ -56,20 +56,20 @@ export default function CompaniesPage() {
             {contractTypes && (
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Full-time:</span>
-                  <span className="font-medium text-green-600">
+                  <span className="text-gray-600 dark:text-gray-400">Full-time:</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
                     {formatNumber(contractTypes.full_time || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Part-time:</span>
-                  <span className="font-medium text-yellow-600">
+                  <span className="text-gray-600 dark:text-gray-400">Part-time:</span>
+                  <span className="font-medium text-yellow-600 dark:text-yellow-400">
                     {formatNumber(contractTypes.part_time || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Contract:</span>
-                  <span className="font-medium text-purple-600">
+                  <span className="text-gray-600 dark:text-gray-400">Contract:</span>
+                  <span className="font-medium text-purple-600 dark:text-purple-400">
                     {formatNumber(contractTypes.contract || 0)}
                   </span>
                 </div>
@@ -82,16 +82,16 @@ export default function CompaniesPage() {
             <Card title="Quick Stats">
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Companies:</span>
-                  <span className="font-medium">{companies.total_count}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Total Companies:</span>
+                  <span className="font-medium dark:text-gray-200">{companies.total_count}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Top Employer:</span>
-                  <span className="font-medium">{companies.data[0]?.company_name}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Top Employer:</span>
+                  <span className="font-medium dark:text-gray-200">{companies.data[0]?.company_name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Top Jobs:</span>
-                  <span className="font-medium">{formatNumber(companies.data[0]?.job_count)}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Top Jobs:</span>
+                  <span className="font-medium dark:text-gray-200">{formatNumber(companies.data[0]?.job_count)}</span>
                 </div>
               </div>
             </Card>
@@ -104,33 +104,33 @@ export default function CompaniesPage() {
         {companiesLoading ? (
           <div className="space-y-2">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
             ))}
           </div>
         ) : companies?.data?.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Rank</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Company</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Total Jobs</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Full-Time</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Avg Salary</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Rank</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Company</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Total Jobs</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Full-Time</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Avg Salary</th>
                 </tr>
               </thead>
               <tbody>
                 {companies.data.slice(0, 30).map((company, index) => (
-                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-500">{index + 1}</td>
-                    <td className="py-3 px-4 font-medium text-gray-900">{company.company_name}</td>
-                    <td className="py-3 px-4 text-right text-gray-900">
+                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="py-3 px-4 text-gray-500 dark:text-gray-500">{index + 1}</td>
+                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{company.company_name}</td>
+                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">
                       {formatNumber(company.job_count)}
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-600">
+                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                       {formatNumber(company.full_time_count || 0)}
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-600">
+                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                       {company.avg_salary_midpoint 
                         ? formatCurrency(company.avg_salary_midpoint) 
                         : '-'}

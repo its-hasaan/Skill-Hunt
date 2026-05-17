@@ -5,7 +5,7 @@ import clsx from 'clsx'
  */
 export function Skeleton({ className }) {
   return (
-    <div className={clsx('animate-pulse bg-gray-200 rounded', className)} />
+    <div className={clsx('animate-pulse bg-gray-200 dark:bg-gray-700 rounded', className)} />
   )
 }
 
@@ -35,12 +35,12 @@ export function Spinner({ size = 'md', className }) {
 export function ChartLoading({ height = 300 }) {
   return (
     <div 
-      className="flex items-center justify-center bg-gray-50 rounded-lg"
+      className="flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg"
       style={{ height }}
     >
       <div className="text-center">
         <Spinner />
-        <p className="mt-2 text-sm text-gray-500">Loading chart...</p>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading chart...</p>
       </div>
     </div>
   )
@@ -52,13 +52,13 @@ export function ChartLoading({ height = 300 }) {
 export function ErrorState({ message = 'Something went wrong', onRetry }) {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
-      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-1">Error</h3>
-      <p className="text-sm text-gray-500 mb-4">{message}</p>
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">Error</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{message}</p>
       {onRetry && (
         <button onClick={onRetry} className="btn-primary">
           Try Again
@@ -79,14 +79,14 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       {icon || (
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
         </div>
       )}
-      <h3 className="text-lg font-medium text-gray-900 mb-1">{title}</h3>
-      <p className="text-sm text-gray-500">{description}</p>
+      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{title}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
     </div>
   )
 }
@@ -128,10 +128,10 @@ export function StatCard({ title, value, icon: Icon, color = 'primary', loading 
  */
 export function Card({ title, children, className, headerAction }) {
   return (
-    <div className={clsx('bg-white rounded-xl shadow-sm border border-gray-100', className)}>
+    <div className={clsx('bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700', className)}>
       {title && (
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           {headerAction}
         </div>
       )}
@@ -145,7 +145,7 @@ export function Card({ title, children, className, headerAction }) {
  */
 export function Tabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700/60 rounded-lg">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -153,8 +153,8 @@ export function Tabs({ tabs, activeTab, onChange }) {
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
             activeTab === tab.id
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
           )}
         >
           {tab.icon && <tab.icon className="h-4 w-4" />}
@@ -170,11 +170,11 @@ export function Tabs({ tabs, activeTab, onChange }) {
  */
 export function Badge({ children, variant = 'default', className }) {
   const variants = {
-    default: 'bg-gray-100 text-gray-700',
-    primary: 'bg-primary-100 text-primary-700',
-    success: 'bg-green-100 text-green-700',
-    warning: 'bg-yellow-100 text-yellow-700',
-    danger: 'bg-red-100 text-red-700',
+    default: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+    primary: 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400',
+    success: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
+    warning: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400',
+    danger: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
   }
 
   return (

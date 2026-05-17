@@ -20,8 +20,8 @@ export default function CareerPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">🔄 Career Transition Guide</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">🔄 Career Transition Guide</h1>
+        <p className="text-gray-600 dark:text-gray-400">
           Discover how similar different tech roles are based on required skills
         </p>
       </div>
@@ -31,7 +31,7 @@ export default function CareerPage() {
         <Card title="🎯 Find Your Path">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 I am currently a:
               </label>
               <select
@@ -52,7 +52,7 @@ export default function CareerPage() {
 
             {selectedRole && transitions?.transitions && (
               <div className="mt-6">
-                <h4 className="font-medium text-gray-900 mb-3">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                   Roles similar to {selectedRole}:
                 </h4>
                 <div className="space-y-2">
@@ -61,15 +61,15 @@ export default function CareerPage() {
                       key={index}
                       className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                         targetRole === transition.target_role 
-                          ? 'border-primary-500 bg-primary-50' 
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                       }`}
                       onClick={() => setTargetRole(transition.target_role)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{getDifficultyEmoji(transition.difficulty)}</span>
-                          <span className="font-medium text-gray-900">{transition.target_role}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{transition.target_role}</span>
                         </div>
                         <Badge 
                           variant={
@@ -80,7 +80,7 @@ export default function CareerPage() {
                           {(transition.similarity * 100).toFixed(0)}% match
                         </Badge>
                       </div>
-                      <div className="mt-1 text-sm text-gray-500">
+                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {transition.shared_skills} shared skills • {
                           transition.difficulty === 'easy' ? 'Easy transition' :
                           transition.difficulty === 'moderate' ? 'Moderate transition' : 
@@ -96,7 +96,7 @@ export default function CareerPage() {
             {transLoading && selectedRole && (
               <div className="space-y-2">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                  <div key={i} className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
                 ))}
               </div>
             )}
@@ -106,11 +106,11 @@ export default function CareerPage() {
         {/* Skill Gap Analysis */}
         <Card title="📚 Skill Gap Analysis">
           {!selectedRole ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <p>Select your current role to see transition options</p>
             </div>
           ) : !targetRole ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               <p>Select a target role to see the skill gap</p>
             </div>
           ) : gapLoading ? (
@@ -135,10 +135,10 @@ export default function CareerPage() {
               {/* Shared Skills */}
               {skillGap.shared_skills?.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">✅ Skills You Already Have:</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">✅ Skills You Already Have:</h4>
                   <div className="flex flex-wrap gap-2">
                     {skillGap.shared_skills.slice(0, 10).map((skill, i) => (
-                      <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
+                      <span key={i} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-sm">
                         {skill}
                       </span>
                     ))}
@@ -149,12 +149,12 @@ export default function CareerPage() {
               {/* Skills to Learn */}
               {skillGap.skills_to_learn?.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">📖 Skills to Learn:</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">📖 Skills to Learn:</h4>
                   <div className="space-y-2">
                     {skillGap.skills_to_learn.map((skill, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-gray-900">{skill.skill_name}</span>
-                        <span className="text-sm text-gray-500">{skill.skill_category}</span>
+                      <div key={i} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                        <span className="text-gray-900 dark:text-gray-100">{skill.skill_name}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{skill.skill_category}</span>
                       </div>
                     ))}
                   </div>
@@ -175,12 +175,12 @@ export default function CareerPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Role 1</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Role 2</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Shared Skills</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Similarity</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Difficulty</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Role 1</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Role 2</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Shared Skills</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Similarity</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Difficulty</th>
                 </tr>
               </thead>
               <tbody>
@@ -188,11 +188,11 @@ export default function CareerPage() {
                   const difficulty = pair.jaccard_similarity >= 0.5 ? 'easy' :
                                     pair.jaccard_similarity >= 0.3 ? 'moderate' : 'significant'
                   return (
-                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-900">{pair.role_1}</td>
-                      <td className="py-3 px-4 text-gray-900">{pair.role_2}</td>
-                      <td className="py-3 px-4 text-right text-gray-600">{pair.shared_skills_count}</td>
-                      <td className="py-3 px-4 text-right font-medium text-gray-900">
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{pair.role_1}</td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{pair.role_2}</td>
+                      <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">{pair.shared_skills_count}</td>
+                      <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-gray-100">
                         {(pair.jaccard_similarity * 100).toFixed(1)}%
                       </td>
                       <td className="py-3 px-4 text-center">

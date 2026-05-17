@@ -35,8 +35,8 @@ export default function SkillsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Skills Analysis</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Skills Analysis</h1>
+          <p className="text-gray-600 dark:text-gray-400">
             {selectedRole ? `Skills for ${selectedRole}` : 'Select a role to see skills'}
           </p>
         </div>
@@ -76,16 +76,16 @@ export default function SkillsPage() {
             {skillDemand?.data && (
               <div className="mt-6 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Skills:</span>
-                  <span className="font-medium">{skillDemand.total_count}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Total Skills:</span>
+                  <span className="font-medium dark:text-gray-200">{skillDemand.total_count}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Top Skill:</span>
-                  <span className="font-medium">{skillDemand.data[0]?.skill_name}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Top Skill:</span>
+                  <span className="font-medium dark:text-gray-200">{skillDemand.data[0]?.skill_name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Top Category:</span>
-                  <span className="font-medium">{skillDemand.data[0]?.skill_category || '-'}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Top Category:</span>
+                  <span className="font-medium dark:text-gray-200">{skillDemand.data[0]?.skill_category || '-'}</span>
                 </div>
               </div>
             )}
@@ -98,7 +98,7 @@ export default function SkillsPage() {
           {/* Skill Selector */}
           <Card title="Find Skill Connections">
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Select a skill to see what it pairs with:
               </label>
               <select
@@ -122,7 +122,7 @@ export default function SkillsPage() {
                 </div>
               ) : cooccurrence?.length > 0 ? (
                 <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                     Skills that pair with {selectedSkill}:
                   </h4>
                   {cooccurrence.slice(0, 15).map((pair, index) => {
@@ -132,14 +132,14 @@ export default function SkillsPage() {
                     return (
                       <div 
                         key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                       >
-                        <span className="font-medium text-gray-900">{otherSkill}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{otherSkill}</span>
                         <div className="text-right text-sm">
-                          <div className="text-gray-600">
+                          <div className="text-gray-600 dark:text-gray-400">
                             {formatNumber(pair.cooccurrence_count)} jobs
                           </div>
-                          <div className="text-gray-400">
+                          <div className="text-gray-400 dark:text-gray-500">
                             {(pair.jaccard_similarity * 100).toFixed(1)}% similarity
                           </div>
                         </div>
@@ -158,7 +158,7 @@ export default function SkillsPage() {
             {coocLoading && !selectedSkill ? (
               <ChartLoading height={400} />
             ) : (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                 <p>Select a skill to see its connections</p>
                 <p className="text-sm mt-2">
                   The network graph visualization will show how skills relate to each other
@@ -174,33 +174,33 @@ export default function SkillsPage() {
         {demandLoading ? (
           <div className="space-y-2">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
             ))}
           </div>
         ) : skillDemand?.data?.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Rank</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Skill</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Category</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Jobs</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Demand %</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Rank</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Skill</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Category</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
                 </tr>
               </thead>
               <tbody>
                 {skillDemand.data.map((skill, index) => (
                   <tr 
                     key={index} 
-                    className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
                     onClick={() => setSelectedSkill(skill.skill_name)}
                   >
-                    <td className="py-3 px-4 text-gray-500">{index + 1}</td>
-                    <td className="py-3 px-4 font-medium text-gray-900">{skill.skill_name}</td>
-                    <td className="py-3 px-4 text-gray-600">{skill.skill_category || '-'}</td>
-                    <td className="py-3 px-4 text-right text-gray-900">{formatNumber(skill.job_count)}</td>
-                    <td className="py-3 px-4 text-right text-gray-600">
+                    <td className="py-3 px-4 text-gray-500 dark:text-gray-500">{index + 1}</td>
+                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{skill.skill_name}</td>
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
+                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
+                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                       {skill.demand_percentage ? `${skill.demand_percentage.toFixed(1)}%` : '-'}
                     </td>
                   </tr>

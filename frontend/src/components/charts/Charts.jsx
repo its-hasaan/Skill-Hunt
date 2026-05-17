@@ -7,11 +7,30 @@ import {
   ScatterChart, Scatter, ZAxis
 } from 'recharts'
 import { CHART_COLORS, formatNumber, formatCurrency, formatPercent } from '../../utils/helpers'
+import { useTheme } from '../../context/ThemeContext'
+
+/**
+ * Returns chart-appropriate colors based on current theme
+ */
+function useChartColors() {
+  const { isDark } = useTheme()
+  return {
+    gridColor: isDark ? '#374151' : '#e5e7eb',
+    tooltipStyle: {
+      backgroundColor: isDark ? '#1f2937' : '#ffffff',
+      border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
+      borderRadius: '8px',
+      color: isDark ? '#f3f4f6' : '#111827',
+    },
+    tickStyle: { fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 },
+  }
+}
 
 /**
  * Horizontal bar chart for skill rankings
  */
 export function SkillBarChart({ data, dataKey = 'job_count', nameKey = 'skill_name', height = 400 }) {
+  const { gridColor, tooltipStyle, tickStyle } = useChartColors()
   // Sort by value and take top items
   const sortedData = [...data]
     .sort((a, b) => b[dataKey] - a[dataKey])
@@ -21,22 +40,17 @@ export function SkillBarChart({ data, dataKey = 'job_count', nameKey = 'skill_na
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sortedData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis type="number" tickFormatter={formatNumber} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+        <XAxis type="number" tickFormatter={formatNumber} tick={tickStyle} />
         <YAxis 
           dataKey={nameKey} 
           type="category" 
-          tick={{ fontSize: 12 }}
+          tick={tickStyle}
           width={90}
         />
         <Tooltip 
           formatter={(value) => formatNumber(value)}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-          }}
+          contentStyle={tooltipStyle}
         />
         <Bar 
           dataKey={dataKey} 
@@ -58,6 +72,7 @@ export function CategoryBarChart({
   categoryKey = 'skill_category',
   height = 400 
 }) {
+  const { gridColor, tooltipStyle, tickStyle } = useChartColors()
   const sortedData = [...data]
     .sort((a, b) => b[dataKey] - a[dataKey])
     .slice(0, 15)
@@ -73,21 +88,17 @@ export function CategoryBarChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sortedData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis type="number" tickFormatter={formatNumber} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+        <XAxis type="number" tickFormatter={formatNumber} tick={tickStyle} />
         <YAxis 
           dataKey={nameKey} 
           type="category" 
-          tick={{ fontSize: 12 }}
+          tick={tickStyle}
           width={90}
         />
         <Tooltip 
           formatter={(value, name, props) => [formatNumber(value), props.payload[categoryKey]]}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
-          }}
+          contentStyle={tooltipStyle}
         />
         <Bar dataKey={dataKey} radius={[0, 4, 4, 0]}>
           {sortedData.map((entry, index) => (
@@ -103,6 +114,7 @@ export function CategoryBarChart({
  * Pie chart for category distribution
  */
 export function CategoryPieChart({ data, height = 300 }) {
+  const { tooltipStyle, tickStyle } = useChartColors()
   // Aggregate by category
   const categoryData = data.reduce((acc, item) => {
     const cat = item.skill_category || 'Other'
@@ -124,7 +136,7 @@ export function CategoryPieChart({ data, height = 300 }) {
           paddingAngle={2}
           dataKey="value"
           label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-          labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
+          labelLine={{ stroke: tickStyle.fill, strokeWidth: 1 }}
         >
           {pieData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -132,11 +144,7 @@ export function CategoryPieChart({ data, height = 300 }) {
         </Pie>
         <Tooltip 
           formatter={(value) => formatNumber(value)}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
-          }}
+          contentStyle={tooltipStyle}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -147,6 +155,7 @@ export function CategoryPieChart({ data, height = 300 }) {
  * Salary premium bar chart
  */
 export function SalaryPremiumChart({ data, height = 400 }) {
+  const { gridColor, tooltipStyle, tickStyle } = useChartColors()
   const sortedData = [...data]
     .filter(d => d.salary_premium_percentage != null)
     .sort((a, b) => b.salary_premium_percentage - a.salary_premium_percentage)
@@ -156,24 +165,21 @@ export function SalaryPremiumChart({ data, height = 400 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sortedData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis 
           type="number" 
           tickFormatter={(v) => `${v > 0 ? '+' : ''}${v.toFixed(0)}%`}
+          tick={tickStyle}
         />
         <YAxis 
           dataKey="skill_name" 
           type="category" 
-          tick={{ fontSize: 12 }}
+          tick={tickStyle}
           width={90}
         />
         <Tooltip 
           formatter={(value) => formatPercent(value)}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
-          }}
+          contentStyle={tooltipStyle}
         />
         <Bar dataKey="salary_premium_percentage" radius={[0, 4, 4, 0]}>
           {sortedData.map((entry, index) => (
@@ -192,6 +198,7 @@ export function SalaryPremiumChart({ data, height = 400 }) {
  * Salary comparison bar chart
  */
 export function SalaryComparisonChart({ data, height = 400 }) {
+  const { gridColor, tooltipStyle, tickStyle } = useChartColors()
   const sortedData = [...data]
     .filter(d => d.avg_salary_with_skill != null)
     .sort((a, b) => b.avg_salary_with_skill - a.avg_salary_with_skill)
@@ -201,24 +208,21 @@ export function SalaryComparisonChart({ data, height = 400 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sortedData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis 
           type="number" 
           tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+          tick={tickStyle}
         />
         <YAxis 
           dataKey="skill_name" 
           type="category" 
-          tick={{ fontSize: 12 }}
+          tick={tickStyle}
           width={90}
         />
         <Tooltip 
           formatter={(value) => formatCurrency(value)}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
-          }}
+          contentStyle={tooltipStyle}
         />
         <Bar 
           dataKey="avg_salary_with_skill" 
@@ -234,6 +238,7 @@ export function SalaryComparisonChart({ data, height = 400 }) {
  * Company job count chart
  */
 export function CompanyBarChart({ data, height = 500 }) {
+  const { gridColor, tooltipStyle, tickStyle } = useChartColors()
   const sortedData = [...data]
     .sort((a, b) => b.job_count - a.job_count)
     .slice(0, 20)
@@ -242,21 +247,17 @@ export function CompanyBarChart({ data, height = 500 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sortedData} layout="vertical" margin={{ top: 5, right: 30, left: 120, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis type="number" tickFormatter={formatNumber} />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+        <XAxis type="number" tickFormatter={formatNumber} tick={tickStyle} />
         <YAxis 
           dataKey="company_name" 
           type="category" 
-          tick={{ fontSize: 11 }}
+          tick={{ ...tickStyle, fontSize: 11 }}
           width={110}
         />
         <Tooltip 
           formatter={(value) => formatNumber(value)}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
-          }}
+          contentStyle={tooltipStyle}
         />
         <Bar 
           dataKey="job_count" 
@@ -272,6 +273,7 @@ export function CompanyBarChart({ data, height = 500 }) {
  * Contract type pie chart
  */
 export function ContractTypePieChart({ data, height = 250 }) {
+  const { tooltipStyle } = useChartColors()
   const pieData = [
     { name: 'Full Time', value: data.full_time || 0, color: '#10b981' },
     { name: 'Part Time', value: data.part_time || 0, color: '#f59e0b' },
@@ -295,7 +297,7 @@ export function ContractTypePieChart({ data, height = 250 }) {
             <Cell key={`cell-${index}`} fill={entry.color} />
           ))}
         </Pie>
-        <Tooltip formatter={(value) => formatNumber(value)} />
+        <Tooltip formatter={(value) => formatNumber(value)} contentStyle={tooltipStyle} />
       </PieChart>
     </ResponsiveContainer>
   )
@@ -305,6 +307,7 @@ export function ContractTypePieChart({ data, height = 250 }) {
  * Country comparison bar chart
  */
 export function CountryComparisonChart({ data, valueKey = 'demand_percentage', height = 400 }) {
+  const { gridColor, tooltipStyle, tickStyle } = useChartColors()
   const sortedData = [...data]
     .sort((a, b) => b[valueKey] - a[valueKey])
     .map(d => ({
@@ -315,24 +318,21 @@ export function CountryComparisonChart({ data, valueKey = 'demand_percentage', h
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={sortedData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
         <XAxis 
           type="number" 
           tickFormatter={(v) => valueKey.includes('percentage') ? `${v.toFixed(1)}%` : formatNumber(v)}
+          tick={tickStyle}
         />
         <YAxis 
           dataKey="display_name" 
           type="category" 
-          tick={{ fontSize: 12 }}
+          tick={tickStyle}
           width={90}
         />
         <Tooltip 
           formatter={(value) => valueKey.includes('percentage') ? `${value.toFixed(2)}%` : formatNumber(value)}
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px'
-          }}
+          contentStyle={tooltipStyle}
         />
         <Bar 
           dataKey={valueKey} 

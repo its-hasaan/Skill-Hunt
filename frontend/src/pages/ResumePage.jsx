@@ -41,7 +41,7 @@ function FileUpload({ onFileSelect, file, loading }) {
     <div
       className={`
         relative border-2 border-dashed rounded-xl p-8 text-center transition-all
-        ${dragActive ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-gray-400'}
+        ${dragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'}
         ${loading ? 'opacity-50 pointer-events-none' : ''}
       `}
       onDragEnter={handleDrag}
@@ -61,21 +61,21 @@ function FileUpload({ onFileSelect, file, loading }) {
         <div className="flex items-center justify-center gap-3">
           <FileText className="h-10 w-10 text-primary-600" />
           <div className="text-left">
-            <p className="font-medium text-gray-900">{file.name}</p>
-            <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{file.name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
           </div>
           <CheckCircle2 className="h-6 w-6 text-green-500" />
         </div>
       ) : (
         <>
-          <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-lg font-medium text-gray-700 mb-2">
+          <Upload className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
             Drop your resume here
           </p>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             or click to browse files
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
             Supports PDF, DOCX, DOC, TXT, and images (PNG, JPG)
           </p>
         </>
@@ -87,9 +87,9 @@ function FileUpload({ onFileSelect, file, loading }) {
 // Skill Badge component
 function SkillBadge({ skill, type = 'neutral' }) {
   const colors = {
-    have: 'bg-green-100 text-green-800 border-green-200',
-    need: 'bg-red-100 text-red-800 border-red-200',
-    neutral: 'bg-gray-100 text-gray-800 border-gray-200',
+    have: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800',
+    need: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800',
+    neutral: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600',
   }
 
   return (
@@ -159,18 +159,18 @@ function RoleMatchCard({ match, rank }) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className={`
             w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm
-            ${rank === 1 ? 'bg-yellow-500' : rank === 2 ? 'bg-gray-400' : rank === 3 ? 'bg-amber-600' : 'bg-gray-300'}
+            ${rank === 1 ? 'bg-yellow-500' : rank === 2 ? 'bg-gray-400' : rank === 3 ? 'bg-amber-600' : 'bg-gray-300 dark:bg-gray-600'}
           `}>
             {rank}
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900">{match.role}</h4>
-            <p className="text-sm text-gray-500">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100">{match.role}</h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {match.matched_skills_count} of {match.total_skills_evaluated} skills matched
             </p>
           </div>
@@ -186,7 +186,7 @@ function RoleMatchCard({ match, rank }) {
       </div>
 
       {/* Progress bar */}
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-3">
         <div 
           className={`h-2 rounded-full transition-all ${getScoreColor(match.match_score)}`}
           style={{ width: `${match.match_score}%` }}
@@ -196,15 +196,15 @@ function RoleMatchCard({ match, rank }) {
       {/* Top matched skills */}
       {match.top_matched_skills?.length > 0 && (
         <div className="mb-2">
-          <p className="text-xs text-gray-500 mb-1">Your matching skills:</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Your matching skills:</p>
           <div className="flex flex-wrap gap-1">
             {match.top_matched_skills.slice(0, 4).map((skill, i) => (
-              <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+              <span key={i} className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
                 {skill.skill_name}
               </span>
             ))}
             {match.top_matched_skills.length > 4 && (
-              <span className="text-xs text-gray-500">+{match.top_matched_skills.length - 4} more</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">+{match.top_matched_skills.length - 4} more</span>
             )}
           </div>
         </div>
@@ -213,10 +213,10 @@ function RoleMatchCard({ match, rank }) {
       {/* Top missing skills */}
       {match.top_missing_skills?.length > 0 && (
         <div>
-          <p className="text-xs text-gray-500 mb-1">Skills to learn:</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Skills to learn:</p>
           <div className="flex flex-wrap gap-1">
             {match.top_missing_skills.slice(0, 3).map((skill, i) => (
-              <span key={i} className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+              <span key={i} className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded">
                 {skill.skill_name}
               </span>
             ))}
@@ -302,13 +302,13 @@ export default function ResumePage() {
         <Card title="2. Choose Analysis">
           <div className="space-y-4">
             {/* Tab Selection */}
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
               <button
                 onClick={() => setActiveTab('gap-analysis')}
                 className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'gap-analysis'
-                    ? 'bg-white text-primary-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white dark:bg-gray-600 text-primary-700 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
                 Gap Analysis
@@ -317,8 +317,8 @@ export default function ResumePage() {
                 onClick={() => setActiveTab('role-match')}
                 className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'role-match'
-                    ? 'bg-white text-primary-700 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white dark:bg-gray-600 text-primary-700 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
                 Role Match
@@ -328,13 +328,13 @@ export default function ResumePage() {
             {/* Target Role (only for gap analysis) */}
             {activeTab === 'gap-analysis' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Target Role
                 </label>
                 <select
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">Select a role...</option>
                   {roles?.map((role) => (
@@ -352,7 +352,7 @@ export default function ResumePage() {
                 w-full py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2
                 transition-all
                 ${loading || !file || (activeTab === 'gap-analysis' && !targetRole)
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                   : 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg hover:shadow-xl'
                 }
               `}
@@ -372,7 +372,7 @@ export default function ResumePage() {
 
             {/* Error Message */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
                 <AlertCircle className="h-5 w-5 flex-shrink-0" />
                 {error}
               </div>
@@ -424,25 +424,25 @@ export default function ResumePage() {
                 {gapAnalysis.skills_you_need.slice(0, 15).map((skill, i) => (
                   <div 
                     key={i}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <span className={`
                         w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                        ${i < 5 ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-600'}
+                        ${i < 5 ? 'bg-red-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'}
                       `}>
                         {i + 1}
                       </span>
                       <div>
-                        <span className="font-medium text-gray-900">{skill.skill_name}</span>
-                        <span className="text-sm text-gray-500 ml-2">({skill.skill_category})</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{skill.skill_name}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">({skill.skill_category})</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {skill.job_count?.toLocaleString()} jobs
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {skill.demand_percentage?.toFixed(1)}% of postings
                       </p>
                     </div>
@@ -463,11 +463,11 @@ export default function ResumePage() {
               {gapAnalysis.resume_skills?.map((skill, i) => (
                 <span 
                   key={i}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                  className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm"
                 >
                   {skill.skill_name}
                   {skill.mention_count > 1 && (
-                    <span className="ml-1 text-gray-400">×{skill.mention_count}</span>
+                    <span className="ml-1 text-gray-400 dark:text-gray-500">×{skill.mention_count}</span>
                   )}
                 </span>
               ))}
@@ -481,7 +481,7 @@ export default function ResumePage() {
         <Card 
           title="Your Best Role Matches"
           headerAction={
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               Based on skill overlap with market demand
             </span>
           }
@@ -506,14 +506,14 @@ export default function ResumePage() {
         <Card title="How It Works">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-3">
                 <Target className="h-5 w-5 text-primary-600" />
                 Gap Analysis
               </h4>
-              <p className="text-gray-600 mb-3">
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
                 Compare your skills against market demand for a specific role.
               </p>
-              <ul className="space-y-2 text-sm text-gray-500">
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
                   See which of your skills are in high demand
@@ -529,14 +529,14 @@ export default function ResumePage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-3">
                 <Briefcase className="h-5 w-5 text-accent-600" />
                 Role Match
               </h4>
-              <p className="text-gray-600 mb-3">
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
                 Find which job roles best match your current skillset.
               </p>
-              <ul className="space-y-2 text-sm text-gray-500">
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
                   Automatically match against all tracked roles
