@@ -48,7 +48,9 @@ export default function Layout() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <img src="/logo.png" alt="Skill Hunt" className="h-8 w-8 rounded-full object-cover" />
+          <div className="h-9 w-9 rounded-full overflow-hidden flex-shrink-0">
+            <img src="/logo.png" alt="Skill Hunt" className="w-full h-full object-cover scale-[1.35] object-center" />
+          </div>
           <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Skill Hunt</span>
         </div>
 
