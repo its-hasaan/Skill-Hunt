@@ -3,6 +3,7 @@ name: Keep Render warm
 on:
   schedule:
     - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch:           # allow manual trigger from GitHub Actions UI
 jobs:
   ping:
     runs-on: ubuntu-latest
