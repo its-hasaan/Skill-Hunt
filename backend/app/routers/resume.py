@@ -123,19 +123,18 @@ class ResumeSkillExtractor:
 skill_extractor = ResumeSkillExtractor()
 
 
-async def extract_text_from_file(file: UploadFile) -> str:
+def extract_text_from_bytes(content: bytes, filename: str) -> str:
     """
-    Extract text content from uploaded file.
+    Extract text from file bytes synchronously.
     Supports: PDF, DOCX, TXT, and common text formats.
     """
-    content = await file.read()
-    filename = file.filename.lower()
-    
+    filename = filename.lower()
+
     try:
         # Plain text files
         if filename.endswith(('.txt', '.md', '.csv')):
             return content.decode('utf-8', errors='ignore')
-        
+
         # PDF files
         elif filename.endswith('.pdf'):
             try:
@@ -181,13 +180,74 @@ async def extract_text_from_file(file: UploadFile) -> str:
         else:
             # Try to decode as text anyway
             return content.decode('utf-8', errors='ignore')
-    
+
     except Exception as e:
         logger.error(f"Error extracting text from {filename}: {e}")
         raise HTTPException(
             status_code=400,
             detail=f"Could not extract text from file: {str(e)}"
         )
+
+
+async def extract_text_from_file(file: UploadFile) -> tuple:
+    """Read file bytes and extract text. Returns (bytes, text)."""
+    content = await file.read()
+    text = extract_text_from_bytes(content, file.filename)
+    return content, text
+
+
+async def _save_resume_record(
+    db: "Database",
+    filename: str,
+    file_size: int,
+    file_bytes: bytes,
+    analysis_type: str,
+    target_role: Optional[str],
+    extracted_skills: list,
+    match_score: Optional[float] = None,
+) -> None:
+    """
+    Save resume upload record to DB and file to Supabase Storage.
+    Runs best-effort — any failure is logged but does NOT raise.
+    """
+    import json as _json
+    from ..storage import upload_resume_file, is_storage_configured
+
+    storage_path = None
+    storage_url = None
+
+    # Try to upload file to Supabase Storage
+    if is_storage_configured():
+        try:
+            storage_path, storage_url = await upload_resume_file(file_bytes, filename)
+            logger.info(f"Resume saved to storage: {storage_path}")
+        except Exception as e:
+            logger.warning(f"Storage upload failed (non-fatal): {e}")
+
+    # Save metadata to PostgreSQL
+    try:
+        skills_json = _json.dumps(extracted_skills)
+        await db.execute(
+            """
+            INSERT INTO public.resume_uploads
+                (filename, file_size, analysis_type, target_role,
+                 extracted_skills_count, extracted_skills,
+                 match_score, storage_path, storage_url)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            """,
+            filename,
+            file_size,
+            analysis_type,
+            target_role,
+            len(extracted_skills),
+            skills_json,
+            match_score,
+            storage_path,
+            storage_url,
+        )
+        logger.info(f"Resume metadata saved for '{filename}'")
+    except Exception as e:
+        logger.warning(f"DB metadata save failed (non-fatal): {e}")
 
 
 # ============================================
@@ -220,7 +280,7 @@ async def extract_skills_from_resume(
         )
     
     # Extract text from file
-    text = await extract_text_from_file(file)
+    file_bytes, text = await extract_text_from_file(file)
     
     if not text or len(text.strip()) < 50:
         raise HTTPException(
@@ -256,7 +316,7 @@ async def analyze_resume(
     - Match percentage
     """
     # Extract text
-    text = await extract_text_from_file(file)
+    file_bytes, text = await extract_text_from_file(file)
     
     if not text or len(text.strip()) < 50:
         raise HTTPException(
@@ -330,7 +390,20 @@ async def analyze_resume(
     # Sort by priority
     skills_you_have.sort(key=lambda x: x['job_count'], reverse=True)
     skills_you_need.sort(key=lambda x: x['job_count'], reverse=True)
-    
+
+    # Save resume + metadata (non-blocking, best-effort)
+    import asyncio as _asyncio
+    _asyncio.ensure_future(_save_resume_record(
+        db=db,
+        filename=file.filename,
+        file_size=len(file_bytes),
+        file_bytes=file_bytes,
+        analysis_type="gap_analysis",
+        target_role=target_role,
+        extracted_skills=[{'skill_name': s['skill_name'], 'category': s['skill_category'], 'mention_count': s['mention_count']} for s in resume_skills],
+        match_score=round(match_percentage, 1),
+    ))
+
     return ResumeAnalysisResponse(
         target_role=target_role,
         country=country,
@@ -339,7 +412,7 @@ async def analyze_resume(
         match_percentage=round(match_percentage, 1),
         skills_you_have=[SkillGapAnalysis(**s) for s in skills_you_have],
         skills_you_need=[SkillGapAnalysis(**s) for s in skills_you_need],
-        top_skills_to_learn=skills_you_need[:5]  # Top 5 most impactful skills to learn
+        top_skills_to_learn=skills_you_need[:5]
     )
 
 
@@ -375,7 +448,7 @@ async def match_resume_to_roles(
     - Top skills you're missing for that role
     """
     # Extract text
-    text = await extract_text_from_file(file)
+    file_bytes, text = await extract_text_from_file(file)
     
     if not text or len(text.strip()) < 50:
         raise HTTPException(
@@ -472,8 +545,24 @@ async def match_resume_to_roles(
     
     # Sort by match score descending
     role_matches.sort(key=lambda x: x['match_score'], reverse=True)
-    
-    return [RoleMatchResult(**r) for r in role_matches[:limit]]
+    top_matches = role_matches[:limit]
+
+    # Save resume + metadata (non-blocking, best-effort)
+    import asyncio as _asyncio
+    top_role = top_matches[0]['role'] if top_matches else None
+    top_score = top_matches[0]['match_score'] if top_matches else None
+    _asyncio.ensure_future(_save_resume_record(
+        db=db,
+        filename=file.filename,
+        file_size=len(file_bytes),
+        file_bytes=file_bytes,
+        analysis_type="role_match",
+        target_role=top_role,
+        extracted_skills=[{'skill_name': s['skill_name']} for s in resume_skills],
+        match_score=top_score,
+    ))
+
+    return [RoleMatchResult(**r) for r in top_matches]
 
 
 @router.get("/supported-roles")

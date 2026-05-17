@@ -1,0 +1,10 @@
+# .github/workflows/keep-warm.yml
+name: Keep Render warm
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -f https://skill-hunt.onrender.com/health

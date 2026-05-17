@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Database - Supabase PostgreSQL
     supabase_url: str  # Connection string
     supabase_anon_key: Optional[str] = None  # For future Supabase client features
+
+    # Supabase Storage (for resume file uploads)
+    supabase_project_url: Optional[str] = None  # e.g. https://xxxx.supabase.co
+    supabase_service_key: Optional[str] = None  # service_role key from Supabase dashboard
     
     # CORS - Frontend URLs
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
