@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://your-render-backend.onrender.com/api/$1"
+      "dest": "https://skill-hunt.onrender.com/api/$1"
     },
     {
       "src": "/(.*)",
