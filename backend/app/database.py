@@ -29,7 +29,8 @@ class Database:
                     min_size=2,
                     max_size=10,
                     ssl="require",
-                    command_timeout=30
+                    command_timeout=30,
+                    statement_cache_size=0,  # Required for Supabase PgBouncer (transaction mode)
                 )
                 logger.info("Database connection pool created")
             except Exception as e:
