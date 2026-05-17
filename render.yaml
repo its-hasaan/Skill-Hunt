@@ -13,7 +13,7 @@ services:
       - key: SUPABASE_URL
         sync: false  # Set manually in Render dashboard
       - key: CORS_ORIGINS
-        value: https://skill-hunt.vercel.app,http://localhost:5173
+        value: https://skill-hunt-beta.vercel.app,http://localhost:5173,http://localhost:5174
       - key: DEBUG
         value: false
       - key: CACHE_TTL_SECONDS
