@@ -400,7 +400,7 @@ async def analyze_resume(
         file_bytes=file_bytes,
         analysis_type="gap_analysis",
         target_role=target_role,
-        extracted_skills=[{'skill_name': s['skill_name'], 'category': s['skill_category'], 'mention_count': s['mention_count']} for s in resume_skills],
+        extracted_skills=[{'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']} for s in resume_skills],
         match_score=round(match_percentage, 1),
     ))
 
