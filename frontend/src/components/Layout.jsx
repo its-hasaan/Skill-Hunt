@@ -48,9 +48,7 @@ export default function Layout() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div className="h-9 w-9 rounded-full overflow-hidden flex-shrink-0">
-            <img src="/logo.png" alt="Skill Hunt" className="w-full h-full object-cover scale-[1.35] object-center" />
-          </div>
+          <img src="/logo.png" alt="Skill Hunt" className="h-9 w-9 flex-shrink-0" />
           <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Skill Hunt</span>
         </div>
 
@@ -141,7 +139,7 @@ export default function Layout() {
               Tech Job Market Analysis
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
-              Real-time skill demand insights from job postings
+              Skill demand insights from job postings
             </p>
           </div>
 
