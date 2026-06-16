@@ -2,10 +2,12 @@
 name: Keep Render warm
 on:
   schedule:
-    - cron: '*/10 * * * *'   # every 10 minutes
-  workflow_dispatch:           # allow manual trigger from GitHub Actions UI
+    - cron: '*/5 * * * *'   # every 5 minutes (minimum allowed by GitHub to buffer against scheduler delays)
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -f https://skill-hunt.onrender.com/health
+      - name: Ping Health Endpoint
+        run: |
+          curl -s -f -o /dev/null --connect-timeout 15 --max-time 60 --retry 3 --retry-delay 10 https://skill-hunt.onrender.com/health
