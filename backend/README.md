@@ -1,6 +1,6 @@
-# Skill Hunt Backend
+# Job Script Backend
 
-FastAPI backend for the Skill Hunt job market analysis dashboard.
+FastAPI backend for the Job Script job market analysis dashboard.
 
 ## Setup
 

@@ -1,5 +1,5 @@
 /**
- * API client for Skill Hunt backend
+ * API client for Job Script backend
  */
 import axios from 'axios'
 

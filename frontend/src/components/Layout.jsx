@@ -48,8 +48,8 @@ export default function Layout() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <img src="/logo.png" alt="Skill Hunt" className="h-9 w-9 flex-shrink-0" />
-          <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Skill Hunt</span>
+          <img src="/logo.png" alt="Job Script" className="h-9 w-9 flex-shrink-0" />
+          <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Job Script</span>
         </div>
 
         {/* Navigation */}

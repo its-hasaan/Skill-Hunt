@@ -1,8 +1,8 @@
-name: 'skill_hunt'
+name: 'job_script'
 version: '1.0.0'
 config-version: 2
 
-profile: 'skill_hunt'
+profile: 'job_script'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]

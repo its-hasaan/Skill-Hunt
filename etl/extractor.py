@@ -1,5 +1,5 @@
 """
-Skill Hunt - Job Data Extractor
+Job Script - Job Data Extractor
 ================================
 Extracts job postings from Adzuna API for multiple roles and countries.
 Stores raw JSON data in Supabase PostgreSQL.

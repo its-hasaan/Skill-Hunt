@@ -130,7 +130,7 @@ export default function Dashboard() {
 
       {/* Footer */}
       <div className="text-center text-sm text-gray-500 dark:text-gray-500 py-4">
-        <p>🎯 Skill Hunt | Data refreshed weekly from job postings</p>
+        <p>🎯 Job Script | Data refreshed weekly from job postings</p>
         <p className="mt-1">Built with React + FastAPI • Data Engineering Portfolio Project</p>
       </div>
     </div>

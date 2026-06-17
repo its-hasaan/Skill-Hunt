@@ -1,6 +1,6 @@
-# Skill Hunt Frontend
+# Job Script Frontend
 
-React + Vite frontend for the Skill Hunt job market analysis dashboard.
+React + Vite frontend for the Job Script job market analysis dashboard.
 
 ## Tech Stack
 

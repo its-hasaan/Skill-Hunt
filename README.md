@@ -1,4 +1,4 @@
-# 🎯 Skill Hunt
+# 🎯 Job Script
 
 > **Data-Driven Job Market Intelligence Platform**  
 > Uncover skill trends, salary insights, and career opportunities through advanced analytics and AI-powered data extraction.
@@ -36,7 +36,7 @@
 
 ## 🌟 Overview
 
-**Skill Hunt** is an enterprise-grade job market analysis platform that empowers professionals, recruiters, and organizations with actionable intelligence derived from millions of job postings worldwide. By combining cutting-edge data engineering practices with AI-driven skill extraction, Skill Hunt transforms raw job market data into strategic career insights.
+**Job Script** is an enterprise-grade job market analysis platform that empowers professionals, recruiters, and organizations with actionable intelligence derived from millions of job postings worldwide. By combining cutting-edge data engineering practices with AI-driven skill extraction, Job Script transforms raw job market data into strategic career insights.
 
 ### 🎯 Mission
 
@@ -52,7 +52,7 @@ To democratize access to job market intelligence, enabling individuals to make i
 
 ### 🌍 Global Coverage
 
-Skill Hunt aggregates job postings from **18 countries** across 6 continents, analyzing **15+ job roles** spanning Data Engineering, AI/ML, Software Development, DevOps, and Cybersecurity.
+Job Script aggregates job postings from **18 countries** across 6 continents, analyzing **15+ job roles** spanning Data Engineering, AI/ML, Software Development, DevOps, and Cybersecurity.
 
 **Supported Countries:**
 - 🇬🇧 United Kingdom
@@ -109,7 +109,7 @@ Skill Hunt aggregates job postings from **18 countries** across 6 continents, an
 
 ## 🛠️ Technology Stack
 
-Skill Hunt leverages a modern, production-ready technology stack designed for scalability, maintainability, and performance.
+Job Script leverages a modern, production-ready technology stack designed for scalability, maintainability, and performance.
 
 ### **Backend**
 - **[FastAPI](https://fastapi.tiangolo.com/)** - High-performance async Python web framework
@@ -156,11 +156,11 @@ Skill Hunt leverages a modern, production-ready technology stack designed for sc
 
 ## 🏗️ Architecture
 
-Skill Hunt follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract, Load, Transform)** pipeline pattern.
+Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract, Load, Transform)** pipeline pattern.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         SKILL HUNT ARCHITECTURE                      │
+│                         Job Script ARCHITECTURE                      │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────┐
@@ -254,8 +254,8 @@ Ensure you have the following installed:
 #### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/skill-hunt.git
-cd skill-hunt
+git clone https://github.com/yourusername/job-script.git
+cd job-script
 ```
 
 #### 2️⃣ Set Up Backend
@@ -433,7 +433,7 @@ npm run dev
 
 ## 📚 API Documentation
 
-The Skill Hunt API provides RESTful endpoints for accessing job market data.
+The Job Script API provides RESTful endpoints for accessing job market data.
 
 ### Base URL
 ```
@@ -539,7 +539,7 @@ For full API documentation with interactive examples, visit: http://localhost:80
 
 ### ETL Architecture
 
-Skill Hunt uses a **scheduled automated ETL pipeline** that runs **twice weekly** (Sundays and Wednesdays at 3:00 AM UTC) via GitHub Actions.
+Job Script uses a **scheduled automated ETL pipeline** that runs **twice weekly** (Sundays and Wednesdays at 3:00 AM UTC) via GitHub Actions.
 
 ### Pipeline Stages
 
@@ -621,7 +621,7 @@ ETL runs automatically via GitHub Actions (`.github/workflows/etl_pipeline.yml`)
 
 3. **Set Environment Variables**
    - `SUPABASE_URL`: Your PostgreSQL connection string
-   - `CORS_ORIGINS`: Your frontend URL (e.g., `https://skill-hunt.vercel.app`)
+   - `CORS_ORIGINS`: Your frontend URL (e.g., `https://jobscript.vercel.app`)
    - `DEBUG`: `false`
    - `CACHE_TTL_SECONDS`: `3600`
 
@@ -641,7 +641,7 @@ ETL runs automatically via GitHub Actions (`.github/workflows/etl_pipeline.yml`)
    - **Install Command**: `npm install`
 
 3. **Set Environment Variables**
-   - `VITE_API_URL`: Your Render backend URL (e.g., `https://skill-hunt-api.onrender.com/api/v1`)
+   - `VITE_API_URL`: Your Render backend URL (e.g., `https://job-script-api.onrender.com/api/v1`)
 
 4. **Deploy**
    - Vercel auto-deploys on Git push
@@ -707,9 +707,9 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 📞 Contact & Support
 
-- **Email**: support@skillhunt.com
-- **GitHub Issues**: [Report a bug](https://github.com/yourusername/skill-hunt/issues)
-- **Discussions**: [Ask questions](https://github.com/yourusername/skill-hunt/discussions)
+- **Email**: support@jobscript.com
+- **GitHub Issues**: [Report a bug](https://github.com/yourusername/job-script/issues)
+- **Discussions**: [Ask questions](https://github.com/yourusername/job-script/discussions)
 
 ---
 
@@ -729,7 +729,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-**Built with ❤️ by the Skill Hunt Team**
+**Built with ❤️ by the Job Script Team**
 
 ⭐ Star us on GitHub if you find this project useful!
 

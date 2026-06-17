@@ -1,5 +1,5 @@
 """
-Skill Hunt - Skill Extraction Transformer
+Job Script - Skill Extraction Transformer
 ==========================================
 Extracts skills from job descriptions using HYBRID approach:
 - Fast Path: Regex-based matching for known skills (instant, free)

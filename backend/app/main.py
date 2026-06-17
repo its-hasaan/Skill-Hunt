@@ -1,7 +1,7 @@
 """
-Skill Hunt API - Main Application
+Job Script API - Main Application
 =================================
-FastAPI backend for the Skill Hunt job market analysis dashboard.
+FastAPI backend for the Job Script job market analysis dashboard.
 
 Run locally: uvicorn app.main:app --reload --port 8000
 API docs: http://localhost:8000/docs
@@ -39,14 +39,14 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown events."""
     # Startup
-    logger.info("Starting Skill Hunt API...")
+    logger.info("Starting Job Script API...")
     await db.connect()
     logger.info("Database connected")
     
     yield
     
     # Shutdown
-    logger.info("Shutting down Skill Hunt API...")
+    logger.info("Shutting down Job Script API...")
     await db.disconnect()
     logger.info("Database disconnected")
 
@@ -55,9 +55,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="""
-    ## Skill Hunt API
+    ## Job Script API
     
-    Backend API for the Skill Hunt job market analysis dashboard.
+    Backend API for the Job Script job market analysis dashboard.
     
     ### Features
     - **Skills**: Get skill demand, co-occurrence, and network data

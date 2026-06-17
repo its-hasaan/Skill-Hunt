@@ -1,4 +1,4 @@
-# Skill Hunt Backend - FastAPI Dependencies
+# Job Script Backend - FastAPI Dependencies
 # Install with: pip install -r requirements.txt
 
 # Web Framework

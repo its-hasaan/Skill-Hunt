@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Application
-    app_name: str = "Skill Hunt API"
+    app_name: str = "Job Script API"
     app_version: str = "1.0.0"
     debug: bool = False
     

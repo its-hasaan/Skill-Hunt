@@ -1,5 +1,5 @@
 -- ============================================================
--- SKILL HUNT DATABASE SCHEMA
+-- JOB SCRIPT DATABASE SCHEMA
 -- Supabase PostgreSQL Schema for Job Market Analysis
 -- ============================================================
 

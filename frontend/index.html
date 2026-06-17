@@ -5,17 +5,17 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Skill Hunt - Tech Job Market Analysis Dashboard. Discover in-demand skills, salary insights, and career paths." />
+    <meta name="description" content="Job Script - Tech Job Market Analysis Dashboard. Discover in-demand skills, salary insights, and career paths." />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <title>Skill Hunt - Tech Job Market Analysis</title>
+    <title>Job Script - Tech Job Market Analysis</title>
   </head>
   <body>
     <script>
       // Apply theme class before first paint to prevent flash and ensure Tailwind dark: classes work correctly
       (function() {
-        var saved = localStorage.getItem('skillhunt-theme');
+        var saved = localStorage.getItem('jobscript-theme');
         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (saved === 'dark' || (!saved && prefersDark)) {
           document.documentElement.classList.add('dark');

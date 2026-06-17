@@ -1,4 +1,4 @@
-# Render Blueprint for Skill Hunt Backend
+# Render Blueprint for Job Script Backend
 # Deploy with: render blueprint apply
 
 services:
@@ -13,7 +13,7 @@ services:
       - key: SUPABASE_URL
         sync: false  # Set manually in Render dashboard
       - key: CORS_ORIGINS
-        value: https://skill-hunt-beta.vercel.app,http://localhost:5173,http://localhost:5174
+        value: https://jobscript.vercel.app,http://localhost:5173,http://localhost:5174
       - key: DEBUG
         value: false
       - key: CACHE_TTL_SECONDS

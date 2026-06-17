@@ -1,7 +1,7 @@
-# 🔧 Skill Hunt - Implementation Guide
+# 🔧 Job Script - Implementation Guide
 
 > **Comprehensive Technical Documentation**  
-> Deep dive into the architecture, implementation details, and engineering decisions behind Skill Hunt.
+> Deep dive into the architecture, implementation details, and engineering decisions behind Job Script.
 
 ---
 
@@ -24,7 +24,7 @@
 
 ### 1.1 High-Level Architecture
 
-Skill Hunt follows a **Modern Data Stack (MDS)** architecture pattern, emphasizing:
+Job Script follows a **Modern Data Stack (MDS)** architecture pattern, emphasizing:
 - **Separation of Concerns**: Distinct layers for extraction, storage, transformation, and presentation
 - **ELT over ETL**: Load raw data first, transform in-database for performance
 - **Cloud-Native**: Leverages managed services (Supabase, Render, Vercel)
@@ -565,14 +565,14 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     # Startup
-    logger.info("Starting Skill Hunt API...")
+    logger.info("Starting Job Script API...")
     await db.connect()
     yield
     # Shutdown
     await db.disconnect()
 
 app = FastAPI(
-    title="Skill Hunt API",
+    title="Job Script API",
     description="Job market analysis API",
     version="1.0.0",
     lifespan=lifespan
@@ -1497,7 +1497,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 # render.yaml (Render.com deployment)
 services:
   - type: web
-    name: skill-hunt-api
+    name: job-script-api
     env: python
     region: oregon
     buildCommand: "pip install -r backend/requirements.txt"
@@ -1506,7 +1506,7 @@ services:
       - key: SUPABASE_URL
         sync: false
       - key: CORS_ORIGINS
-        value: "https://skill-hunt.vercel.app"
+        value: "https://jobscript.vercel.app"
       - key: DEBUG
         value: "false"
 ```
@@ -1613,7 +1613,7 @@ test('renders skills page', async () => {
 
 ## 📌 Summary
 
-Skill Hunt demonstrates enterprise-grade engineering practices:
+Job Script demonstrates enterprise-grade engineering practices:
 
 ✅ **Modular Architecture**: Clear separation between layers  
 ✅ **Scalable Data Pipeline**: Automated ETL with hybrid skill extraction  
@@ -1623,7 +1623,7 @@ Skill Hunt demonstrates enterprise-grade engineering practices:
 ✅ **Self-Documenting**: OpenAPI, dbt docs, inline comments  
 ✅ **Cost-Effective**: Hybrid extraction saves 95% on LLM costs  
 
-This implementation guide serves as a comprehensive reference for understanding, extending, and maintaining the Skill Hunt platform.
+This implementation guide serves as a comprehensive reference for understanding, extending, and maintaining the Job Script platform.
 
 ---
 

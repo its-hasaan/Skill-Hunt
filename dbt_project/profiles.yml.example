@@ -5,7 +5,7 @@
 #    - DB_PASSWORD: Database password
 #    - DB_NAME: Database name (usually 'postgres')
 
-skill_hunt:
+job_script:
   outputs:
     dev:
       type: postgres

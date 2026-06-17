@@ -1,7 +1,7 @@
-# Skill Hunt Project Overview
+# Job Script Project Overview
 
 ## Project Description
-Skill Hunt is a full-stack job market analysis dashboard that aggregates data from job postings to provide insights into skill demands, salary trends, and career paths. It leverages a modern data stack (MDS) approach with a Python extraction pipeline, hybrid skill extraction (regex + LLM), DBT for data transformation, FastAPI for the backend, and React for the frontend visualization.
+Job Script is a full-stack job market analysis dashboard that aggregates data from job postings to provide insights into skill demands, salary trends, and career paths. It leverages a modern data stack (MDS) approach with a Python extraction pipeline, hybrid skill extraction (regex + LLM), DBT for data transformation, FastAPI for the backend, and React for the frontend visualization.
 
 ## Data Flow
 The data pipeline follows an ELT (Extract, Load, Transform) pattern:
