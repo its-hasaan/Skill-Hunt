@@ -74,7 +74,7 @@ The database uses **four schemas** (plus `public` for resume metadata):
 2. **`staging`** — normalized/flattened data + dimension tables (roles, countries, skills)
 3. **`marts`** — analytical aggregations (pre-computed by dbt)
 4. **`archive`** — historical demand snapshots
-5. **`public`** — `resume_uploads` metadata (Resume Analyzer)
+5. **`public`** — Resume Analyzer tables: `resume_uploads` (parent), `resume_skills`, `resume_gap_analysis`, `resume_role_matches`
 
 The canonical DDL lives in [`database/schema.sql`](database/schema.sql); the resume table in [`database/Resume_upload.sql`](database/Resume_upload.sql).
 
@@ -165,8 +165,14 @@ CREATE TABLE staging.stg_job_skills (
 - `archive_skill_demand()` — plpgsql function that snapshots `marts.skill_demand` into the archive (invoked by the CI `archive` job).
 - `get_currency_by_country(country TEXT)` — maps a country code to its currency.
 
-#### `public.resume_uploads` (`database/Resume_upload.sql`)
-Stores metadata for each analyzed resume: `id` (UUID), `filename`, `file_size`, `analysis_type` (`gap_analysis` | `role_match`), `target_role`, `extracted_skills_count`, `extracted_skills` (JSONB), `match_score`, `storage_path`, `storage_url`, `uploaded_at`.
+#### Resume Analyzer tables (`database/Resume_upload.sql`)
+
+- **`public.resume_uploads`** (parent) — one row per analysis: `id` (UUID), `filename`, `file_size`, `analysis_type` (`gap_analysis` | `role_match`), `target_role`, `country`, `extracted_skills_count`, `extracted_skills` (JSONB snapshot), `match_score`, `storage_path`, `storage_url`, `uploaded_at`.
+- **`public.resume_skills`** — one row per skill extracted from the resume (`resume_id` FK, `skill_name`, `skill_category`, `mention_count`).
+- **`public.resume_gap_analysis`** — gap-run detail, one row per market skill for the target role (`resume_id` FK, `target_role`, `country`, `skill_name`, `skill_category`, `has_skill`, `job_count`, `demand_percentage`, `avg_salary`, `market_rank`).
+- **`public.resume_role_matches`** — role-match detail, one ranked row per evaluated role (`resume_id` FK, `country`, `role`, `match_score`, `matched_skills_count`, `total_skills_evaluated`, `rank`, `top_matched_skills` JSONB, `top_missing_skills` JSONB).
+
+All three detail tables reference `resume_uploads(id)` with `ON DELETE CASCADE`.
 
 ### 2.3 Indexing
 
@@ -395,7 +401,13 @@ The resume feature is fully implemented:
 - **Skill extraction** (`ResumeSkillExtractor`): loads `etl/config/skills_taxonomy.json` and matches with compiled regex (same approach as the ETL fast path, special-casing `C++`/`C#`/`.NET`). If the taxonomy file is missing it logs and extracts nothing.
 - **`POST /resume/analyze`**: extracts resume skills, queries `mart_skill_demand` for the `target_role`, splits into `skills_you_have` / `skills_you_need`, and computes a demand-weighted `match_percentage` (→ `ResumeAnalysisResponse`).
 - **`POST /resume/match-roles`**: scores the resume against every role in `mart_skill_demand` (demand-weighted) and returns the top N (→ `List[RoleMatchResult]`).
-- **Persistence**: `/analyze` and `/match-roles` schedule a best-effort background task (`_save_resume_record`) that, when storage is configured, uploads the file to the Supabase Storage `resumes` bucket (`storage.py`, `upload_resume_file`) and inserts a metadata row into `public.resume_uploads`. Failures are logged and non-fatal.
+- **Persistence**: `/analyze` and `/match-roles` register a FastAPI `BackgroundTasks` job (`_persist_analysis`) that runs after the response. When storage is configured it uploads the file to the Supabase Storage `resumes` bucket (`storage.py`, `upload_resume_file`), then in a single DB transaction writes:
+  - `public.resume_uploads` — the parent row (filename, analysis_type, target_role, country, match_score, storage path/url, skills snapshot),
+  - `public.resume_skills` — one row per extracted resume skill,
+  - `public.resume_gap_analysis` — for gap runs, one row per market skill flagged `has_skill` (owned) or a gap, with demand %, salary, and rank,
+  - `public.resume_role_matches` — for role-match runs, one ranked row per evaluated role with score, matched/total counts, and top matched/missing skills (JSONB).
+
+  The whole task is best-effort: any storage/DB failure is logged and never propagates to the user's response. (An earlier implementation used a fire-and-forget `asyncio.ensure_future`, which could be garbage-collected mid-run; `BackgroundTasks` is awaited by Starlette and is reliable.)
 
 Relevant schemas: `ExtractedSkill`, `SkillGapAnalysis`, `ResumeAnalysisResponse`, `MatchedSkill`, `RoleMatchResult`. (`ResumeSkill`/`ResumeAnalysis` remain as older "future" models and are not used by the active endpoints.)
 

@@ -52,10 +52,12 @@ def _get_client():
 def _do_upload(file_bytes: bytes, storage_path: str, content_type: str) -> str:
     """Blocking upload — always run via asyncio.to_thread."""
     client = _get_client()
+    # file_options values become HTTP headers, so they must be strings
+    # ("upsert": False would raise inside the header encoder).
     client.storage.from_(BUCKET_NAME).upload(
         storage_path,
         file_bytes,
-        {"contentType": content_type, "upsert": False},
+        {"content-type": content_type, "upsert": "false"},
     )
     return client.storage.from_(BUCKET_NAME).get_public_url(storage_path)
 

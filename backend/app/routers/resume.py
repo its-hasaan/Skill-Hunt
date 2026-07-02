@@ -9,7 +9,7 @@ Features:
 4. Match resume skills against all roles to find best fit
 """
 
-from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File, Form, BackgroundTasks
 from typing import Optional, List, Dict, Any
 import logging
 import re
@@ -196,27 +196,36 @@ async def extract_text_from_file(file: UploadFile) -> tuple:
     return content, text
 
 
-async def _save_resume_record(
+async def _persist_analysis(
     db: "Database",
     filename: str,
     file_size: int,
     file_bytes: bytes,
     analysis_type: str,
     target_role: Optional[str],
+    country: Optional[str],
     extracted_skills: list,
     match_score: Optional[float] = None,
+    gap_rows: Optional[list] = None,
+    role_rows: Optional[list] = None,
 ) -> None:
     """
-    Save resume upload record to DB and file to Supabase Storage.
-    Runs best-effort — any failure is logged but does NOT raise.
+    Persist a full resume analysis to Supabase:
+      - the file to Supabase Storage (if configured),
+      - a parent row in public.resume_uploads,
+      - one row per extracted skill in public.resume_skills,
+      - gap-analysis detail in public.resume_gap_analysis (gap runs), OR
+      - role-match detail in public.resume_role_matches (role-match runs).
+
+    Runs best-effort in a single DB transaction — any failure is logged but
+    never propagates to the user response.
     """
-    import json as _json
     from ..storage import upload_resume_file, is_storage_configured
 
     storage_path = None
     storage_url = None
 
-    # Try to upload file to Supabase Storage
+    # 1) Upload the file to Supabase Storage (optional).
     if is_storage_configured():
         try:
             storage_path, storage_url = await upload_resume_file(file_bytes, filename)
@@ -224,30 +233,77 @@ async def _save_resume_record(
         except Exception as e:
             logger.warning(f"Storage upload failed (non-fatal): {e}")
 
-    # Save metadata to PostgreSQL
+    # 2) Write the parent + detail rows atomically.
+    if db.pool is None:
+        logger.warning("DB pool unavailable; skipping resume persistence.")
+        return
+
     try:
-        skills_json = _json.dumps(extracted_skills)
-        await db.execute(
-            """
-            INSERT INTO public.resume_uploads
-                (filename, file_size, analysis_type, target_role,
-                 extracted_skills_count, extracted_skills,
-                 match_score, storage_path, storage_url)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-            """,
-            filename,
-            file_size,
-            analysis_type,
-            target_role,
-            len(extracted_skills),
-            skills_json,
-            match_score,
-            storage_path,
-            storage_url,
-        )
-        logger.info(f"Resume metadata saved for '{filename}'")
+        async with db.pool.acquire() as conn:
+            async with conn.transaction():
+                resume_id = await conn.fetchval(
+                    """
+                    INSERT INTO public.resume_uploads
+                        (filename, file_size, analysis_type, target_role, country,
+                         extracted_skills_count, extracted_skills, match_score,
+                         storage_path, storage_url)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10)
+                    RETURNING id
+                    """,
+                    filename, file_size, analysis_type, target_role, country,
+                    len(extracted_skills), json.dumps(extracted_skills), match_score,
+                    storage_path, storage_url,
+                )
+
+                if extracted_skills:
+                    await conn.executemany(
+                        """
+                        INSERT INTO public.resume_skills
+                            (resume_id, skill_name, skill_category, mention_count)
+                        VALUES ($1,$2,$3,$4)
+                        """,
+                        [
+                            (resume_id, s.get('skill_name'), s.get('category'),
+                             s.get('mention_count', 1))
+                            for s in extracted_skills
+                        ],
+                    )
+
+                if gap_rows:
+                    await conn.executemany(
+                        """
+                        INSERT INTO public.resume_gap_analysis
+                            (resume_id, target_role, country, skill_name, skill_category,
+                             has_skill, job_count, demand_percentage, avg_salary, market_rank)
+                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                        """,
+                        [
+                            (resume_id, target_role, country, g['skill_name'],
+                             g.get('skill_category'), g['has_skill'], g.get('job_count'),
+                             g.get('demand_percentage'), g.get('avg_salary'), g.get('market_rank'))
+                            for g in gap_rows
+                        ],
+                    )
+
+                if role_rows:
+                    await conn.executemany(
+                        """
+                        INSERT INTO public.resume_role_matches
+                            (resume_id, country, role, match_score, matched_skills_count,
+                             total_skills_evaluated, rank, top_matched_skills, top_missing_skills)
+                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb)
+                        """,
+                        [
+                            (resume_id, country, r['role'], r['match_score'],
+                             r['matched_skills_count'], r['total_skills_evaluated'], r['rank'],
+                             json.dumps(r.get('top_matched_skills', [])),
+                             json.dumps(r.get('top_missing_skills', [])))
+                            for r in role_rows
+                        ],
+                    )
+        logger.info(f"Resume analysis persisted for '{filename}' ({analysis_type})")
     except Exception as e:
-        logger.warning(f"DB metadata save failed (non-fatal): {e}")
+        logger.warning(f"DB persistence failed (non-fatal): {e}")
 
 
 # ============================================
@@ -296,6 +352,7 @@ async def extract_skills_from_resume(
 
 @router.post("/analyze", response_model=ResumeAnalysisResponse)
 async def analyze_resume(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="Resume file (PDF, DOCX, TXT, or image)"),
     target_role: str = Form(..., description="Target job role (e.g., 'Data Engineer')"),
     country: Optional[str] = Form(None, description="Country code for market comparison (e.g., 'gb', 'us')"),
@@ -391,18 +448,48 @@ async def analyze_resume(
     skills_you_have.sort(key=lambda x: x['job_count'], reverse=True)
     skills_you_need.sort(key=lambda x: x['job_count'], reverse=True)
 
-    # Save resume + metadata (non-blocking, best-effort)
-    import asyncio as _asyncio
-    _asyncio.ensure_future(_save_resume_record(
+    # Build the full gap-analysis detail (one row per market skill, flagged owned/gap)
+    gap_rows = [
+        {
+            'skill_name': s['skill_name'],
+            'skill_category': s['skill_category'],
+            'has_skill': True,
+            'job_count': s['job_count'],
+            'demand_percentage': s['demand_percentage'],
+            'avg_salary': s['avg_salary'],
+            'market_rank': s['market_rank'],
+        }
+        for s in skills_you_have
+    ] + [
+        {
+            'skill_name': s['skill_name'],
+            'skill_category': s['skill_category'],
+            'has_skill': False,
+            'job_count': s['job_count'],
+            'demand_percentage': s['demand_percentage'],
+            'avg_salary': s['avg_salary'],
+            'market_rank': s['market_rank'],
+        }
+        for s in skills_you_need
+    ]
+
+    # Persist the full analysis to Supabase (reliable background task, best-effort)
+    background_tasks.add_task(
+        _persist_analysis,
         db=db,
         filename=file.filename,
         file_size=len(file_bytes),
         file_bytes=file_bytes,
         analysis_type="gap_analysis",
         target_role=target_role,
-        extracted_skills=[{'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']} for s in resume_skills],
+        country=country,
+        extracted_skills=[
+            {'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']}
+            for s in resume_skills
+        ],
         match_score=round(match_percentage, 1),
-    ))
+        gap_rows=gap_rows,
+    )
 
     return ResumeAnalysisResponse(
         target_role=target_role,
@@ -418,6 +505,7 @@ async def analyze_resume(
 
 @router.post("/match-roles", response_model=List[RoleMatchResult])
 async def match_resume_to_roles(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="Resume file (PDF, DOCX, TXT, or image)"),
     country: Optional[str] = Form(None, description="Country code (e.g., 'gb', 'us')"),
     limit: int = Form(10, ge=1, le=20, description="Number of top matching roles to return"),
@@ -547,20 +635,28 @@ async def match_resume_to_roles(
     role_matches.sort(key=lambda x: x['match_score'], reverse=True)
     top_matches = role_matches[:limit]
 
-    # Save resume + metadata (non-blocking, best-effort)
-    import asyncio as _asyncio
+    # Rank every evaluated role for persistence (1 = best fit)
+    role_rows = [{**r, 'rank': i + 1} for i, r in enumerate(role_matches)]
     top_role = top_matches[0]['role'] if top_matches else None
     top_score = top_matches[0]['match_score'] if top_matches else None
-    _asyncio.ensure_future(_save_resume_record(
+
+    # Persist the full analysis to Supabase (reliable background task, best-effort)
+    background_tasks.add_task(
+        _persist_analysis,
         db=db,
         filename=file.filename,
         file_size=len(file_bytes),
         file_bytes=file_bytes,
         analysis_type="role_match",
         target_role=top_role,
-        extracted_skills=[{'skill_name': s['skill_name']} for s in resume_skills],
+        country=country,
+        extracted_skills=[
+            {'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']}
+            for s in resume_skills
+        ],
         match_score=top_score,
-    ))
+        role_rows=role_rows,
+    )
 
     return [RoleMatchResult(**r) for r in top_matches]
 
