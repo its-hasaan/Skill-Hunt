@@ -1,7 +1,7 @@
-# 🔧 Job Script - Implementation Guide
+# 🔧 Job Script — Implementation Guide
 
-> **Comprehensive Technical Documentation**  
-> Deep dive into the architecture, implementation details, and engineering decisions behind Job Script.
+> **Technical Documentation**  
+> A deep dive into the architecture and implementation details behind Job Script, kept in sync with the actual codebase.
 
 ---
 
@@ -14,9 +14,9 @@
 5. [Frontend Implementation](#5-frontend-implementation)
 6. [Data Transformation Layer (dbt)](#6-data-transformation-layer-dbt)
 7. [Deployment & DevOps](#7-deployment--devops)
-8. [Performance Optimization](#8-performance-optimization)
+8. [Performance & Current Limitations](#8-performance--current-limitations)
 9. [Security & Best Practices](#9-security--best-practices)
-10. [Testing Strategy](#10-testing-strategy)
+10. [Testing Status](#10-testing-status)
 
 ---
 
@@ -24,35 +24,42 @@
 
 ### 1.1 High-Level Architecture
 
-Job Script follows a **Modern Data Stack (MDS)** architecture pattern, emphasizing:
-- **Separation of Concerns**: Distinct layers for extraction, storage, transformation, and presentation
-- **ELT over ETL**: Load raw data first, transform in-database for performance
-- **Cloud-Native**: Leverages managed services (Supabase, Render, Vercel)
-- **API-First**: Backend as a service layer with RESTful endpoints
-- **Stateless Frontend**: React SPA consuming API data
+Job Script follows a **Modern Data Stack (MDS)** architecture:
+- **Separation of Concerns**: distinct layers for extraction, storage, transformation, and presentation
+- **ELT over ETL**: load raw data first, transform in-database with dbt
+- **Cloud-Native**: managed services (Supabase, Render, Vercel)
+- **API-First**: FastAPI service layer with RESTful endpoints
+- **Stateless Frontend**: React SPA consuming the API
 
 ### 1.2 Technology Decisions
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| **Database** | PostgreSQL (Supabase) | ACID compliance, JSON support (JSONB), powerful analytics, managed hosting |
-| **Backend** | FastAPI | Async support, automatic OpenAPI docs, Pydantic validation, excellent performance |
-| **Frontend** | React + Vite | Component reusability, virtual DOM, fast HMR, modern tooling |
-| **Transformation** | dbt | SQL-based, version control, documentation, lineage tracking |
-| **Orchestration** | GitHub Actions | Free for public repos, integrated with version control, declarative YAML |
-| **Charting** | Recharts + D3.js | Recharts for simplicity, D3 for advanced network graphs |
-| **Styling** | Tailwind CSS | Utility-first, rapid prototyping, consistent design system |
+| **Database** | PostgreSQL (Supabase) | ACID, JSONB support, analytics, managed hosting + storage |
+| **Backend** | FastAPI + asyncpg | Async, automatic OpenAPI docs, Pydantic validation |
+| **Frontend** | React + Vite | Component reuse, fast HMR, modern tooling |
+| **Transformation** | dbt (dbt-postgres) | SQL-based, version-controlled, lineage & docs |
+| **Skill Discovery** | GLiNER NER (local) | Free, no API cost, discovers skills outside the taxonomy |
+| **Orchestration** | GitHub Actions | Free, integrated with version control, declarative YAML |
+| **Charting** | Recharts + D3.js | Recharts for standard charts, D3 for network graph & heatmap |
+| **Styling** | Tailwind CSS | Utility-first, class-based dark mode |
 
-### 1.3 Data Flow Architecture
+### 1.3 Data Flow
 
 ```
-External API → Extractor → PostgreSQL → Transformer → PostgreSQL → dbt → PostgreSQL
-                                ↓                                        ↓
-                         Raw Layer (JSONB)                        Marts Layer (SQL)
-                                                                         ↓
-                                                                    FastAPI
-                                                                         ↓
-                                                                    React SPA
+Adzuna API → extractor.py → raw.jobs (JSONB)
+                               │
+                    transformer.py (fast path + GLiNER)
+                               │
+                    staging.stg_jobs / staging.stg_job_skills
+                               │
+                          dbt (int + marts)
+                               │
+                          marts.* (tables)
+                               │
+                            FastAPI  ──►  React SPA
+                               │
+                    (resume endpoints read staging + taxonomy)
 ```
 
 ---
@@ -61,51 +68,53 @@ External API → Extractor → PostgreSQL → Transformer → PostgreSQL → dbt
 
 ### 2.1 Schema Organization
 
-The database is organized into **four distinct schemas**, following data warehouse best practices:
+The database uses **four schemas** (plus `public` for resume metadata):
 
-#### **Schema Layers**
+1. **`raw`** — immutable landing zone (unprocessed API responses as JSONB)
+2. **`staging`** — normalized/flattened data + dimension tables (roles, countries, skills)
+3. **`marts`** — analytical aggregations (pre-computed by dbt)
+4. **`archive`** — historical demand snapshots
+5. **`public`** — `resume_uploads` metadata (Resume Analyzer)
 
-1. **`raw`** - Immutable landing zone
-   - Stores unprocessed API responses as JSONB
-   - Acts as source of truth
-   - Enables reprocessing without re-extraction
+The canonical DDL lives in [`database/schema.sql`](database/schema.sql); the resume table in [`database/Resume_upload.sql`](database/Resume_upload.sql).
 
-2. **`staging`** - Normalized operational data
-   - Flattened and cleaned data
-   - Dimension tables (roles, countries, skills)
-   - Foreign key relationships
+### 2.2 Key Tables (as defined in `database/schema.sql`)
 
-3. **`marts`** - Analytical aggregations
-   - Pre-computed metrics for dashboard performance
-   - Denormalized for query speed
-   - Updated by dbt transformations
+#### `staging.dim_job_roles`
+Seeded with the **15 target roles** (`role_id`, `role_name` unique, `role_category`, `is_active`, `created_at`).
 
-4. **`archive`** - Historical snapshots
-   - Point-in-time backups
-   - Change data capture
+#### `staging.dim_countries`
+Seeded with **18 countries** (`country_code` PK, `country_name`, `is_active`).
 
-### 2.2 Key Tables
+#### `staging.dim_skills`
+```sql
+CREATE TABLE staging.dim_skills (
+    skill_id SERIAL PRIMARY KEY,
+    skill_name TEXT UNIQUE NOT NULL,   -- canonical name, e.g. "Python"
+    skill_category TEXT,               -- e.g. 'Programming Language', 'Cloud'
+    skill_subcategory TEXT,
+    aliases TEXT[],                    -- e.g. {"python3","py"}
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-#### **`raw.jobs`**
+#### `raw.jobs`
 ```sql
 CREATE TABLE raw.jobs (
     id SERIAL PRIMARY KEY,
-    job_platform_id TEXT NOT NULL,
+    job_platform_id TEXT NOT NULL,        -- Adzuna job ID
     search_role TEXT NOT NULL,
     country_code TEXT NOT NULL,
-    raw_data JSONB NOT NULL,              -- Complete API response
+    raw_data JSONB NOT NULL,              -- complete API response
     extracted_at TIMESTAMP DEFAULT NOW(),
     extraction_batch_id UUID DEFAULT uuid_generate_v4(),
     CONSTRAINT raw_jobs_unique UNIQUE (job_platform_id, country_code)
 );
 ```
+**Design notes:** JSONB preserves the full response for reprocessing; the composite unique key allows the same job to appear per-country; the batch ID tracks extraction runs.
 
-**Design Decisions:**
-- **JSONB Column**: Preserves complete API response for future reprocessing
-- **Composite Unique Key**: Same job can appear in different countries
-- **Batch ID**: Enables tracking extraction runs and rollbacks
-
-#### **`staging.stg_jobs`**
+#### `staging.stg_jobs`
 ```sql
 CREATE TABLE staging.stg_jobs (
     job_id SERIAL PRIMARY KEY,
@@ -116,86 +125,70 @@ CREATE TABLE staging.stg_jobs (
     company_name TEXT,
     description TEXT,
     location_display TEXT,
-    location_areas TEXT[],                -- PostgreSQL array for hierarchical locations
-    category_tag TEXT,
+    location_areas TEXT[],                -- hierarchical location
+    category_tag TEXT,                    -- e.g. 'it-jobs'
+    category_label TEXT,                  -- e.g. 'IT Jobs'
     salary_min NUMERIC,
     salary_max NUMERIC,
     salary_is_predicted BOOLEAN DEFAULT FALSE,
-    salary_currency TEXT DEFAULT 'GBP',
-    contract_type TEXT,                   -- 'permanent', 'contract', etc.
-    contract_time TEXT,                   -- 'full_time', 'part_time'
-    created_at TIMESTAMP,
+    salary_currency TEXT DEFAULT 'GBP',   -- derived from country
+    contract_type TEXT,                   -- 'full_time','part_time','contract'
+    contract_time TEXT,                   -- 'permanent','temporary'
     redirect_url TEXT,
-    processed_at TIMESTAMP DEFAULT NOW()
+    job_posted_at TIMESTAMP,              -- when posted on Adzuna
+    extracted_at TIMESTAMP,               -- when we extracted it
+    processed_at TIMESTAMP DEFAULT NOW(), -- when we cleaned it
+    raw_job_id INTEGER REFERENCES raw.jobs(id),
+    CONSTRAINT stg_jobs_unique UNIQUE (job_platform_id, country_code)
 );
 ```
 
-**Design Decisions:**
-- **Flattened Structure**: Optimizes for SQL queries vs. nested JSON
-- **Array Type**: Native PostgreSQL support for multi-valued location hierarchy
-- **Nullable Salaries**: Not all jobs include compensation data
-- **Predicted Flag**: Distinguishes actual vs. estimated salaries
-
-#### **`staging.stg_job_skills`**
+#### `staging.stg_job_skills`
 ```sql
 CREATE TABLE staging.stg_job_skills (
     id SERIAL PRIMARY KEY,
     job_id INTEGER REFERENCES staging.stg_jobs(job_id) ON DELETE CASCADE,
     skill_id INTEGER REFERENCES staging.dim_skills(skill_id),
-    extraction_method TEXT,               -- 'fast_path' or 'slow_path'
-    confidence_score NUMERIC,             -- 0.0 to 1.0
-    context_snippet TEXT,                 -- Surrounding text for verification
-    created_at TIMESTAMP DEFAULT NOW()
+    skill_name TEXT NOT NULL,             -- denormalized for convenience
+    mention_count INTEGER DEFAULT 1,      -- occurrences in the description
+    extracted_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT stg_job_skills_unique UNIQUE (job_id, skill_id)
 );
 ```
+> Note: this table stores a `mention_count`, not extraction-method/confidence metadata. Confidence lives only in the in-memory extractor; it is not persisted here.
 
-**Design Decisions:**
-- **Foreign Keys**: Ensures referential integrity
-- **Cascade Delete**: Automatically cleans up skills when job is deleted
-- **Extraction Method**: Tracks whether skill was found via regex or LLM
-- **Confidence Score**: Enables filtering of low-confidence matches
+#### Marts tables
+`schema.sql` pre-creates `marts.skill_demand`, `marts.skill_cooccurrence`, `marts.company_leaderboard`, `marts.role_similarity`, and `marts.salary_by_skill`. In production these are (re)built by dbt as `table` materializations in the `marts` schema.
 
-#### **`staging.dim_skills`**
+#### Archive & functions
+- `archive.skill_demand_history` — dated snapshots of demand.
+- `archive_skill_demand()` — plpgsql function that snapshots `marts.skill_demand` into the archive (invoked by the CI `archive` job).
+- `get_currency_by_country(country TEXT)` — maps a country code to its currency.
+
+#### `public.resume_uploads` (`database/Resume_upload.sql`)
+Stores metadata for each analyzed resume: `id` (UUID), `filename`, `file_size`, `analysis_type` (`gap_analysis` | `role_match`), `target_role`, `extracted_skills_count`, `extracted_skills` (JSONB), `match_score`, `storage_path`, `storage_url`, `uploaded_at`.
+
+### 2.3 Indexing
+
+Indexes defined in `schema.sql`:
 ```sql
-CREATE TABLE staging.dim_skills (
-    skill_id SERIAL PRIMARY KEY,
-    skill_name TEXT UNIQUE NOT NULL,
-    skill_category TEXT,                  -- 'Programming Language', 'Cloud', 'Database', etc.
-    skill_subcategory TEXT,               -- 'AWS Services', 'NoSQL Databases', etc.
-    aliases TEXT[],                       -- Alternative names: ["python3", "py"]
-    verification_status TEXT DEFAULT 'Unverified',  -- 'Verified', 'Unverified', 'Rejected'
-    discovery_count INTEGER DEFAULT 0,    -- Times seen in discovery mode
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-**Design Decisions:**
-- **Aliases Array**: Handles skill name variations (React.js, React, ReactJS)
-- **Verification Status**: Manual curation workflow for discovered skills
-- **Discovery Count**: Auto-promotion threshold for frequently seen skills
-
-### 2.3 Indexing Strategy
-
-```sql
--- Performance indexes for common queries
+-- raw.jobs
 CREATE INDEX idx_raw_jobs_extracted_at ON raw.jobs(extracted_at);
-CREATE INDEX idx_raw_jobs_search_role ON raw.jobs(search_role);
-CREATE INDEX idx_raw_jobs_country ON raw.jobs(country_code);
-CREATE INDEX idx_stg_jobs_role ON staging.stg_jobs(search_role);
-CREATE INDEX idx_stg_jobs_country ON staging.stg_jobs(country_code);
-CREATE INDEX idx_stg_jobs_company ON staging.stg_jobs(company_name);
-CREATE INDEX idx_stg_job_skills_job_id ON staging.stg_job_skills(job_id);
-CREATE INDEX idx_stg_job_skills_skill_id ON staging.stg_job_skills(skill_id);
-CREATE INDEX idx_dim_skills_name ON staging.dim_skills(skill_name);
-CREATE INDEX idx_dim_skills_category ON staging.dim_skills(skill_category);
+CREATE INDEX idx_raw_jobs_search_role  ON raw.jobs(search_role);
+CREATE INDEX idx_raw_jobs_country      ON raw.jobs(country_code);
+CREATE INDEX idx_raw_jobs_batch        ON raw.jobs(extraction_batch_id);
+-- staging.stg_jobs
+CREATE INDEX idx_stg_jobs_search_role  ON staging.stg_jobs(search_role);
+CREATE INDEX idx_stg_jobs_country      ON staging.stg_jobs(country_code);
+CREATE INDEX idx_stg_jobs_company      ON staging.stg_jobs(company_name);
+CREATE INDEX idx_stg_jobs_posted_at    ON staging.stg_jobs(job_posted_at);
+-- staging.stg_job_skills
+CREATE INDEX idx_stg_job_skills_skill  ON staging.stg_job_skills(skill_id);
+CREATE INDEX idx_stg_job_skills_job    ON staging.stg_job_skills(job_id);
+-- archive
+CREATE INDEX idx_skill_demand_history_date  ON archive.skill_demand_history(snapshot_date);
+CREATE INDEX idx_skill_demand_history_skill ON archive.skill_demand_history(skill_name, search_role);
 ```
-
-**Indexing Rationale:**
-- **Filter Columns**: Indexes on `search_role`, `country_code` for WHERE clauses
-- **Join Columns**: Indexes on foreign keys for join performance
-- **Timestamp Columns**: Enables efficient time-range queries
-- **Text Search**: Consider GIN indexes for full-text search in future
 
 ---
 
@@ -203,169 +196,59 @@ CREATE INDEX idx_dim_skills_category ON staging.dim_skills(skill_category);
 
 ### 3.1 Extraction (`etl/extractor.py`)
 
-#### **Architecture**
+The extractor queries the **Adzuna Job Search API** and stores raw responses in `raw.jobs`.
 
-The extractor is a Python script that queries the **Adzuna Job Search API** and stores raw responses in PostgreSQL.
-
-#### **Configuration-Driven Design**
-
+**Configuration-driven** via `etl/config/extraction_config.json`:
 ```json
-// etl/config/extraction_config.json
 {
-  "roles": [
-    "Data Engineer",
-    "Analytics Engineer",
-    "Data Scientist",
-    "Full Stack Developer",
-    // ... 15 total roles
-  ],
-  "countries": ["gb", "us", "au", "ca", "de", "fr", "in", "sg", ...],
-  "pagination": {
+  "roles": ["Data Engineer", "Analytics Engineer", "... 15 total"],
+  "countries": { "gb": "United Kingdom", "us": "United States", "... 17 total": "" },
+  "api": {
     "results_per_page": 50,
-    "max_pages_per_search": 20
-  },
-  "filters": {
-    "max_days_old": 30
+    "max_pages_per_role_country": 2,
+    "rate_limit_delay_seconds": 1
   }
 }
 ```
 
-**Benefits:**
-- Modify roles/countries without code changes
-- Version-controlled configuration
-- Easy A/B testing of extraction parameters
+**Key functions:** `load_config()`, `validate_credentials()`, `get_jobs()` (fetch a page, handling HTTP 429 with a 60s backoff and timeouts), `save_to_database()` (batch insert), `extract_all()`, `main()`.
 
-#### **Core Extraction Logic**
-
+**Endpoint & auth:**
 ```python
-def get_jobs(role: str, country: str = "gb", page: int = 1, max_days_old: int = None) -> list:
-    """
-    Fetches jobs from Adzuna API with error handling and rate limiting.
-    """
-    url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
-    params = {
-        "app_id": ADZUNA_APP_ID,
-        "app_key": ADZUNA_APP_KEY,
-        "what": role,
-        "results_per_page": 50,
-        "content-type": "application/json"
-    }
-    
-    if max_days_old:
-        params["max_days_old"] = max_days_old
-    
-    try:
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("results", [])
-    except requests.exceptions.RequestException as e:
-        logger.error(f"API request failed: {e}")
-        return []
+url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
+# params: app_id, app_key, what=role, results_per_page=50, [max_days_old]
+```
+Credentials come from `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`; the DB connection from `SUPABASE_URL`.
+
+**Batch, idempotent insert** (via `psycopg2.extras.execute_values`):
+```sql
+INSERT INTO raw.jobs (job_platform_id, search_role, country_code, raw_data, extraction_batch_id)
+VALUES %s
+ON CONFLICT (job_platform_id, country_code) DO NOTHING
 ```
 
-**Robust Error Handling:**
-- **Timeout Protection**: 30-second timeout prevents hanging
-- **HTTP Error Handling**: `raise_for_status()` catches 4xx/5xx errors
-- **Graceful Degradation**: Returns empty list on failure, continues with next search
+**CLI flags:** `--role`, `--country`, `--pages`, `--delay`, `--days`, `--months`, `--test`. Each run is tagged with a UUID `batch_id`. The scheduled CI job invokes `python extractor.py --days 60 --pages 3 --delay 1.5`.
 
-#### **Batch Insertion for Performance**
+`etl/check_progress.py` prints row counts across `raw.jobs`, `staging.stg_jobs`, and `staging.stg_job_skills`. `etl/truncate_old.sql` truncates staging/marts tables for a clean rebuild.
 
-```python
-def insert_jobs_batch(conn, jobs: list, search_role: str, country_code: str, batch_id: str):
-    """
-    Bulk insert jobs using execute_values for performance.
-    """
-    insert_query = """
-        INSERT INTO raw.jobs (job_platform_id, search_role, country_code, raw_data, extraction_batch_id)
-        VALUES %s
-        ON CONFLICT (job_platform_id, country_code) DO NOTHING
-    """
-    
-    values = [
-        (job['id'], search_role, country_code, json.dumps(job), batch_id)
-        for job in jobs
-    ]
-    
-    with conn.cursor() as cur:
-        execute_values(cur, insert_query, values)
-    conn.commit()
-```
+### 3.2 Transformation & Skill Extraction (`etl/transformer.py`)
 
-**Performance Optimization:**
-- **Bulk Insert**: `execute_values()` is 10-100x faster than individual inserts
-- **ON CONFLICT DO NOTHING**: Idempotent inserts, safe for re-runs
-- **Batching**: Reduces network round-trips
+Transforms `raw.jobs` → `staging.stg_jobs` (+ `staging.stg_job_skills`):
+- `get_unprocessed_jobs()` — selects `raw.jobs` rows that don't yet have a `stg_jobs` row (LEFT JOIN, batched).
+- `parse_raw_job()` — flattens the Adzuna JSON (title, company, description, location display + areas, category tag/label, salary min/max/predicted, contract type/time, redirect URL, `job_posted_at`) and maps country → currency.
+- Upserts into `stg_jobs` (`ON CONFLICT ... DO UPDATE SET processed_at = NOW()`), then runs the hybrid extractor on `title + description`.
+- `get_or_create_skill()` — looks up/creates a `dim_skills` row, then upserts into `stg_job_skills` (`ON CONFLICT (job_id, skill_id)`).
 
-#### **Rate Limiting & Politeness**
+**CLI flags:** `--batch-size`, `--reprocess`, `--discovery-mode` (force GLiNER for all jobs), `--fast-only` (disable GLiNER). Env overrides: `ENABLE_GLINER`, `GLINER_MODEL`, `DISCOVERY_SAMPLE_RATE`. The scheduled CI job runs `--fast-only`.
 
-```python
-# Rate limiting between API calls
-time.sleep(1)  # 1 request per second to respect API limits
-```
+### 3.3 Hybrid Skill Extractor (`etl/skill_extractor/`)
 
-**API Politeness:**
-- Prevents overwhelming external API
-- Avoids rate limit bans
-- Distributes load over time
+The `skill_extractor` package implements a two-path design (exported from `__init__.py`): `FastPathExtractor`, `SlowPathExtractor` + `SlowPathConfig`, `HybridSkillExtractor` + `HybridConfig`, and `SkillDiscoveryManager`.
 
----
+#### Fast Path (`fast_path.py`)
+Pre-compiles word-boundary regex patterns for each skill name + aliases from the taxonomy, with special-casing for tokens like `C++`, `C#`, `.NET`, `Node.js`, `Vue.js`. Matches case-insensitively and returns a `mention_count`. Zero cost, near-instant.
 
-### 3.2 Skill Extraction (`etl/transformer.py`)
-
-#### **Hybrid Extraction Architecture**
-
-Skill extraction is the most innovative component, using a **two-path system**:
-
-1. **Fast Path**: Regex-based pattern matching (95% coverage, instant, free)
-2. **Slow Path**: LLM-based extraction (5% sampling, for discovery)
-
-#### **Fast Path Implementation**
-
-```python
-# etl/skill_extractor/fast_path.py
-class FastPathExtractor:
-    def __init__(self, taxonomy_path: str):
-        self.taxonomy = self.load_taxonomy(taxonomy_path)
-        self.patterns = self.compile_patterns()
-    
-    def compile_patterns(self) -> dict:
-        """
-        Compile regex patterns for each skill + aliases.
-        """
-        patterns = {}
-        for skill in self.taxonomy['skills']:
-            # Create pattern matching skill name + aliases
-            terms = [skill['name']] + skill.get('aliases', [])
-            # Word boundary patterns to avoid false positives
-            pattern = r'\b(' + '|'.join(re.escape(t) for t in terms) + r')\b'
-            patterns[skill['name']] = re.compile(pattern, re.IGNORECASE)
-        return patterns
-    
-    def extract(self, text: str) -> List[Dict]:
-        """
-        Extract skills from text using regex matching.
-        """
-        results = []
-        for skill_name, pattern in self.patterns.items():
-            matches = pattern.findall(text)
-            if matches:
-                results.append({
-                    'skill_name': skill_name,
-                    'confidence': 1.0,  # Regex matches are certain
-                    'method': 'fast_path',
-                    'matches': len(matches)
-                })
-        return results
-```
-
-**Fast Path Benefits:**
-- **Zero Cost**: No API calls
-- **Zero Latency**: Regex is near-instant
-- **High Precision**: Word boundaries prevent false positives ("Go" language vs. "go to")
-- **Scalable**: Can process millions of jobs
-
-**Taxonomy Structure:**
+**Taxonomy structure** (`etl/config/skills_taxonomy.json`, ~430 skills across ~26 categories):
 ```json
 {
   "skills": [
@@ -373,802 +256,252 @@ class FastPathExtractor:
       "name": "Python",
       "category": "Programming Language",
       "subcategory": "General Purpose",
-      "aliases": ["python3", "py", "CPython"]
-    },
-    {
-      "name": "Amazon Web Services",
-      "category": "Cloud",
-      "subcategory": "Cloud Platform",
-      "aliases": ["AWS", "aws cloud"]
+      "aliases": ["python3", "py"]
     }
   ]
 }
 ```
+Auto-promoted entries also carry `_discovered`, `_first_seen`, and `_occurrence_count`.
 
-#### **Slow Path Implementation (GLiNER NER-Based)**
-
+#### Slow Path — GLiNER NER (`slow_path.py`)
 ```python
-# etl/skill_extractor/slow_path.py
 class SlowPathExtractor:
-    def __init__(self, config: SlowPathConfig):
-        self.config = config
-        self._model = None  # Lazy loaded
-    
     def _load_model(self):
-        """Lazy load the GLiNER model."""
         if self._model is None and self.config.enabled:
             from gliner import GLiNER
             self._model = GLiNER.from_pretrained(self.config.model_name)
-            # Default: urchade/gliner_medium-v2.1
+            # default: urchade/gliner_medium-v2.1
         return self._model
-    
-    def extract(self, text: str, known_skills: Set[str]) -> List[Dict]:
-        """
-        Use GLiNER NER model to discover skills not in taxonomy.
-        """
-        model = self._load_model()
-        if not model:
-            return []
-        
-        # GLiNER predicts entities with labels
-        entities = model.predict_entities(
-            text,
-            labels=GLINER_SKILL_LABELS,  # Programming language, database, etc.
-            threshold=self.config.threshold
-        )
-        
-        # Filter out known skills and low confidence
-        results = []
-        for entity in entities:
-            skill_name = entity['text'].strip()
-            if (skill_name.lower() not in known_skills and 
-                entity['score'] >= self.config.min_confidence):
-                results.append({
-                    'skill_name': skill_name,
-                    'category': LABEL_TO_CATEGORY.get(entity['label'], 'Unknown'),
-                    'confidence': entity['score'],
-                    'method': 'gliner'
-                })
-        
-        return results
 ```
+Predicts entities against ~25 skill labels (mapped to taxonomy categories via `LABEL_TO_CATEGORY`), filters by confidence (`threshold` 0.4 / `min_confidence` 0.5), and drops generic terms. **It is a local NER model, not an LLM — there are no API calls or costs.** (`gliner` is an optional dependency; install with `pip install gliner`.)
 
-**Slow Path Advantages:**
-- **Local & Free**: Runs on local hardware, no API costs
-- **Discovers New Skills**: Finds emerging technologies not in taxonomy
-- **Fast Inference**: Medium model balances speed and accuracy
-- **Pre-trained**: No fine-tuning required, works out-of-the-box
+> Historical note: an earlier design used Google Gemini. That path has been removed — the `gemini_api_key` parameter on `HybridSkillExtractor` is deprecated and ignored, and `google-generativeai` remains only as a stale entry in `etl/requirements.txt`.
 
-**Cost Optimization:**
-- **Zero API Costs**: Runs locally using GLiNER
-- **Sampling**: Only 10% of jobs processed via NER model
-- **Efficient Model**: Medium-sized model for faster inference
-- **Lazy Loading**: Model loaded only when needed
+#### Hybrid Orchestrator (`hybrid.py`)
+Always runs the fast path. It additionally invokes GLiNER when the fast path finds fewer than `min_skills_for_fast_only` (5), when `always_discover=True`, or by random sampling (`discovery_sample_rate`, default 0.1). GLiNER hits are validated against the taxonomy: known → `taxonomy`/`gliner_verified`; unknown → `gliner_unverified`.
 
-#### **Discovery Manager**
+#### Discovery Manager (`skill_discovery.py`)
+Tracks unverified discoveries with occurrence counts and average confidence, and **auto-promotes a skill to the taxonomy when `occurrence_count >= 3` and `avg_confidence >= 0.75`** — writing the new entry to both the taxonomy JSON file and `staging.dim_skills`.
 
-```python
-class DiscoveryManager:
-    def __init__(self, db_connection):
-        self.db = db_connection
-        self.promotion_threshold = 10  # Promote after 10 occurrences
-    
-    def record_discovery(self, skill_name: str, category: str):
-        """
-        Track newly discovered skill.
-        """
-        query = """
-            INSERT INTO staging.dim_skills (skill_name, skill_category, verification_status, discovery_count)
-            VALUES (%s, %s, 'Unverified', 1)
-            ON CONFLICT (skill_name) 
-            DO UPDATE SET discovery_count = dim_skills.discovery_count + 1
-        """
-        self.db.execute(query, (skill_name, category))
-    
-    def promote_frequent_skills(self):
-        """
-        Auto-promote skills seen frequently to taxonomy.
-        """
-        query = """
-            UPDATE staging.dim_skills
-            SET verification_status = 'Verified'
-            WHERE discovery_count >= %s AND verification_status = 'Unverified'
-            RETURNING skill_name
-        """
-        promoted = self.db.execute(query, (self.promotion_threshold,))
-        for skill in promoted:
-            self.add_to_taxonomy(skill['skill_name'])
-```
-
-**Auto-Promotion Workflow:**
-1. LLM discovers new skill (e.g., "Astro.js")
-2. Recorded as "Unverified" with count = 1
-3. Each subsequent discovery increments count
-4. At threshold (10), auto-promoted to "Verified"
-5. Added to taxonomy JSON for fast path matching
-
----
-
-### 3.3 Transformation Logic
-
-#### **Job Data Transformation**
-
-```python
-def transform_job(raw_job: dict) -> dict:
-    """
-    Transform raw API response into staging table format.
-    """
-    return {
-        'job_platform_id': raw_job['id'],
-        'title': raw_job.get('title'),
-        'company_name': raw_job.get('company', {}).get('display_name'),
-        'description': raw_job.get('description', ''),
-        'location_display': raw_job.get('location', {}).get('display_name'),
-        'location_areas': raw_job.get('location', {}).get('area', []),
-        'category_tag': raw_job.get('category', {}).get('tag'),
-        'salary_min': raw_job.get('salary_min'),
-        'salary_max': raw_job.get('salary_max'),
-        'salary_is_predicted': raw_job.get('salary_is_predicted', False),
-        'contract_type': raw_job.get('contract_type'),
-        'contract_time': raw_job.get('contract_time'),
-        'created_at': raw_job.get('created'),
-        'redirect_url': raw_job.get('redirect_url')
-    }
-```
-
-#### **Batch Processing**
-
-```python
-def process_jobs_batch(batch_size: int = 1000):
-    """
-    Process unprocessed jobs in batches for memory efficiency.
-    """
-    offset = 0
-    while True:
-        # Fetch batch of unprocessed jobs
-        jobs = fetch_unprocessed_jobs(limit=batch_size, offset=offset)
-        if not jobs:
-            break
-        
-        # Transform and extract skills
-        for job in jobs:
-            transformed = transform_job(job['raw_data'])
-            job_id = insert_staging_job(transformed)
-            
-            # Extract skills
-            skills = skill_extractor.extract(job['raw_data']['description'])
-            insert_job_skills(job_id, skills)
-        
-        offset += batch_size
-        logger.info(f"Processed {offset} jobs...")
-```
-
-**Memory Management:**
-- Processes jobs in batches to avoid loading entire dataset
-- Commits after each batch for fault tolerance
-- Progress logging for monitoring
+**Auto-promotion workflow:**
+1. GLiNER discovers a term not in the taxonomy (e.g. "Astro").
+2. It is recorded as an unverified discovery (count = 1).
+3. Subsequent sightings increment the count and update average confidence.
+4. Once ≥3 occurrences at ≥0.75 confidence, it is promoted into the taxonomy JSON + `dim_skills`, so the fast path picks it up on future runs.
 
 ---
 
 ## 4. Backend Implementation
 
-### 4.1 FastAPI Application Structure
-
-#### **Application Factory Pattern**
+### 4.1 Application Setup (`backend/app/main.py`)
 
 ```python
-# backend/app/main.py
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup and shutdown events."""
-    # Startup
-    logger.info("Starting Job Script API...")
     await db.connect()
     yield
-    # Shutdown
     await db.disconnect()
 
-app = FastAPI(
-    title="Job Script API",
-    description="Job market analysis API",
-    version="1.0.0",
-    lifespan=lifespan
+app = FastAPI(title="Job Script API", version="1.0.0", lifespan=lifespan)
+```
+
+The app also registers: `CORSMiddleware`, an `X-Process-Time` HTTP middleware, and a global `Exception` handler (which only exposes error detail when `settings.debug` is true). Swagger is at `/docs`, ReDoc at `/redoc`.
+
+**Root endpoints:** `GET /` (metadata), `GET /health` (runs `SELECT 1`, reports DB status), `GET /api/v1` (endpoint map).
+
+### 4.2 Database Layer (`backend/app/database.py`)
+
+A singleton `Database` creates an `asyncpg` pool:
+```python
+self.pool = await asyncpg.create_pool(
+    self.settings.supabase_url,
+    min_size=2, max_size=10,
+    ssl="require",
+    command_timeout=30,
+    statement_cache_size=0,   # disabled for Supabase PgBouncer (transaction mode)
 )
 ```
+Helpers: `fetch_all`, `fetch_one`, `execute`. A global `db` instance is injected into routers via the `get_db()` dependency. Queries use positional parameters (`$1, $2, …`) so they are parameterized (not string-interpolated).
 
-**Lifespan Pattern Benefits:**
-- Centralizes startup/shutdown logic
-- Ensures database connections are properly managed
-- Async-friendly context manager
+### 4.3 Configuration (`backend/app/config.py`)
 
-#### **Database Connection Pooling**
+Pydantic `Settings(BaseSettings)` loaded from environment/`.env`:
+- `app_name` = "Job Script API", `app_version` = "1.0.0", `debug` = False
+- `supabase_url` (**required**, DB connection string), `supabase_anon_key` (optional)
+- `supabase_project_url`, `supabase_service_key` (optional — for resume storage)
+- `cors_origins` (comma-split), `cache_ttl_seconds` = 3600, `api_prefix` = "/api/v1"
+- `rate_limit_per_minute` = 100 (declared for future use; **not enforced yet**)
 
+`get_settings()` is wrapped with `@lru_cache()`. Note: `cache_ttl_seconds` is defined but there is **no active response caching** in the current code (`cachetools` is listed in requirements but unused).
+
+### 4.4 Routers
+
+Routers live in `backend/app/routers/` and are mounted under `settings.api_prefix` (`/api/v1`). The `skills`, `companies`, `salary`, `career`, and `stats` routers are exported via `routers/__init__.py`; the `resume` router is imported separately in `main.py`.
+
+| Router | Prefix | Endpoints |
+|--------|--------|-----------|
+| skills | `/skills` | `demand`, `demand/all`, `cooccurrence`, `network`, `by-country`, `categories`, `list` |
+| salary | `/salary` | `by-skill`, `top-paying-skills`, `premium-skills`, `range` |
+| companies | `/companies` | `leaderboard`, `contract-types`, `search` |
+| career | `/career` | `role-similarity`, `transitions/{current_role}`, `similarity-matrix`, `skill-gap` |
+| stats | `/stats` | `summary`, `filters`, `roles`, `countries` |
+| resume | `/resume` | `extract-skills` (POST), `analyze` (POST), `match-roles` (POST), `supported-roles` (GET) |
+
+**Example — `routers/skills.py`:**
 ```python
-# backend/app/database.py
-import asyncpg
-from app.config import get_settings
-
-class Database:
-    def __init__(self):
-        self.pool: Optional[asyncpg.Pool] = None
-        self.settings = get_settings()
-    
-    async def connect(self):
-        """Create connection pool."""
-        if self.pool is None:
-            self.pool = await asyncpg.create_pool(
-                self.settings.supabase_url,
-                min_size=2,
-                max_size=10,
-                ssl="require",
-                command_timeout=30
-            )
-            logger.info("Database connection pool created")
-    
-    async def disconnect(self):
-        if self.pool:
-            await self.pool.close()
-            self.pool = None
-    
-    async def fetch_all(self, query: str, *args):
-        """Execute query and return all results as list of dicts."""
-        async with self.pool.acquire() as conn:
-            rows = await conn.fetch(query, *args)
-            return [dict(row) for row in rows]
-    
-    async def fetch_one(self, query: str, *args):
-        """Execute query and return single result as dict."""
-        async with self.pool.acquire() as conn:
-            row = await conn.fetchrow(query, *args)
-            return dict(row) if row else None
-
-db = Database()
-```
-
-**asyncpg Advantages:**
-- **High Performance**: Fastest PostgreSQL driver for Python
-- **Connection Pooling**: Efficient connection reuse (min 2, max 10)
-- **Async Native**: Built for async/await patterns
-- **SSL Support**: Secure connections to Supabase
-
-### 4.2 Router Architecture
-
-#### **Modular Routing**
-
-```python
-# backend/app/main.py
-from app.routers import (
-    skills_router,
-    companies_router,
-    salary_router,
-    career_router,
-    stats_router
-)
-
-app.include_router(skills_router, prefix="/api/v1/skills", tags=["Skills"])
-app.include_router(salary_router, prefix="/api/v1/salary", tags=["Salary"])
-app.include_router(companies_router, prefix="/api/v1/companies", tags=["Companies"])
-app.include_router(career_router, prefix="/api/v1/career", tags=["Career"])
-app.include_router(stats_router, prefix="/api/v1/stats", tags=["Statistics"])
-```
-
-**Benefits:**
-- **Separation of Concerns**: Each domain in separate file
-- **Scalability**: Easy to add new routers
-- **Documentation**: Automatic grouping in OpenAPI docs
-
-#### **Example Router Implementation**
-
-```python
-# backend/app/routers/skills.py
-from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import Optional, List
-from ..database import Database, get_db
-from ..models.schemas import SkillDemand, SkillDemandResponse
-
-router = APIRouter(prefix="/skills", tags=["Skills"])
-
 @router.get("/demand", response_model=SkillDemandResponse)
 async def get_skill_demand(
     role: str = Query(..., description="Job role to filter by"),
-    country: Optional[str] = Query(None, description="Country code (e.g., 'gb', 'us')"),
-    limit: int = Query(30, ge=1, le=100, description="Maximum results"),
-    db: Database = Depends(get_db)
+    country: Optional[str] = Query(None, description="Country code, e.g. 'gb'"),
+    limit: int = Query(30, ge=1, le=100),
+    db: Database = Depends(get_db),
 ):
-    """
-    Get skill demand data for a specific role and optionally country.
-    Returns top skills ranked by job count.
-    """
-    if country:
-        query = """
-            SELECT 
-                skill_name, skill_category, search_role, country_code,
-                job_count, demand_percentage, avg_salary_min, avg_salary_max,
-                avg_salary_midpoint, rank_in_role_country, rank_in_role_global
-            FROM staging_marts.mart_skill_demand
-            WHERE search_role = $1 AND country_code = $2
-            ORDER BY rank_in_role_country
-            LIMIT $3
-        """
-        rows = await db.fetch_all(query, role, country, limit)
-    else:
-        # Aggregate across all countries for global view
-        query = """
-            SELECT 
-                skill_name, skill_category, search_role,
-                SUM(job_count) as job_count,
-                AVG(demand_percentage) as demand_percentage,
-                AVG(avg_salary_min) as avg_salary_min,
-                AVG(avg_salary_max) as avg_salary_max,
-                MIN(rank_in_role_global) as rank_in_role_global
-            FROM staging_marts.mart_skill_demand
-            WHERE search_role = $1
-            GROUP BY skill_name, skill_category, search_role
-            ORDER BY job_count DESC
-            LIMIT $2
-        """
-        rows = await db.fetch_all(query, role, limit)
-    
-    return SkillDemandResponse(
-        role=role,
-        country=country,
-        total_count=len(rows),
-        data=[SkillDemand(**row) for row in rows]
-    )
+    # queries staging_marts.mart_skill_demand; when country is None,
+    # aggregates across countries. Returns SkillDemandResponse.
 ```
 
-**Best Practices Demonstrated:**
-- **Pydantic Response Models**: Automatic validation and serialization
-- **Query Parameters**: Type-safe with validation (ge=1, le=100)
-- **Dynamic SQL**: Builds query based on provided filters
-- **Positional Parameters**: Uses `$1, $2, $3` with asyncpg (not `:named`)
-- **Dependency Injection**: Database instance injected via `Depends(get_db)`
-- **Metadata in Response**: Includes filter context for debugging
+### 4.5 Pydantic Schemas (`backend/app/models/schemas.py`)
 
-### 4.3 Data Validation with Pydantic
-
+Response models reflect the mart columns. For example:
 ```python
-# backend/app/models/schemas.py
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime
-
 class SkillDemand(BaseModel):
-    skill_name: str = Field(..., description="Name of the skill")
-    mention_count: int = Field(..., description="Total mentions in job descriptions")
-    job_count: int = Field(..., description="Number of jobs requiring this skill")
-    percentage_of_jobs: float = Field(..., description="Percentage of total jobs")
-    avg_salary_min: Optional[float] = Field(None, description="Average minimum salary")
-    avg_salary_max: Optional[float] = Field(None, description="Average maximum salary")
-    trend: Optional[str] = Field(None, description="Growing, declining, or stable")
-    
-    class Config:
-        from_attributes = True  # Allows creating from ORM objects
+    skill_name: str
+    skill_category: Optional[str] = None
+    search_role: str
+    country_code: Optional[str] = None
+    job_count: int
+    demand_percentage: Optional[float] = None
+    avg_salary_min: Optional[float] = None
+    avg_salary_max: Optional[float] = None
+    avg_salary_midpoint: Optional[float] = None
+    rank_in_role_country: Optional[int] = None
+    rank_in_role_global: Optional[int] = None
 
 class SkillDemandResponse(BaseModel):
-    skills: List[SkillDemand]
-    total_jobs: int
-    filters: dict
+    role: str
+    country: Optional[str] = None
+    total_count: int
+    data: List[SkillDemand]
 ```
+Other models include `SkillCooccurrence`, `SkillNetworkResponse`, `SalaryBySkill`/`SalaryResponse`, `CompanyLeaderboard`/`CompanyResponse`, `RoleSimilarity`, `CareerTransition`/`CareerPathResponse`, `SkillByCountry`/`GlobalComparisonResponse`, `DashboardStats`, `FilterOptions`, and the resume models below.
 
-**Pydantic Advantages:**
-- **Automatic Validation**: Type checking at runtime
-- **Self-Documenting**: Field descriptions appear in OpenAPI docs
-- **Serialization**: Converts database rows to JSON seamlessly
-- **IDE Support**: Autocomplete and type hints
+### 4.6 Resume Analyzer (`backend/app/routers/resume.py` + `storage.py`)
 
-### 4.4 CORS Configuration
+The resume feature is fully implemented:
+
+- **Text extraction** (`extract_text_from_bytes`): plain text (`.txt/.md/.csv`), PDF (`PyPDF2.PdfReader`), Word (`python-docx`), and images (`.png/.jpg/.jpeg/.webp/.bmp` via optional `pytesseract` OCR). Missing optional libraries raise HTTP 500; unknown types fall back to UTF-8 decode.
+- **Skill extraction** (`ResumeSkillExtractor`): loads `etl/config/skills_taxonomy.json` and matches with compiled regex (same approach as the ETL fast path, special-casing `C++`/`C#`/`.NET`). If the taxonomy file is missing it logs and extracts nothing.
+- **`POST /resume/analyze`**: extracts resume skills, queries `mart_skill_demand` for the `target_role`, splits into `skills_you_have` / `skills_you_need`, and computes a demand-weighted `match_percentage` (→ `ResumeAnalysisResponse`).
+- **`POST /resume/match-roles`**: scores the resume against every role in `mart_skill_demand` (demand-weighted) and returns the top N (→ `List[RoleMatchResult]`).
+- **Persistence**: `/analyze` and `/match-roles` schedule a best-effort background task (`_save_resume_record`) that, when storage is configured, uploads the file to the Supabase Storage `resumes` bucket (`storage.py`, `upload_resume_file`) and inserts a metadata row into `public.resume_uploads`. Failures are logged and non-fatal.
+
+Relevant schemas: `ExtractedSkill`, `SkillGapAnalysis`, `ResumeAnalysisResponse`, `MatchedSkill`, `RoleMatchResult`. (`ResumeSkill`/`ResumeAnalysis` remain as older "future" models and are not used by the active endpoints.)
+
+### 4.7 CORS, Timing & Error Handling
 
 ```python
-# backend/app/main.py
-from fastapi.middleware.cors import CORSMiddleware
-
-origins = settings.cors_origins.split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.cors_origins.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-```
 
-**Security Considerations:**
-- **Environment-Based**: Different origins for dev vs. prod
-- **Explicit Whitelist**: Only specified origins allowed
-- **Credentials Support**: Enables cookies/auth headers if needed
-
-### 4.5 Request Timing Middleware
-
-```python
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
+async def add_process_time_header(request, call_next):
+    start = time.time()
     response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = str(round(process_time * 1000, 2)) + "ms"
+    response.headers["X-Process-Time"] = f"{round((time.time()-start)*1000, 2)}ms"
     return response
 ```
-
-**Performance Monitoring:**
-- Adds processing time to every response header
-- Helps identify slow endpoints
-- No external dependencies required
-
-### 4.6 Error Handling
-
-```python
-from fastapi.responses import JSONResponse
-from fastapi import Request
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Global exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "Internal server error",
-            "path": str(request.url),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
-```
-
-**Graceful Degradation:**
-- Catches all unhandled exceptions
-- Logs full stack trace for debugging
-- Returns user-friendly error message
-- Includes context (path, timestamp)
 
 ---
 
 ## 5. Frontend Implementation
 
-### 5.1 React Application Structure
+### 5.1 Structure
 
 ```
 frontend/src/
-├── main.jsx              # Entry point
-├── App.jsx               # Router configuration
-├── index.css             # Global styles
+├── main.jsx                 # Bootstrap: ThemeProvider → QueryClientProvider → App
+├── App.jsx                  # BrowserRouter + routes under <Layout>
+├── index.css                # Global styles (Tailwind)
 ├── api/
-│   └── index.js          # API client
+│   └── index.js             # Axios client + grouped API objects
 ├── components/
-│   ├── Layout.jsx        # Shell with navigation
+│   ├── Layout.jsx           # Sidebar nav, global Role/Country filters, theme toggle
 │   ├── charts/
-│   │   ├── Charts.jsx    # Recharts components
-│   │   ├── Heatmap.jsx   # Geographic heatmap
-│   │   └── NetworkGraph.jsx  # D3 network visualization
+│   │   ├── Charts.jsx       # Recharts components
+│   │   ├── Heatmap.jsx      # D3 SimilarityHeatmap
+│   │   └── NetworkGraph.jsx # D3 SkillNetworkGraph
 │   └── ui/
-│       └── index.jsx     # Reusable UI components
+│       └── index.jsx        # Skeleton, Spinner, StatCard, Card, Tabs, Badge, ...
+├── context/
+│   └── ThemeContext.jsx     # Light/dark theme (localStorage + prefers-color-scheme)
 ├── hooks/
-│   └── useData.js        # Custom data fetching hook
+│   └── useData.js           # React Query hooks
 ├── pages/
-│   ├── Dashboard.jsx     # Home page
-│   ├── SkillsPage.jsx    # Skills analysis
-│   ├── SalaryPage.jsx    # Salary insights
-│   ├── CompaniesPage.jsx # Company leaderboard
-│   ├── CareerPage.jsx    # Career paths
-│   └── GlobalPage.jsx    # Geographic view
+│   ├── Dashboard.jsx
+│   ├── SkillsPage.jsx
+│   ├── SalaryPage.jsx
+│   ├── CompaniesPage.jsx
+│   ├── CareerPage.jsx
+│   ├── GlobalPage.jsx
+│   └── ResumePage.jsx       # Resume Analyzer (upload + gap analysis / role match)
 └── utils/
-    └── helpers.js        # Utility functions
+    └── helpers.js           # Country metadata, formatters, color palettes
 ```
 
-### 5.2 API Client Implementation
+### 5.2 Tech Stack
+
+React 18.2, Vite 5, React Router 6, TanStack React Query 5, Recharts 2.10, D3 7, Axios 1.6, Tailwind 3.4, Lucide icons. The dev server (`vite.config.js`) proxies `/api` → `http://localhost:8000`.
+
+### 5.3 API Client (`src/api/index.js`)
 
 ```javascript
-// frontend/src/api/index.js
-import axios from 'axios'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
-
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// Response interceptor - auto-unwrap data and handle errors
 api.interceptors.response.use(
-  (response) => response.data,  // Auto-unwrap data
-  (error) => {
-    console.error('API Error:', error.response?.data || error.message)
-    throw error
-  }
+  (response) => response.data,       // auto-unwrap
+  (error) => { console.error('API Error:', error.response?.data || error.message); throw error }
 )
-
-// Stats API
-export const statsApi = {
-  getSummary: () => api.get('/stats/summary'),
-  getFilters: () => api.get('/stats/filters'),
-  getRoles: () => api.get('/stats/roles'),
-  getCountries: () => api.get('/stats/countries'),
-}
-
-// Skills API
-export const skillsApi = {
-  getDemand: (role, country = null, limit = 30) => {
-    const params = { role, limit }
-    if (country) params.country = country
-    return api.get('/skills/demand', { params })
-  },
-  getCooccurrence: (role, skill = null, minCount = 5, limit = 100) => {
-    const params = { role, min_count: minCount, limit }
-    if (skill) params.skill = skill
-    return api.get('/skills/cooccurrence', { params })
-  },
-  getNetwork: (role, minCount = 10, limit = 50) => 
-    api.get('/skills/network', { params: { role, min_count: minCount, limit } }),
-  getByCountry: (skill, role) => 
-    api.get('/skills/by-country', { params: { skill, role } }),
-  getCategories: () => api.get('/skills/categories'),
-}
-
-// Companies, Salary, Career APIs follow similar pattern...
 ```
+Grouped exports: `statsApi`, `skillsApi`, `companiesApi`, `salaryApi`, `careerApi`, and `resumeApi`. The resume calls post `multipart/form-data` directly with a 60s timeout.
 
-**Architecture Benefits:**
-- **Auto Data Unwrapping**: Response interceptor returns `response.data` directly
-- **Flexible Parameters**: Helper functions build query params dynamically
-- **Clean API**: Callers get data directly without `.data` access
-- **Environment Aware**: Default to `/api/v1` for proxy in development
+### 5.4 Data Fetching (`src/hooks/useData.js`)
 
-### 5.3 Data Fetching with React Query
+Most endpoints are wrapped in React Query hooks (`useSummaryStats`, `useFilterOptions`, `useSkillDemand`, `useSkillCooccurrence`, `useCompanyLeaderboard`, `useSalaryBySkill`, `useRoleSimilarity`, `useSkillGap`, …). The global `QueryClient` (in `main.jsx`) sets `staleTime` 5 min, `cacheTime` 30 min, `refetchOnWindowFocus: false`, `retry: 2`. `ResumePage` calls `resumeApi` directly rather than through a hook.
 
-```javascript
-// frontend/src/hooks/useData.js
-import { useQuery } from '@tanstack/react-query'
-import { statsApi, skillsApi, companiesApi } from '../api'
+### 5.5 Theming (`src/context/ThemeContext.jsx`)
 
-// Stats Hooks
-export function useSummaryStats() {
-  return useQuery({
-    queryKey: ['stats', 'summary'],
-    queryFn: statsApi.getSummary,
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  })
-}
+`ThemeProvider`/`useTheme` provide `{ theme, toggleTheme, isDark }`. The initial theme reads `localStorage['jobscript-theme']`, falling back to `prefers-color-scheme`. Toggling adds/removes the `dark` class on `<html>`; Tailwind uses class-based dark mode with `dark:` variants throughout.
 
-export function useFilterOptions() {
-  return useQuery({
-    queryKey: ['stats', 'filters'],
-    queryFn: statsApi.getFilters,
-    staleTime: 1000 * 60 * 30, // 30 minutes
-  })
-}
+### 5.6 Charts
 
-// Skills Hooks
-export function useSkillDemand(role, country = null, limit = 30) {
-  return useQuery({
-    queryKey: ['skills', 'demand', role, country, limit],
-    queryFn: () => skillsApi.getDemand(role, country, limit),
-    enabled: !!role,  // Only fetch when role is provided
-  })
-}
-
-export function useSkillCooccurrence(role, skill = null, minCount = 5) {
-  return useQuery({
-    queryKey: ['skills', 'cooccurrence', role, skill, minCount],
-    queryFn: () => skillsApi.getCooccurrence(role, skill, minCount),
-    enabled: !!role,
-  })
-}
-
-// More hooks for companies, salary, career...
-```
-
-**React Query Advantages:**
-- **Automatic Caching**: Data cached with configurable stale time
-- **Background Refetching**: Updates data in background
-- **Request Deduplication**: Multiple components share same query
-- **Built-in Loading States**: `isLoading`, `isError`, `data` states
-- **Enabled Flag**: Conditional fetching based on dependencies
-- **Optimistic Updates**: Support for mutations
-
-### 5.4 Example Page Implementation
-
-```javascript
-// frontend/src/pages/Dashboard.jsx
-import { useOutletContext } from 'react-router-dom'
-import { Briefcase, Code, Globe, Building2, TrendingUp } from 'lucide-react'
-import { useSummaryStats, useSkillDemand } from '../hooks/useData'
-import { Card, StatCard, ChartLoading, EmptyState } from '../components/ui'
-import { SkillBarChart, CategoryPieChart } from '../components/charts/Charts'
-import { formatNumber } from '../utils/helpers'
-
-export default function Dashboard() {
-  const { selectedRole, selectedCountry } = useOutletContext()
-  
-  // React Query hooks - automatic caching and refetching
-  const { data: stats, isLoading: statsLoading } = useSummaryStats()
-  const { data: skillDemand, isLoading: skillsLoading } = useSkillDemand(
-    selectedRole, 
-    selectedCountry || null, 
-    20
-  )
-
-  return (
-    <div className="space-y-6">
-      {/* Hero Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard
-          title="Total Jobs"
-          value={statsLoading ? '...' : formatNumber(stats?.total_jobs || 0)}
-          icon={Briefcase}
-          color="primary"
-          loading={statsLoading}
-        />
-        <StatCard
-          title="Skills Tracked"
-          value={statsLoading ? '...' : formatNumber(stats?.total_skills || 0)}
-          icon={Code}
-          color="accent"
-          loading={statsLoading}
-        />
-        {/* More stat cards... */}
-      </div>
-
-      {/* Main Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card 
-          title={`Top Skills for ${selectedRole || 'All Roles'}`}
-          className="lg:col-span-2"
-        >
-          {skillsLoading ? (
-            <ChartLoading height={400} />
-          ) : skillDemand?.data?.length > 0 ? (
-            <SkillBarChart data={skillDemand.data} height={400} />
-          ) : (
-            <EmptyState description="No skill data available" />
-          )}
-        </Card>
-
-        <Card title="Skills by Category">
-          {skillsLoading ? (
-            <ChartLoading height={300} />
-          ) : skillDemand?.data?.length > 0 ? (
-            <CategoryPieChart data={skillDemand.data} height={300} />
-          ) : (
-            <EmptyState description="No category data available" />
-          )}
-        </Card>
-      </div>
-    </div>
-  )
-}
-```
-
-**React Query Benefits in Action:**
-- **Automatic Loading States**: `isLoading` from `useSummaryStats()` and `useSkillDemand()`
-- **Shared State**: Multiple components using same query share cached data
-- **Background Refetch**: Data refreshes in background when stale
-- **Conditional Rendering**: Clean pattern for loading/error/success states
-
-### 5.5 Network Graph Visualization (D3.js)
-
-```javascript
-// frontend/src/components/charts/NetworkGraph.jsx
-import { useEffect, useRef } from 'react'
-import * as d3 from 'd3'
-
-export default function NetworkGraph({ data }) {
-  const svgRef = useRef()
-
-  useEffect(() => {
-    if (!data) return
-
-    const width = 800
-    const height = 600
-
-    const svg = d3.select(svgRef.current)
-      .attr('width', width)
-      .attr('height', height)
-
-    svg.selectAll('*').remove() // Clear previous render
-
-    const simulation = d3.forceSimulation(data.nodes)
-      .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-
-    const link = svg.append('g')
-      .selectAll('line')
-      .data(data.links)
-      .join('line')
-      .attr('stroke', '#999')
-      .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', d => Math.sqrt(d.value))
-
-    const node = svg.append('g')
-      .selectAll('circle')
-      .data(data.nodes)
-      .join('circle')
-      .attr('r', 8)
-      .attr('fill', d => d.category === 'Programming Language' ? '#3b82f6' : '#10b981')
-      .call(drag(simulation))
-
-    const labels = svg.append('g')
-      .selectAll('text')
-      .data(data.nodes)
-      .join('text')
-      .text(d => d.name)
-      .attr('font-size', 10)
-      .attr('dx', 12)
-      .attr('dy', 4)
-
-    simulation.on('tick', () => {
-      link
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y)
-
-      node
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-
-      labels
-        .attr('x', d => d.x)
-        .attr('y', d => d.y)
-    })
-
-    function drag(simulation) {
-      function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart()
-        event.subject.fx = event.subject.x
-        event.subject.fy = event.subject.y
-      }
-
-      function dragged(event) {
-        event.subject.fx = event.x
-        event.subject.fy = event.y
-      }
-
-      function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0)
-        event.subject.fx = null
-        event.subject.fy = null
-      }
-
-      return d3.drag()
-        .on('start', dragstarted)
-        .on('drag', dragged)
-        .on('end', dragended)
-    }
-
-  }, [data])
-
-  return <svg ref={svgRef}></svg>
-}
-```
-
-**D3 Force Simulation:**
-- **Physics-Based Layout**: Nodes repel, links attract
-- **Interactive**: Drag nodes to reposition
-- **Color-Coded**: Different colors for skill categories
-- **Dynamic**: Updates when data changes
+- **Recharts** (`charts/Charts.jsx`): `SkillBarChart`, `CategoryBarChart`, `CategoryPieChart`, `SalaryPremiumChart`, `SalaryComparisonChart`, `CompanyBarChart`, `ContractTypePieChart`, `CountryComparisonChart`, with a `useChartColors` hook that adapts to the theme.
+- **D3** (named exports): `SimilarityHeatmap` (`Heatmap.jsx`) and `SkillNetworkGraph` (`NetworkGraph.jsx`) — force-directed graph and RdYlGn heatmap with zoom, drag, tooltips, and legends. These components exist in the codebase; the Skills and Career pages currently render their relationship data as tables/lists.
 
 ---
 
 ## 6. Data Transformation Layer (dbt)
 
-### 6.1 dbt Project Structure
+### 6.1 Project Structure
 
 ```
 dbt_project/
-├── dbt_project.yml          # Project configuration
-├── profiles.yml             # Database connection
+├── dbt_project.yml
+├── profiles.yml.example      # copy to profiles.yml (uses DB_* env vars)
 ├── models/
-│   ├── sources.yml          # Source definitions
-│   ├── intermediate/        # Intermediate transformations
+│   ├── sources.yml
+│   ├── intermediate/
 │   │   ├── int_job_skills_enriched.sql
 │   │   └── schema.yml
-│   └── marts/               # Final analytics tables
+│   └── marts/
 │       ├── mart_skill_demand.sql
 │       ├── mart_skill_cooccurrence.sql
 │       ├── mart_salary_by_skill.sql
@@ -1178,454 +511,164 @@ dbt_project/
 │       └── schema.yml
 ```
 
-### 6.2 Source Definitions
+The dbt project is named `job_script`. Vars `analysis_start_date` / `analysis_end_date` define a rolling window.
 
-```yaml
-# models/sources.yml
-version: 2
+### 6.2 Sources (`models/sources.yml`)
 
-sources:
-  - name: staging
-    database: postgres
-    schema: staging
-    tables:
-      - name: stg_jobs
-        description: Cleaned and normalized job postings
-        columns:
-          - name: job_id
-            description: Primary key
-            tests:
-              - unique
-              - not_null
-      
-      - name: stg_job_skills
-        description: Skills extracted from job descriptions
-        columns:
-          - name: job_id
-            tests:
-              - relationships:
-                  to: source('staging', 'stg_jobs')
-                  field: job_id
-      
-      - name: dim_skills
-        description: Master skills taxonomy
-```
+Two source schemas:
+- **`raw`** → `jobs`
+- **`staging`** → `stg_jobs`, `stg_job_skills`, `dim_skills`, `dim_job_roles`, `dim_countries`
 
-### 6.3 Intermediate Model Example
+### 6.3 Profiles (`profiles.yml.example`)
+
+`type: postgres` (dbt-postgres) with two outputs:
+- **`dev`** — schema `staging` (default target)
+- **`prod`** — schema `marts`
+
+Both read `DB_HOST`, `DB_PORT` (default `6543`, the Supabase pooler), `DB_USER`, `DB_PASSWORD`, `DB_NAME` (default `postgres`), with `sslmode: require` and 4 threads. (The CI workflow generates its own `~/.dbt/profiles.yml` pointing at the Supabase host on port 5432.)
+
+### 6.4 Intermediate Model
 
 ```sql
 -- models/intermediate/int_job_skills_enriched.sql
-{{
-  config(
-    materialized='view',
-    schema='intermediate'
-  )
-}}
+{{ config(materialized='view', schema='staging') }}
 
-WITH job_skills AS (
-    SELECT
-        js.job_id,
-        js.skill_id,
-        js.extraction_method,
-        js.confidence_score,
-        s.skill_name,
-        s.skill_category,
-        s.skill_subcategory,
-        j.search_role,
-        j.country_code,
-        j.company_name,
-        j.salary_min,
-        j.salary_max,
-        j.contract_type
-    FROM {{ source('staging', 'stg_job_skills') }} js
-    INNER JOIN {{ source('staging', 'dim_skills') }} s
-        ON js.skill_id = s.skill_id
-    INNER JOIN {{ source('staging', 'stg_jobs') }} j
-        ON js.job_id = j.job_id
-    WHERE js.confidence_score >= 0.7  -- Filter low-confidence matches
-)
-
-SELECT * FROM job_skills
+SELECT
+    js.job_id, js.skill_id, js.skill_name, js.mention_count,
+    s.skill_category, s.skill_subcategory,
+    j.search_role, j.country_code, j.company_name,
+    j.salary_min, j.salary_max,
+    (j.salary_min + j.salary_max) / 2.0 AS salary_midpoint,
+    j.contract_type, j.contract_time,
+    j.job_posted_at::date AS job_posted_date
+FROM {{ source('staging', 'stg_job_skills') }} js
+INNER JOIN {{ source('staging', 'dim_skills') }} s ON js.skill_id = s.skill_id
+INNER JOIN {{ source('staging', 'stg_jobs') }} j   ON js.job_id = j.job_id
+WHERE j.job_posted_at >= CURRENT_DATE - INTERVAL '60 days'
 ```
+> The join key is `skill_id`, the freshness filter is a 60-day posting window, and the model is a **view in the `staging` schema**. There is no `confidence_score` column in the source table, so no confidence filter is applied.
 
-**Jinja Templating:**
-- `{{ source() }}`: References source tables with lineage tracking
-- `{{ config() }}`: Defines materialization strategy
-- Enables SQL reuse and dynamic queries
+### 6.5 Marts
 
-### 6.4 Mart Model Example
+| Model | Purpose | Notable logic |
+|-------|---------|---------------|
+| `mart_skill_demand` | Top skills per role+country | `job_count`, `demand_percentage`, ranks; top 50 per role/country |
+| `mart_salary_by_skill` | Salary vs. market per skill | premium absolute/%, requires ≥5 jobs |
+| `mart_skills_by_country` | Skill demand across countries | `rank_by_country`, `top_country_for_skill`; min 3 jobs |
+| `mart_skill_cooccurrence` | Skill pairs in the same job | `jaccard_similarity`, conditional probabilities; min 5 co-occurrences |
+| `mart_company_leaderboard` | Top hiring companies | contract breakdown, `roles_hiring`; top 100 per role/country |
+| `mart_role_similarity` | Role skill overlap | Jaccard, overlap & dice coefficients, top 10 shared skills |
 
-```sql
--- models/marts/mart_skill_demand.sql
-{{
-    config(
-        materialized='table',
-        schema='marts'
-    )
-}}
+All marts are materialized as `table` in the `marts` schema.
 
-/*
-    Mart: Skill Demand
-    Top skills per role and country with demand percentages
-    Answers: "What are the top 10 skills for Data Engineers?"
-*/
+### 6.6 Tests (`schema.yml`)
 
-WITH job_counts AS (
-    -- Total unique jobs per role and country
-    SELECT 
-        search_role,
-        country_code,
-        COUNT(DISTINCT job_id) AS total_jobs
-    FROM {{ ref('int_job_skills_enriched') }}
-    GROUP BY search_role, country_code
-),
-
-skill_counts AS (
-    -- Count jobs per skill, role, country
-    SELECT 
-        skill_id,
-        skill_name,
-        skill_category,
-        skill_subcategory,
-        search_role,
-        country_code,
-        COUNT(DISTINCT job_id) AS job_count,
-        AVG(salary_min) AS avg_salary_min,
-        AVG(salary_max) AS avg_salary_max,
-        AVG(salary_midpoint) AS avg_salary_midpoint
-    FROM {{ ref('int_job_skills_enriched') }}
-    GROUP BY skill_id, skill_name, skill_category, skill_subcategory, search_role, country_code
-),
-
-ranked_skills AS (
-    SELECT 
-        sc.*,
-        jc.total_jobs,
-        ROUND((sc.job_count::NUMERIC / NULLIF(jc.total_jobs, 0)) * 100, 2) AS demand_percentage,
-        ROW_NUMBER() OVER (
-            PARTITION BY sc.search_role, sc.country_code 
-            ORDER BY sc.job_count DESC
-        ) AS rank_in_role_country,
-        ROW_NUMBER() OVER (
-            PARTITION BY sc.search_role 
-            ORDER BY sc.job_count DESC
-        ) AS rank_in_role_global
-    FROM skill_counts sc
-    JOIN job_counts jc 
-        ON sc.search_role = jc.search_role 
-        AND sc.country_code = jc.country_code
-)
-
-SELECT 
-    skill_id,
-    skill_name,
-    skill_category,
-    skill_subcategory,
-    search_role,
-    country_code,
-    job_count,
-    total_jobs AS total_jobs_for_role,
-    demand_percentage,
-    avg_salary_min,
-    avg_salary_max,
-    avg_salary_midpoint,
-    rank_in_role_country,
-    rank_in_role_global,
-    CURRENT_DATE - INTERVAL '30 days' AS period_start,
-    CURRENT_DATE AS period_end,
-    NOW() AS updated_at
-FROM ranked_skills
-WHERE rank_in_role_country <= 50  -- Keep top 50 skills per role/country
-ORDER BY search_role, country_code, rank_in_role_country
-```
-
-**SQL Best Practices:**
-- **CTEs**: Break complex logic into readable chunks (job_counts, skill_counts, ranked_skills)
-- **Window Functions**: `ROW_NUMBER()` for ranking within partitions
-- **Aggregations**: Pre-compute metrics (counts, averages) for dashboard performance
-- **Null Safety**: `NULLIF()` prevents division by zero
-- **Data Quality**: Filter to top 50 skills to limit result size
-
-### 6.5 dbt Documentation
-
-```yaml
-# models/marts/schema.yml
-version: 2
-
-models:
-  - name: mart_skill_demand
-    description: >
-      Aggregated skill demand metrics by role and country.
-      Includes mention counts, job percentages, and salary data.
-    columns:
-      - name: skill_name
-        description: Name of the skill
-        tests:
-          - not_null
-      
-      - name: mention_count
-        description: Total mentions of this skill in job descriptions
-        tests:
-          - not_null
-      
-      - name: percentage_of_jobs
-        description: Percentage of jobs requiring this skill
-        tests:
-          - not_null
-      
-      - name: avg_salary_max
-        description: Average maximum salary for jobs requiring this skill
-```
-
-**Documentation Benefits:**
-- **Self-Documenting**: `dbt docs generate` creates interactive site
-- **Data Lineage**: Visual graph of table dependencies
-- **Data Quality**: Built-in testing framework
+Data tests are intentionally minimal: `not_null` on `int_job_skills_enriched.job_id`, and on `mart_skill_demand.skill_name` / `search_role`. `dbt test` runs these in CI after `dbt run`.
 
 ---
 
 ## 7. Deployment & DevOps
 
-### 7.1 GitHub Actions CI/CD
+### 7.1 GitHub Actions — ETL (`.github/workflows/etl_pipeline.yml`)
+
+- **Schedule**: `cron: '0 3 1,15 * *'` — the 1st and 15th of each month at 03:00 UTC. Also supports `workflow_dispatch` with `run_extraction` / `run_transformation` / `run_dbt` / `test_mode` inputs.
+- **Python** 3.11, `actions/checkout@v4`, `actions/setup-python@v5`.
+- **Secrets**: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `SUPABASE_URL`, `SUPABASE_HOST`, `SUPABASE_USER`, `SUPABASE_PASSWORD`, `SUPABASE_DB`. (No Gemini key — discovery is local GLiNER.)
+- **Jobs**:
+  1. `extract` — `python extractor.py --days 60 --pages 3 --delay 1.5` (or `--test` in test mode).
+  2. `transform` — `python transformer.py --batch-size 500 --fast-only` (taxonomy-only; GLiNER disabled).
+  3. `dbt` — writes a `~/.dbt/profiles.yml`, then `dbt debug`, `dbt deps`, `dbt run --full-refresh`, `dbt test`, `dbt docs generate`; uploads artifacts.
+  4. `archive` — (scheduled runs) calls `SELECT archive_skill_demand()`.
+  5. `notify` — reports the status of all jobs.
+
+### 7.2 Keep-Warm (`.github/workflows/keep_warm.yml`)
+
+Cron `*/5 * * * *` curls `https://skill-hunt.onrender.com/health` to prevent the Render free-tier service from sleeping.
+
+### 7.3 Backend Hosting — Render (`render.yaml`)
 
 ```yaml
-# .github/workflows/etl_pipeline.yml
-name: ETL Pipeline
-
-on:
-  schedule:
-    - cron: '0 3 * * 0,3'  # Sundays and Wednesdays at 3 AM UTC
-  workflow_dispatch:  # Manual trigger
-
-jobs:
-  extract:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install dependencies
-        run: |
-          cd etl
-          pip install -r requirements.txt
-      
-      - name: Run extraction
-        env:
-          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
-          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        run: |
-          cd etl
-          python extractor.py
-  
-  transform:
-    runs-on: ubuntu-latest
-    needs: extract
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install dependencies
-        run: |
-          cd etl
-          pip install -r requirements.txt
-      
-      - name: Run transformation
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          cd etl
-          python transformer.py
-  
-  dbt:
-    runs-on: ubuntu-latest
-    needs: transform
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install dbt
-        run: |
-          pip install dbt-postgres
-      
-      - name: Run dbt models
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        run: |
-          cd dbt_project
-          dbt run --target prod
-```
-
-### 7.2 Docker Configuration
-
-```dockerfile
-# Dockerfile.backend
-FROM python:3.10-slim
-
-WORKDIR /app
-
-# Install dependencies
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application
-COPY backend/app ./app
-
-# Expose port
-EXPOSE 8000
-
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### 7.3 Environment Configuration
-
-```yaml
-# render.yaml (Render.com deployment)
 services:
   - type: web
-    name: job-script-api
-    env: python
-    region: oregon
-    buildCommand: "pip install -r backend/requirements.txt"
-    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    name: skill-hunt-api
+    env: python                 # Python buildpack (no Dockerfile)
+    rootDir: backend
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
     envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: CORS_ORIGINS
-        value: "https://jobscript.vercel.app"
-      - key: DEBUG
-        value: "false"
+      - key: SUPABASE_URL      # sync: false (set in dashboard)
+      - key: CORS_ORIGINS      # jobscript.vercel.app + localhost
+      - key: DEBUG             # false
+      - key: CACHE_TTL_SECONDS # 3600
 ```
+> There is no Dockerfile in the repo — Render builds the app with its Python buildpack.
+
+### 7.4 Frontend Hosting — Vercel (`vercel.json`)
 
 ```json
-// vercel.json (Vercel deployment)
 {
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/dist",
-  "framework": "vite",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "version": 2,
+  "builds": [
+    { "src": "frontend/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "https://skill-hunt.onrender.com/api/$1" },
+    { "src": "/(.*)", "dest": "/frontend/$1" }
+  ],
+  "env": { "VITE_API_URL": "@vite_api_url" }
 }
 ```
+A second `frontend/vercel.json` handles SPA client-side routing (rewrites to `index.html`).
 
 ---
 
-## 8. Performance Optimization
+## 8. Performance & Current Limitations
 
-### 8.1 Database Optimizations
+**Implemented:**
+- **Pre-computed marts** — dbt aggregates once so the API serves ready-made tables.
+- **Connection pooling** — asyncpg pool (min 2 / max 10), statement cache disabled for the Supabase pooler.
+- **Indexing** — filter/join indexes on `raw.jobs` and `staging.*` (see §2.3).
+- **Client caching** — React Query caches responses (5-min stale time) and dedupes requests.
+- **CDN** — the frontend is served from Vercel's edge network.
 
-- **Materialized Views**: Pre-compute expensive aggregations
-- **Indexes**: Strategic indexes on filter/join columns
-- **Connection Pooling**: Reuse database connections
-- **Query Caching**: FastAPI cache decorator for repeated queries
-
-### 8.2 Frontend Optimizations
-
-- **Code Splitting**: React.lazy() for route-based splitting
-- **Memoization**: useMemo/useCallback for expensive computations
-- **Virtual Scrolling**: For large datasets in tables
-- **Image Optimization**: Lazy loading, modern formats (WebP)
-
-### 8.3 API Optimizations
-
-- **Pagination**: Limit result sets to reduce payload size
-- **Field Selection**: Allow clients to specify required fields
-- **Compression**: Gzip middleware for response compression
-- **CDN**: Static assets served via Vercel Edge Network
+**Declared but not yet active** (candidates for future work):
+- Response-level API caching (`CACHE_TTL_SECONDS` / `cachetools` are wired but unused).
+- API rate limiting (`rate_limit_per_minute` is configured but not enforced).
+- Frontend code-splitting / route-level lazy loading and response gzip compression.
 
 ---
 
 ## 9. Security & Best Practices
 
-### 9.1 Security Measures
-
-- **Environment Variables**: Secrets never committed to Git
-- **SQL Injection Prevention**: Parameterized queries
-- **CORS**: Restricted to specific origins
-- **HTTPS**: Enforced in production
-- **Rate Limiting**: Prevent API abuse (future)
-
-### 9.2 Code Quality
-
-- **Linting**: ESLint (JS), Black (Python)
-- **Type Safety**: Pydantic for Python, PropTypes/TypeScript for JS
-- **Documentation**: Inline comments, README files
-- **Version Control**: Git with meaningful commit messages
+- **Secrets** are provided via environment variables / GitHub Actions secrets, not committed.
+- **SQL injection**: queries use asyncpg positional parameters (`$1, $2, …`); the company search builds an ILIKE pattern but still passes it as a bound parameter.
+- **CORS**: restricted to an explicit origin whitelist from `CORS_ORIGINS`.
+- **HTTPS**: enforced by Render and Vercel in production.
+- **Error handling**: a global exception handler returns generic 500s and only reveals detail when `DEBUG=true`.
+- **Code style**: Black (Python) and ESLint (JS/React) are configured.
 
 ---
 
-## 10. Testing Strategy
+## 10. Testing Status
 
-### 10.1 Backend Testing
-
-```python
-# tests/test_api.py
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
-
-def test_skill_demand_endpoint():
-    response = client.get("/api/v1/skills/demand?role=Data Engineer&limit=5")
-    assert response.status_code == 200
-    data = response.json()
-    assert "skills" in data
-    assert len(data["skills"]) <= 5
-
-def test_invalid_role():
-    response = client.get("/api/v1/skills/demand?role=InvalidRole")
-    assert response.status_code == 200
-    assert len(response.json()["skills"]) == 0
-```
-
-### 10.2 Frontend Testing
-
-```javascript
-// frontend/src/__tests__/SkillsPage.test.jsx
-import { render, screen, waitFor } from '@testing-library/react'
-import SkillsPage from '../pages/SkillsPage'
-
-test('renders skills page', async () => {
-  render(<SkillsPage />)
-  await waitFor(() => {
-    expect(screen.getByText('Skills Analysis')).toBeInTheDocument()
-  })
-})
-```
+There is currently **no automated test suite committed** to the repository. `pytest` / `pytest-asyncio` are listed in `backend/requirements.txt` and dbt data tests exist (§6.6), but there are no backend or frontend test files yet. Adding an API test suite (e.g. FastAPI `TestClient`) and frontend component tests is tracked on the roadmap.
 
 ---
 
 ## 📌 Summary
 
-Job Script demonstrates enterprise-grade engineering practices:
+Job Script implements:
 
-✅ **Modular Architecture**: Clear separation between layers  
-✅ **Scalable Data Pipeline**: Automated ETL with hybrid skill extraction  
-✅ **Modern Tech Stack**: FastAPI, React, dbt, PostgreSQL  
-✅ **Performance Optimized**: Indexing, caching, pagination  
-✅ **Production-Ready**: CI/CD, Docker, cloud deployment  
-✅ **Self-Documenting**: OpenAPI, dbt docs, inline comments  
-✅ **Cost-Effective**: Hybrid extraction saves 95% on LLM costs  
-
-This implementation guide serves as a comprehensive reference for understanding, extending, and maintaining the Job Script platform.
+✅ **Layered ELT architecture** — raw → staging → marts → API → SPA  
+✅ **Hybrid skill extraction** — regex fast path + local GLiNER NER discovery (no LLM cost)  
+✅ **Modern stack** — FastAPI + asyncpg, React + Vite, dbt-postgres, Supabase  
+✅ **Resume Analyzer** — upload, parse, gap analysis, and role matching  
+✅ **Automated pipeline** — GitHub Actions on the 1st & 15th, plus keep-warm ping  
+✅ **Honest docs** — this guide reflects the code as it actually stands, including current limitations
 
 ---
 
-**Last Updated:** January 2026  
+**Last Updated:** July 2026  
 **Version:** 1.0.0

@@ -1,18 +1,17 @@
 # 🎯 Job Script
 
 > **Data-Driven Job Market Intelligence Platform**  
-> Uncover skill trends, salary insights, and career opportunities through advanced analytics and AI-powered data extraction.
+> Uncover skill trends, salary insights, and career opportunities through advanced analytics and NER-powered skill extraction.
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.2+-61DAFB.svg)](https://reactjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)
-[![dbt](https://img.shields.io/badge/dbt-1.7+-FF694B.svg)](https://www.getdbt.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)](https://reactjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791.svg)](https://www.postgresql.org/)
+[![dbt](https://img.shields.io/badge/dbt-postgres-FF694B.svg)](https://www.getdbt.com/)
 
-[Live Demo](#) • [Documentation](#) • [API Docs](http://localhost:8000/docs)
+[Live Frontend](https://jobscript.vercel.app) • [Backend API](https://skill-hunt.onrender.com) • [API Docs](https://skill-hunt.onrender.com/docs)
 
 </div>
 
@@ -36,7 +35,7 @@
 
 ## 🌟 Overview
 
-**Job Script** is an enterprise-grade job market analysis platform that empowers professionals, recruiters, and organizations with actionable intelligence derived from millions of job postings worldwide. By combining cutting-edge data engineering practices with AI-driven skill extraction, Job Script transforms raw job market data into strategic career insights.
+**Job Script** is a job market analysis platform that turns real job postings into actionable career intelligence for professionals, recruiters, and analysts. It combines a modern data-stack ELT pipeline with NER-powered skill extraction to transform raw job data into insights on skill demand, salary premiums, hiring companies, and career transitions.
 
 ### 🎯 Mission
 
@@ -50,107 +49,99 @@ To democratize access to job market intelligence, enabling individuals to make i
 - **Data Analysts**: Explore job market dynamics across roles, skills, and geographies
 - **Educators**: Align curriculum with industry demands and emerging technologies
 
-### 🌍 Global Coverage
+### 🌍 Coverage
 
-Job Script aggregates job postings from **18 countries** across 6 continents, analyzing **15+ job roles** spanning Data Engineering, AI/ML, Software Development, DevOps, and Cybersecurity.
+Job Script aggregates job postings via the **Adzuna API**, analyzing **15 job roles** spanning Data, AI/ML, Software Development, DevOps/Cloud, and Cybersecurity across up to **18 countries** (17 currently active in the extraction config).
 
-**Supported Countries:**
-- 🇬🇧 United Kingdom
-- 🇺🇸 United States
-- 🇦🇺 Australia
-- 🇨🇦 Canada
-- 🇩🇪 Germany
-- 🇫🇷 France
-- 🇮🇳 India
-- 🇸🇬 Singapore
-- And 10 more...
+**Job Roles Tracked:** Data Engineer, Analytics Engineer, Data Scientist, Data Analyst, Business Intelligence Developer, Machine Learning Engineer, AI Engineer, Computer Vision Engineer, Backend Developer, Frontend Developer, Full Stack Developer, Mobile Developer, DevOps Engineer, Cloud Architect, Cyber Security Engineer.
+
+**Countries:** 🇬🇧 UK • 🇺🇸 US • 🇦🇺 Australia • 🇦🇹 Austria • 🇧🇪 Belgium • 🇧🇷 Brazil • 🇨🇦 Canada • 🇩🇪 Germany • 🇫🇷 France • 🇮🇳 India • 🇮🇹 Italy • 🇲🇽 Mexico • 🇳🇱 Netherlands • 🇳🇿 New Zealand • 🇵🇱 Poland • 🇸🇬 Singapore • 🇿🇦 South Africa (plus 🇷🇺 Russia in the country dimension).
 
 ---
 
 ## ✨ Key Features
 
 ### 📊 **Intelligent Dashboard**
-- Real-time job market health metrics
-- Trending skills and emerging technologies
+- High-level job market metrics (total jobs, skills tracked, countries, roles, companies)
+- Top skills bar chart and skills-by-category breakdown
 - Interactive data visualizations with Recharts
-- Responsive design optimized for all devices
+- Responsive design with light/dark theme support
 
 ### 🔍 **Skills Analysis**
 - **Skill Demand Tracking**: Monitor demand for specific skills across roles and countries
-- **Co-occurrence Analysis**: Discover skill combinations that appear together in job postings
-- **Skill Network Visualization**: Interactive D3.js network graphs showing skill relationships
+- **Co-occurrence Analysis**: Discover skill combinations that appear together in job postings (with Jaccard similarity)
+- **Skill Connections**: Explore paired skills for a selected skill
 - **Geographic Distribution**: Compare skill popularity across different countries
-- **Trend Analysis**: Track skill growth and decline over time
 
 ### 💰 **Salary Intelligence**
-- **Skill-Based Salary Analysis**: Understand compensation ranges for specific skill sets
+- **Skill-Based Salary Analysis**: Understand compensation for jobs requiring specific skills vs. the market average
 - **Premium Skills Identification**: Identify skills that command the highest salary premiums
-- **Role Comparison**: Compare salary ranges across different job roles
-- **Location-Based Insights**: Analyze geographic salary variations
+- **Top-Paying Skills**: Rank skills by average salary
+- **Salary Range**: Min/max/avg salary and market average by role & country
 
 ### 🏢 **Company Intelligence**
 - **Hiring Leaderboards**: Identify top hiring companies by role and location
-- **Contract Type Analysis**: Understand distribution of permanent vs. contract positions
-- **Company Skill Requirements**: Discover specific skills sought by leading employers
+- **Contract Type Analysis**: Distribution of full-time / part-time / contract positions
+- **Company Search**: Look up specific employers
 
 ### 🚀 **Career Pathfinding**
 - **Role Similarity Engine**: Find related roles based on overlapping skill sets
-- **Career Transition Analysis**: Identify potential career pivots with minimal retraining
-- **Skill Gap Identification**: Discover missing skills needed for career advancement
-- **Career Trajectory Mapping**: Visualize career progression pathways
+- **Career Transition Analysis**: Identify potential career pivots with difficulty ratings derived from skill overlap
+- **Skill Gap Identification**: Discover shared skills and skills to learn between two roles
+- **Similarity Matrix**: Full role-to-role similarity matrix (heatmap-ready)
 
 ### 🗺️ **Global Market Insights**
-- Cross-country skill demand comparison
-- Regional technology adoption patterns
-- Geographic salary disparities
-- Market saturation indicators
+- Cross-country skill demand comparison for a selected skill
+- Job-count-by-country comparison
+- Country-level comparison tables
+
+### 📄 **Resume Analyzer**
+- **Upload & Parse**: Drag-and-drop upload for PDF, DOCX/DOC, TXT, and (optionally, via OCR) image resumes
+- **Skill Extraction**: Extracts skills from resume text using the same taxonomy as the ETL fast path
+- **Gap Analysis**: Compares your resume against the demand for a target role — shows skills you have, skills to learn, and a demand-weighted match percentage
+- **Role Match**: Scores your resume against every tracked role and ranks the best-fitting roles
 
 ---
 
 ## 🛠️ Technology Stack
 
-Job Script leverages a modern, production-ready technology stack designed for scalability, maintainability, and performance.
-
 ### **Backend**
-- **[FastAPI](https://fastapi.tiangolo.com/)** - High-performance async Python web framework
-- **[PostgreSQL](https://www.postgresql.org/)** - Robust relational database (Supabase hosted)
-- **[asyncpg](https://github.com/MagicStack/asyncpg)** - High-performance async PostgreSQL driver
-- **[dbt (Data Build Tool)](https://www.getdbt.com/)** - SQL-based data transformation framework
-- **[Pydantic](https://docs.pydantic.dev/)** - Data validation and settings management
-- **[Uvicorn](https://www.uvicorn.org/)** - Lightning-fast ASGI server
+- **[FastAPI](https://fastapi.tiangolo.com/)** – High-performance async Python web framework
+- **[PostgreSQL](https://www.postgresql.org/)** – Relational database (Supabase hosted)
+- **[asyncpg](https://github.com/MagicStack/asyncpg)** – Async PostgreSQL driver (connection pooling)
+- **[Pydantic](https://docs.pydantic.dev/)** – Request/response validation and settings
+- **[Uvicorn](https://www.uvicorn.org/)** – ASGI server
+- **PyPDF2 / python-docx / Pillow** – Resume file parsing (PDF, Word, images)
+- **[Supabase Storage](https://supabase.com/storage)** – Resume file storage (optional)
 
 ### **Frontend**
-- **[React 18](https://react.dev/)** - Modern component-based UI library
-- **[Vite](https://vitejs.dev/)** - Next-generation frontend build tool
-- **[React Router](https://reactrouter.com/)** - Declarative routing for React
-- **[TanStack React Query](https://tanstack.com/query/)** - Powerful data fetching and caching
-- **[Recharts](https://recharts.org/)** - Composable charting library
-- **[D3.js](https://d3js.org/)** - Data-driven visualizations and network graphs
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[Lucide React](https://lucide.dev/)** - Beautiful, consistent icon set
-- **[Axios](https://axios-http.com/)** - Promise-based HTTP client
+- **[React 18](https://react.dev/)** – Component-based UI library
+- **[Vite](https://vitejs.dev/)** – Frontend build tool and dev server
+- **[React Router](https://reactrouter.com/)** – Client-side routing
+- **[TanStack React Query](https://tanstack.com/query/)** – Data fetching and caching
+- **[Recharts](https://recharts.org/)** – Primary charting library
+- **[D3.js](https://d3js.org/)** – Force-directed network graph & similarity heatmap components
+- **[Tailwind CSS](https://tailwindcss.com/)** – Utility-first CSS (class-based dark mode)
+- **[Lucide React](https://lucide.dev/)** – Icon set
+- **[Axios](https://axios-http.com/)** – HTTP client
 
 ### **Data Pipeline**
-- **[Adzuna API](https://www.adzuna.com/)** - Real-time job posting data source
+- **[Adzuna API](https://www.adzuna.com/)** – Job posting data source
 - **Hybrid Skill Extraction System**:
-  - **Fast Path**: Regex-based pattern matching (95% coverage, instant)
-  - **Slow Path**: GLiNER NER model for skill discovery (local, free)
-  - **Discovery Manager**: Automated skill taxonomy enrichment
-- **[psycopg2](https://www.psycopg.org/)** - PostgreSQL adapter for Python (ETL)
-- **[asyncpg](https://github.com/MagicStack/asyncpg)** - Async PostgreSQL driver (API)
+  - **Fast Path**: Regex/taxonomy pattern matching (majority of skills, instant, free)
+  - **Slow Path**: **GLiNER** NER model (`urchade/gliner_medium-v2.1`) for local, free skill discovery
+  - **Discovery Manager**: Tracks new discoveries and auto-promotes frequently-seen skills into the taxonomy
+- **[psycopg2](https://www.psycopg.org/)** – PostgreSQL driver for the ETL scripts
+- **[dbt (dbt-postgres)](https://www.getdbt.com/)** – SQL transformation into analytical marts
 
 ### **DevOps & Deployment**
-- **[GitHub Actions](https://github.com/features/actions)** - CI/CD automation
-- **[Docker](https://www.docker.com/)** - Containerization
-- **[Render](https://render.com/)** - Backend hosting
-- **[Vercel](https://vercel.com/)** - Frontend hosting
-- **Scheduled ETL**: Automated data refresh (twice weekly)
+- **[GitHub Actions](https://github.com/features/actions)** – Scheduled ETL orchestration + keep-warm ping
+- **[Render](https://render.com/)** – Backend hosting (Python buildpack, no Docker)
+- **[Vercel](https://vercel.com/)** – Frontend hosting + `/api` proxy to the backend
+- **Scheduled ETL**: Automated data refresh on the 1st and 15th of each month
 
-### **Development Tools**
-- **Python 3.10+** - Core programming language
-- **Node.js 18+** - JavaScript runtime
-- **Git** - Version control
-- **VS Code** - Recommended IDE
+### **Languages & Tooling**
+- **Python 3.11**, **Node.js 18+**, **Git**
 
 ---
 
@@ -160,61 +151,47 @@ Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Job Script ARCHITECTURE                      │
+│                         JOB SCRIPT ARCHITECTURE                       │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────┐
-│  Adzuna API  │  ← External Data Source (18 Countries)
+│  Adzuna API  │  ← External Data Source (multi-country)
 └──────┬───────┘
-       │
-       │ (1) EXTRACT
-       │
+       │  (1) EXTRACT
        ▼
 ┌──────────────────┐
-│  extractor.py    │  ← Python Script (Batch Extraction)
+│  extractor.py    │  ← Python (batched, rate-limited) → raw.jobs
 └──────┬───────────┘
-       │
-       │ (2) LOAD
-       │
+       │  (2) LOAD (raw JSONB)
        ▼
 ┌────────────────────────────────────────────────────────────────┐
-│              PostgreSQL Database (Supabase)                     │
-│                                                                 │
-│  ┌─────────────┐   ┌──────────────┐   ┌──────────────────┐   │
-│  │  raw.jobs   │ → │ staging.*    │ → │   marts.*        │   │
-│  │  (JSONB)    │   │ (Normalized) │   │ (Aggregations)   │   │
-│  └─────────────┘   └──────────────┘   └──────────────────┘   │
-│                                                                 │
+│              PostgreSQL Database (Supabase)                      │
+│  ┌─────────────┐   ┌──────────────┐   ┌──────────────────┐      │
+│  │  raw.jobs   │ → │ staging.*    │ → │   marts.*        │      │
+│  │  (JSONB)    │   │ (Normalized) │   │ (Aggregations)   │      │
+│  └─────────────┘   └──────────────┘   └──────────────────┘      │
 └────────────────────────────────────────────────────────────────┘
        │                        │                       ▲
        │ (3) SKILL EXTRACT      │ (4) TRANSFORM         │
-       │                        │                       │
        ▼                        ▼                       │
-┌──────────────────┐    ┌───────────────┐              │
-│ transformer.py   │    │  dbt models   │──────────────┘
-│ - Fast Path      │    │  - SQL marts  │
-│ - Slow Path LLM  │    │  - Analytics  │
-│ - Discovery Mgr  │    └───────────────┘
-└──────────────────┘
-                               │
-                               │ (5) SERVE
-                               │
+┌──────────────────────┐  ┌───────────────┐            │
+│ transformer.py       │  │  dbt models   │────────────┘
+│ - Fast Path (regex)  │  │  - SQL marts  │
+│ - Slow Path (GLiNER) │  │  - Analytics  │
+│ - Discovery Manager  │  └───────────────┘
+└──────────────────────┘
+                               │  (5) SERVE
                                ▼
                         ┌──────────────┐
-                        │  FastAPI     │ ← REST API (CORS-enabled)
-                        │  Backend     │
+                        │  FastAPI     │ ← REST API (/api/v1, CORS-enabled)
+                        │  Backend     │   + Resume Analyzer endpoints
                         └──────┬───────┘
-                               │
-                               │ (6) CONSUME
-                               │
+                               │  (6) CONSUME
                                ▼
                         ┌──────────────┐
-                        │   React      │ ← SPA (Vite + React Router)
-                        │   Frontend   │
-                        └──────────────┘
-                               │
-                               │ (7) VISUALIZE
-                               │
+                        │   React SPA  │ ← Vite + React Router + React Query
+                        └──────┬───────┘
+                               │  (7) VISUALIZE
                                ▼
                         ┌──────────────┐
                         │   End User   │
@@ -223,18 +200,15 @@ Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract
 
 ### Data Flow Explained
 
-1. **Extract**: Python scripts query Adzuna API for job postings (15 roles × 18 countries)
-2. **Load**: Raw JSON data stored in `raw.jobs` table (immutable landing zone)
-3. **Skill Extraction**: Hybrid system extracts skills from descriptions
-   - Fast Path: Regex matching against taxonomy (95% of skills, instant)
-   - Slow Path: LLM-based extraction for unknown skills (5%, discovery mode)
-4. **Transform**: dbt processes raw data into analytical marts
-   - Cleaning, normalization, deduplication
-   - Aggregations, joins, window functions
-   - Business logic and KPI calculations
-5. **Serve**: FastAPI exposes REST endpoints querying dbt marts
-6. **Consume**: React app fetches data via API calls
-7. **Visualize**: Interactive charts, graphs, and dashboards
+1. **Extract**: `extractor.py` queries the Adzuna API across configured roles × countries.
+2. **Load**: Raw JSON is stored in `raw.jobs` (immutable landing zone, JSONB).
+3. **Skill Extraction**: `transformer.py` flattens raw jobs into `staging.stg_jobs` and extracts skills into `staging.stg_job_skills` using the hybrid extractor:
+   - **Fast Path**: regex matching against the skills taxonomy (instant, free).
+   - **Slow Path**: the **GLiNER** NER model discovers skills not yet in the taxonomy (local, free, sampled). *Note: the scheduled CI pipeline runs in `--fast-only` mode, so GLiNER runs only during local/manual discovery runs.*
+4. **Transform**: dbt builds analytical marts (demand, salary, co-occurrence, company leaderboard, role similarity, skills-by-country).
+5. **Serve**: FastAPI exposes REST endpoints that query the dbt marts (and, for the resume feature, the staging tables).
+6. **Consume**: The React app fetches data via the API using React Query.
+7. **Visualize**: Interactive charts, tables, and network/heatmap components.
 
 ---
 
@@ -242,11 +216,9 @@ Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract
 
 ### Prerequisites
 
-Ensure you have the following installed:
-
-- **Python 3.10+** ([Download](https://www.python.org/downloads/))
+- **Python 3.11** ([Download](https://www.python.org/downloads/))
 - **Node.js 18+** ([Download](https://nodejs.org/))
-- **PostgreSQL 15+** or **Supabase account** ([Sign up](https://supabase.com/))
+- **PostgreSQL 15+** or a **Supabase account** ([Sign up](https://supabase.com/))
 - **Git** ([Download](https://git-scm.com/))
 
 ### Installation
@@ -258,36 +230,42 @@ git clone https://github.com/yourusername/job-script.git
 cd job-script
 ```
 
-#### 2️⃣ Set Up Backend
+#### 2️⃣ Set Up the Database
 
 ```bash
-# Navigate to backend directory
-cd backend
+cd database
+# Run schema creation against your Supabase/Postgres instance
+psql "$SUPABASE_URL" -f schema.sql
+# For the Resume Analyzer's upload metadata table:
+psql "$SUPABASE_URL" -f Resume_upload.sql
+# (Or paste the SQL into the Supabase SQL editor)
+```
 
-# Create virtual environment
+#### 3️⃣ Set Up the Backend
+
+```bash
+cd ../backend
+
 python -m venv venv
-
-# Activate virtual environment
 # Windows
 venv\Scripts\activate
 # Linux/Mac
 source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment variables
-copy .env.example .env
-# Edit .env with your Supabase credentials
 ```
 
-**Backend `.env` Configuration:**
+**Backend environment variables** (via environment or a `.env` file):
 ```env
-# Database
+# Database (required) - Postgres connection string
 SUPABASE_URL=postgresql://user:password@host:port/database
 
-# CORS
+# CORS (comma-separated origins)
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Optional - Resume file storage (Supabase Storage)
+SUPABASE_PROJECT_URL=https://<project>.supabase.co
+SUPABASE_SERVICE_KEY=<service-role-key>
 
 # Application
 DEBUG=true
@@ -295,201 +273,157 @@ CACHE_TTL_SECONDS=3600
 API_PREFIX=/api/v1
 ```
 
-#### 3️⃣ Set Up Frontend
+#### 4️⃣ Set Up the Frontend
 
 ```bash
-# Navigate to frontend directory
 cd ../frontend
-
-# Install dependencies
 npm install
 
-# Configure environment
-# Create .env file if needed
+# Create .env (see .env.example)
 echo "VITE_API_URL=http://localhost:8000/api/v1" > .env
 ```
 
-#### 4️⃣ Set Up Database
+#### 5️⃣ Configure & Run dbt
 
 ```bash
-# Navigate to database directory
-cd ../database
-
-# Run schema creation
-psql $SUPABASE_URL -f schema.sql
-
-# Or use Supabase SQL Editor and paste schema.sql content
-```
-
-#### 5️⃣ Run dbt Transformations
-
-```bash
-# Navigate to dbt project
 cd ../dbt_project
+cp profiles.yml.example profiles.yml   # then edit with your DB credentials
+# (dbt reads DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME env vars)
 
-# Configure profiles.yml with your database credentials
-cp profiles.yml.example profiles.yml
-# Edit profiles.yml
-
-# Run dbt models
+dbt deps
 dbt run --target prod
-
-# (Optional) Generate documentation
-dbt docs generate
-dbt docs serve
+dbt test
 ```
 
-#### 6️⃣ Run ETL Pipeline (Optional - for fresh data)
+#### 6️⃣ Run the ETL Pipeline (Optional – for fresh data)
 
 ```bash
-# Navigate to ETL directory
 cd ../etl
-
-# Install ETL dependencies
 pip install -r requirements.txt
+# GLiNER discovery is optional: pip install gliner
 
-# Set up environment variables
-# Add to .env or export:
-# ADZUNA_APP_ID=your_app_id
-# ADZUNA_APP_KEY=your_app_key
+# Set ADZUNA_APP_ID, ADZUNA_APP_KEY, SUPABASE_URL in your environment/.env
 
-# Run extraction (test mode)
+# Extract (test mode = 1 role, 1 country)
 python extractor.py --test
 
-# Run skill extraction
-python transformer.py
+# Extract a real window (used by CI): last 60 days, 3 pages/search
+python extractor.py --days 60 --pages 3 --delay 1.5
 
-# Run dbt transformations
-cd ../dbt_project
-dbt run --target prod
+# Extract skills (fast/taxonomy only, no GLiNER)
+python transformer.py --batch-size 500 --fast-only
+
+# Rebuild marts
+cd ../dbt_project && dbt run --full-refresh
 ```
 
 ### Running the Application
 
-#### Start Backend Server
-
+**Backend**
 ```bash
 cd backend
 uvicorn app.main:app --reload --port 8000
 ```
-
-**Backend will be available at:**
 - API: http://localhost:8000
-- Interactive Docs: http://localhost:8000/docs
+- Swagger docs: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+- Health: http://localhost:8000/health
 
-#### Start Frontend Development Server
-
+**Frontend**
 ```bash
 cd frontend
 npm run dev
 ```
-
-**Frontend will be available at:** http://localhost:5173
+- App: http://localhost:5173 (Vite proxies `/api` → `http://localhost:8000`)
 
 ---
 
 ## 📖 Usage
 
-### Exploring the Dashboard
-
-1. **Navigate to Dashboard** (http://localhost:5173)
-   - View high-level job market statistics
-   - See trending skills and top roles
-   - Monitor recent data updates
-
-2. **Skills Analysis Page** (`/skills`)
-   - Search for specific skills (e.g., "Python", "React", "AWS")
-   - Filter by role (e.g., "Data Engineer")
-   - Filter by country (e.g., "United Kingdom")
-   - View skill demand charts
-   - Explore skill co-occurrence networks
-   - Analyze geographic distribution
-
-3. **Salary Page** (`/salary`)
-   - Compare salaries across skills
-   - Identify premium skills
-   - Filter by role and experience level
-   - View salary distribution charts
-
-4. **Companies Page** (`/companies`)
-   - Browse top hiring companies
-   - Filter by role and location
-   - View contract type distributions
-   - Search for specific companies
-
-5. **Career Page** (`/career`)
-   - Enter your current role
-   - View similar roles with skill overlap
-   - Identify skill gaps for target roles
-   - Plan career transitions
-
-6. **Global Page** (`/global`)
-   - Compare skill demand across countries
-   - View geographic heatmaps
-   - Analyze regional trends
+1. **Dashboard** (`/`) – High-level market stats, top skills, and skills-by-category charts. Use the sidebar **Role** and **Country** filters to scope every page.
+2. **Skills Analysis** (`/skills`) – "Top Skills" and "Skill Connections" tabs; view demand charts, category breakdown, and co-occurring skills with Jaccard similarity.
+3. **Salary** (`/salary`) – Highest salary premiums, top-paying skills, full salary comparison table, and insight cards.
+4. **Companies** (`/companies`) – Top hiring companies, contract-type distribution, and company details.
+5. **Career Paths** (`/career`) – Pick a current role to see similar roles, transition difficulty, and skill gaps.
+6. **Global** (`/global`) – Compare a skill's demand and job counts across countries.
+7. **Resume Analyzer** (`/resume`) – Upload a resume, then run **Gap Analysis** (against a target role) or **Role Match** (ranked best-fit roles).
 
 ---
 
 ## 📚 API Documentation
 
-The Job Script API provides RESTful endpoints for accessing job market data.
+All data endpoints are served under the base path **`/api/v1`**.
 
 ### Base URL
-```
-http://localhost:8000/api/v1
-```
+- Local: `http://localhost:8000/api/v1`
+- Production: `https://skill-hunt.onrender.com/api/v1`
 
 ### Authentication
-Currently, the API is open (no authentication required for development).
+The API is currently open (no authentication required).
 
-### Endpoints Overview
-
-#### **Skills Endpoints**
+### Root & Health
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/skills/demand` | Get skill demand by role/country |
-| GET | `/skills/demand/all` | Get all skills demand |
-| GET | `/skills/cooccurrence` | Get skill co-occurrence data |
-| GET | `/skills/network` | Get D3.js network graph data |
-| GET | `/skills/by-country` | Compare skill across countries |
-| GET | `/skills/categories` | Get skill categories |
-| GET | `/skills/list` | Get all available skills |
+| GET | `/` | API metadata (name, version, links) |
+| GET | `/health` | Health check (runs `SELECT 1`; reports DB status) |
+| GET | `/api/v1` | API version + endpoint map |
 
-#### **Salary Endpoints**
+#### **Skills** (`/api/v1/skills`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/salary/by-skill` | Get salary data by skill |
-| GET | `/salary/top-paying-skills` | Get highest paying skills |
-| GET | `/salary/premium-skills` | Get skills with salary premium |
+| GET | `/skills/demand` | Skill demand by role (optional country) |
+| GET | `/skills/demand/all` | All skills demand |
+| GET | `/skills/cooccurrence` | Skill co-occurrence pairs |
+| GET | `/skills/network` | Skill network graph data (D3 nodes/links) |
+| GET | `/skills/by-country` | Compare a skill across countries |
+| GET | `/skills/categories` | List skill categories |
+| GET | `/skills/list` | List skills (optional category filter) |
 
-#### **Companies Endpoints**
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/companies/leaderboard` | Get top hiring companies |
-| GET | `/companies/contract-types` | Get job type distribution |
-| GET | `/companies/search` | Search for companies |
-
-#### **Career Endpoints**
+#### **Salary** (`/api/v1/salary`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/career/role-similarity` | Get all role similarities |
-| GET | `/career/transitions/{role}` | Get career transitions for a role |
-| GET | `/career/skill-gap` | Get skill gap analysis |
-| GET | `/career/similarity-matrix` | Get role similarity matrix |
+| GET | `/salary/by-skill` | Salary stats by skill vs. market |
+| GET | `/salary/top-paying-skills` | Highest average-salary skills |
+| GET | `/salary/premium-skills` | Skills with the highest salary premium |
+| GET | `/salary/range` | Min/max/avg + market-avg salary |
 
-#### **Stats Endpoints**
+#### **Companies** (`/api/v1/companies`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/stats/summary` | Get dashboard statistics |
-| GET | `/stats/filters` | Get available filter options |
-| GET | `/stats/roles` | Get available roles |
-| GET | `/stats/countries` | Get available countries |
+| GET | `/companies/leaderboard` | Top hiring companies |
+| GET | `/companies/contract-types` | Contract-type distribution |
+| GET | `/companies/search` | Search companies by name |
+
+#### **Career** (`/api/v1/career`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/career/role-similarity` | All role similarities |
+| GET | `/career/transitions/{current_role}` | Transitions for a role |
+| GET | `/career/similarity-matrix` | Role similarity matrix (heatmap) |
+| GET | `/career/skill-gap` | Skill gap between two roles (`from_role`, `to_role`) |
+
+#### **Stats** (`/api/v1/stats`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/stats/summary` | Dashboard summary statistics |
+| GET | `/stats/filters` | Available filter options |
+| GET | `/stats/roles` | Available roles |
+| GET | `/stats/countries` | Available countries |
+
+#### **Resume** (`/api/v1/resume`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/resume/extract-skills` | Extract skills from an uploaded resume file |
+| POST | `/resume/analyze` | Gap analysis vs. a `target_role` (multipart: file + form fields) |
+| POST | `/resume/match-roles` | Rank best-fitting roles for the resume |
+| GET | `/resume/supported-roles` | Roles available for matching |
 
 ### Example API Calls
 
@@ -498,239 +432,168 @@ Currently, the API is open (no authentication required for development).
 curl "http://localhost:8000/api/v1/skills/demand?role=Data%20Engineer&limit=10"
 ```
 
-**Response:**
+**Response** (`SkillDemandResponse`):
 ```json
 {
-  "skills": [
+  "role": "Data Engineer",
+  "country": null,
+  "total_count": 10,
+  "data": [
     {
       "skill_name": "Python",
-      "mention_count": 1250,
+      "skill_category": "Programming Language",
+      "search_role": "Data Engineer",
+      "country_code": null,
       "job_count": 980,
-      "percentage_of_jobs": 78.5,
+      "demand_percentage": 78.5,
       "avg_salary_min": 55000,
       "avg_salary_max": 85000,
-      "trend": "growing"
+      "avg_salary_midpoint": 70000,
+      "rank_in_role_country": null,
+      "rank_in_role_global": 1
     }
-  ],
-  "total_jobs": 1248,
-  "filters": {
-    "role": "Data Engineer",
-    "country": null,
-    "limit": 10
-  }
+  ]
 }
 ```
 
-#### Get Top Paying Skills
+#### Analyze a Resume (Gap Analysis)
 ```bash
-curl "http://localhost:8000/api/v1/salary/top-paying-skills?limit=5"
+curl -X POST "http://localhost:8000/api/v1/resume/analyze" \
+  -F "file=@resume.pdf" \
+  -F "target_role=Data Engineer" \
+  -F "country=gb"
 ```
 
-#### Get Career Transitions
-```bash
-curl "http://localhost:8000/api/v1/career/transitions/Data%20Engineer"
-```
-
-For full API documentation with interactive examples, visit: http://localhost:8000/docs
+For full interactive docs, visit: `/docs`.
 
 ---
 
 ## 🔄 Data Pipeline
 
-### ETL Architecture
+### Schedule
 
-Job Script uses a **scheduled automated ETL pipeline** that runs **twice weekly** (Sundays and Wednesdays at 3:00 AM UTC) via GitHub Actions.
+The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_pipeline.yml`) on a **cron of `0 3 1,15 * *`** — the **1st and 15th of each month at 03:00 UTC** — and can also be triggered manually via `workflow_dispatch`. A separate `keep_warm.yml` workflow pings the backend `/health` endpoint every 5 minutes to keep the Render service warm.
 
-### Pipeline Stages
+### Pipeline Stages (GitHub Actions jobs)
 
-#### 1. **Extraction** (`etl/extractor.py`)
-- Queries Adzuna API for job postings
-- Covers 15 roles × 18 countries = 270 search combinations
-- Stores raw JSON in `raw.jobs` table
-- Rate-limited and fault-tolerant
-- Deduplicates based on job platform ID
+#### 1. **Extract** (`etl/extractor.py`)
+- Queries the Adzuna API for job postings across the configured roles × countries.
+- Extraction config (`etl/config/extraction_config.json`): 15 roles, 17 countries, 50 results/page, 2 pages/search default. CI overrides with `--days 60 --pages 3 --delay 1.5`.
+- Stores raw JSON in `raw.jobs`; deduplicates on `(job_platform_id, country_code)` via `ON CONFLICT DO NOTHING`.
+- Rate-limit aware (handles HTTP 429 with backoff).
 
-#### 2. **Skill Extraction** (`etl/transformer.py`)
-- **Hybrid Extraction System**:
-  - **Fast Path**: Regex-based matching (instant, free, 95% coverage)
-    - Matches against 500+ skills in taxonomy
-    - Handles aliases and variations
-    - Pre-compiled patterns for performance
-    - Zero cost, zero latency
-  - **Slow Path**: GLiNER NER model (local, free)
-    - Uses `urchade/gliner_medium-v2.1` for named entity recognition
-    - Discovers new/emerging skills not in taxonomy
-    - Runs locally with no API costs
-    - Processes 10% of jobs via sampling strategy
-  - **Discovery Manager**:
-    - Tracks newly discovered skills in database
-    - Auto-promotes frequently seen skills to taxonomy
-    - Verification workflow for manual curation
+#### 2. **Transform & Extract Skills** (`etl/transformer.py`)
+- Flattens `raw.jobs` → `staging.stg_jobs`, then extracts skills → `staging.stg_job_skills`.
+- **Hybrid extraction system**:
+  - **Fast Path**: pre-compiled regex against the taxonomy (~430 skills, aliases, special-cased tokens like `C++`/`C#`/`.NET`). Instant and free.
+  - **Slow Path (GLiNER)**: `urchade/gliner_medium-v2.1` NER model discovers skills not in the taxonomy. Runs locally, no API cost, sampled (~10%). **Disabled in CI** (`--fast-only`).
+  - **Discovery Manager**: tracks unverified discoveries; auto-promotes a skill to the taxonomy JSON (and `dim_skills`) once it reaches ≥3 occurrences with ≥0.75 average confidence.
 
-#### 3. **Transformation** (`dbt_project/`)
-- dbt models process staging data into analytical marts
-- **Intermediate Layer** (`models/intermediate/`):
-  - `int_job_skills_enriched.sql`: Joins jobs with extracted skills
-- **Marts Layer** (`models/marts/`):
-  - `mart_skill_demand.sql`: Aggregated skill demand metrics
-  - `mart_skill_cooccurrence.sql`: Skill pairing analysis
-  - `mart_salary_by_skill.sql`: Salary statistics by skill
-  - `mart_company_leaderboard.sql`: Top hiring companies
-  - `mart_role_similarity.sql`: Career transition analysis
-  - `mart_skills_by_country.sql`: Geographic distribution
+#### 3. **Transform** (`dbt_project/`)
+- **Intermediate** (`models/intermediate/`, materialized as a `view` in `staging`):
+  - `int_job_skills_enriched.sql` — joins skills × jobs × skill dimension, computes salary midpoint, filters to jobs posted in the last 60 days.
+- **Marts** (`models/marts/`, materialized as `table` in `marts`):
+  - `mart_skill_demand.sql` — top skills per role/country with demand % and ranks
+  - `mart_salary_by_skill.sql` — salary stats & premium vs. market (min 5 jobs)
+  - `mart_skills_by_country.sql` — skill demand compared across countries
+  - `mart_skill_cooccurrence.sql` — skill pairs with Jaccard + conditional probabilities
+  - `mart_company_leaderboard.sql` — top hiring companies with contract breakdown
+  - `mart_role_similarity.sql` — role skill overlap (Jaccard, overlap, dice)
 
-#### 4. **Serving**
-- FastAPI queries final mart tables
-- Results cached with configurable TTL (default: 1 hour)
-- CORS-enabled for frontend consumption
+#### 4. **Archive & Notify**
+- `archive` job (scheduled runs only) calls the `archive_skill_demand()` Postgres function to snapshot demand into `archive.skill_demand_history`.
+- `notify` job reports the status of all jobs.
+
+#### 5. **Serve**
+- FastAPI queries the marts (and the staging tables for the resume feature). Marts are pre-computed by dbt, so responses are served directly. (`CACHE_TTL_SECONDS` is configured for future response caching but is not yet applied.)
 
 ### Running ETL Manually
 
 ```bash
-# Full pipeline
 cd etl
-python extractor.py           # Extract jobs
-python transformer.py         # Extract skills
-cd ../dbt_project
-dbt run --target prod         # Transform data
+python extractor.py --days 60 --pages 3 --delay 1.5   # extract
+python transformer.py --batch-size 500 --fast-only     # extract skills (taxonomy only)
+cd ../dbt_project && dbt run --full-refresh             # rebuild marts
 
-# Test mode (1 role, 1 country)
+# Test mode
 python extractor.py --test
 ```
-
-### Scheduled Automation
-
-ETL runs automatically via GitHub Actions (`.github/workflows/etl_pipeline.yml`):
-- **Schedule**: Cron: `0 3 * * 0,3` (Sundays & Wednesdays, 3 AM UTC)
-- **Manual Trigger**: Via `workflow_dispatch` in GitHub Actions tab
-- **Notifications**: Logs available in GitHub Actions console
 
 ---
 
 ## 🚢 Deployment
 
-### Backend Deployment (Render)
+### Backend (Render) — `render.yaml`
 
-1. **Create Web Service on Render**
-   - Connect GitHub repository
-   - Select `backend/` as root directory
+- **Root directory**: `backend`
+- **Build**: `pip install -r backend/requirements.txt` (Python buildpack, no Docker)
+- **Start**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Health check path**: `/health`
+- **Environment variables**: `SUPABASE_URL` (set manually), `CORS_ORIGINS`, `DEBUG`, `CACHE_TTL_SECONDS`
+- Auto-deploys on push.
 
-2. **Configure Build Settings**
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+### Frontend (Vercel) — `vercel.json`
 
-3. **Set Environment Variables**
-   - `SUPABASE_URL`: Your PostgreSQL connection string
-   - `CORS_ORIGINS`: Your frontend URL (e.g., `https://jobscript.vercel.app`)
-   - `DEBUG`: `false`
-   - `CACHE_TTL_SECONDS`: `3600`
-
-4. **Deploy**
-   - Render auto-deploys on Git push
-   - Health checks: `GET /api/v1/stats/summary`
-
-### Frontend Deployment (Vercel)
-
-1. **Import Project to Vercel**
-   - Connect GitHub repository
-   - Select `frontend/` as root directory
-
-2. **Configure Build Settings** (auto-detected)
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-   - **Install Command**: `npm install`
-
-3. **Set Environment Variables**
-   - `VITE_API_URL`: Your Render backend URL (e.g., `https://job-script-api.onrender.com/api/v1`)
-
-4. **Deploy**
-   - Vercel auto-deploys on Git push
-   - Edge network CDN for global performance
+- Static build of `frontend/` (`@vercel/static-build`, `distDir: dist`).
+- Routes: `/api/*` is proxied to the Render backend (`https://skill-hunt.onrender.com/api/*`); all other routes serve the SPA.
+- `VITE_API_URL` set via Vercel env (`@vite_api_url`). SPA client-side routing is handled by `frontend/vercel.json`.
 
 ### Database (Supabase)
 
-- Supabase provides managed PostgreSQL
-- Connection pooling (PgBouncer) for performance
-- Automatic backups and point-in-time recovery
-- Dashboard for SQL queries and monitoring
+- Managed PostgreSQL with connection pooling (PgBouncer; the API disables the asyncpg statement cache for transaction-mode pooling).
+- Optional Supabase Storage bucket (`resumes`) for uploaded resume files.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these guidelines:
-
-### Development Workflow
-
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+1. **Fork** the repository
+2. **Create a branch**: `git checkout -b feature/amazing-feature`
 3. **Make your changes**
-4. **Run tests** (if available)
-5. **Commit**: `git commit -m 'Add amazing feature'`
-6. **Push**: `git push origin feature/amazing-feature`
-7. **Open a Pull Request**
+4. **Commit**: `git commit -m 'feat: add amazing feature'`
+5. **Push**: `git push origin feature/amazing-feature`
+6. **Open a Pull Request**
 
 ### Code Style
-
-- **Python**: Follow PEP 8, use Black formatter
-- **JavaScript/React**: ESLint rules configured in `.eslintrc`
-- **SQL**: Lowercase keywords, 2-space indentation
-- **Documentation**: Update README and inline comments
-
-### Commit Messages
-
-Use conventional commits:
-```
-feat: Add salary comparison chart
-fix: Resolve CORS issue on production
-docs: Update API documentation
-refactor: Simplify skill extraction logic
-```
+- **Python**: PEP 8, Black formatter
+- **JavaScript/React**: ESLint (config in `frontend`)
+- **SQL/dbt**: CTEs, lowercase keywords, 2-space indentation
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+Released under the **MIT License**. (No `LICENSE` file is currently committed — add one before public distribution.)
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **Adzuna** for providing job posting data via their API
-- **Supabase** for managed PostgreSQL infrastructure
-- **dbt Labs** for the incredible data transformation framework
-- **FastAPI** community for excellent documentation
-- **React** ecosystem for powerful frontend tools
-
----
-
-## 📞 Contact & Support
-
-- **Email**: support@jobscript.com
-- **GitHub Issues**: [Report a bug](https://github.com/yourusername/job-script/issues)
-- **Discussions**: [Ask questions](https://github.com/yourusername/job-script/discussions)
+- **Adzuna** for the job posting API
+- **Supabase** for managed PostgreSQL & storage
+- **dbt Labs** for the transformation framework
+- **GLiNER** (`urchade/gliner_medium-v2.1`) for local NER-based skill discovery
+- **FastAPI** and the **React** ecosystem
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Real-time job alerts and notifications
 - [ ] User authentication and personalized dashboards
-- [ ] Resume skill gap analysis
-- [ ] Machine learning-based salary prediction
-- [ ] Expanded data sources (LinkedIn, Indeed)
-- [ ] Mobile app (React Native)
 - [ ] API rate limiting and authentication
-- [ ] Advanced filtering and search
+- [ ] Response-level caching (`CACHE_TTL_SECONDS` is already wired for it)
+- [ ] Automated test suite (backend + frontend)
+- [ ] Machine-learning-based salary prediction
+- [ ] Expanded data sources beyond Adzuna
 - [ ] Export reports (PDF, CSV)
+- [x] Resume skill gap analysis & role matching ✅
 
 ---
 
 <div align="center">
 
-**Built with ❤️ by the Job Script Team**
+**Built with ❤️ — Job Script**
 
-⭐ Star us on GitHub if you find this project useful!
+⭐ Star the repo if you find it useful!
 
 </div>
