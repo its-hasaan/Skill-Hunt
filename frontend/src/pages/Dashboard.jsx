@@ -1,6 +1,6 @@
-import { useOutletContext } from 'react-router-dom'
-import { 
-  Briefcase, Code, Globe, Building2, TrendingUp 
+import { useOutletContext, useNavigate } from 'react-router-dom'
+import {
+  Briefcase, Code, Globe, Building2, TrendingUp
 } from 'lucide-react'
 import { useSummaryStats, useSkillDemand } from '../hooks/useData'
 import { Card, StatCard, ChartLoading, EmptyState } from '../components/ui'
@@ -9,13 +9,21 @@ import { formatNumber } from '../utils/helpers'
 
 export default function Dashboard() {
   const { selectedRole, selectedCountry } = useOutletContext()
-  
+  const navigate = useNavigate()
+
   const { data: stats, isLoading: statsLoading } = useSummaryStats()
   const { data: skillDemand, isLoading: skillsLoading } = useSkillDemand(
-    selectedRole, 
-    selectedCountry || null, 
+    selectedRole,
+    selectedCountry || null,
     20
   )
+
+  const openJobs = (skillName) => {
+    if (!selectedRole || !skillName) return
+    const params = new URLSearchParams({ skill: skillName, role: selectedRole })
+    if (selectedCountry) params.set('country', selectedCountry)
+    navigate(`/jobs?${params.toString()}`)
+  }
 
   return (
     <div className="space-y-6">
@@ -87,7 +95,10 @@ export default function Dashboard() {
       </div>
 
       {/* Skills Table */}
-      <Card title="Skill Demand Breakdown">
+      <Card
+        title="Skill Demand Breakdown"
+        headerAction={<span className="text-xs text-gray-500 dark:text-gray-400">Click a skill to see the jobs →</span>}
+      >
         {skillsLoading ? (
           <div className="space-y-2">
             {[...Array(10)].map((_, i) => (
@@ -108,8 +119,13 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {skillDemand.data.slice(0, 20).map((skill, index) => (
-                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{skill.skill_name}</td>
+                  <tr
+                    key={index}
+                    onClick={() => openJobs(skill.skill_name)}
+                    title={`View jobs mentioning ${skill.skill_name}`}
+                    className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                  >
+                    <td className="py-3 px-4 font-medium text-primary-600 dark:text-primary-400 hover:underline">{skill.skill_name}</td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
                     <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
                     <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">

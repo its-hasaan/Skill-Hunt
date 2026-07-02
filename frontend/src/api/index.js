@@ -66,6 +66,12 @@ export const skillsApi = {
     const params = category ? { category } : {}
     return api.get('/skills/list', { params })
   },
+
+  getJobs: (skill, role, country = null, limit = 20, offset = 0) => {
+    const params = { skill, role, limit, offset }
+    if (country) params.country = country
+    return api.get('/skills/jobs', { params })
+  },
 }
 
 // ============================================

@@ -340,7 +340,7 @@ Routers live in `backend/app/routers/` and are mounted under `settings.api_prefi
 
 | Router | Prefix | Endpoints |
 |--------|--------|-----------|
-| skills | `/skills` | `demand`, `demand/all`, `cooccurrence`, `network`, `by-country`, `categories`, `list` |
+| skills | `/skills` | `demand`, `demand/all`, `jobs`, `cooccurrence`, `network`, `by-country`, `categories`, `list` |
 | salary | `/salary` | `by-skill`, `top-paying-skills`, `premium-skills`, `range` |
 | companies | `/companies` | `leaderboard`, `contract-types`, `search` |
 | career | `/career` | `role-similarity`, `transitions/{current_role}`, `similarity-matrix`, `skill-gap` |
@@ -359,6 +359,8 @@ async def get_skill_demand(
     # queries staging_marts.mart_skill_demand; when country is None,
     # aggregates across countries. Returns SkillDemandResponse.
 ```
+
+**Skill drill-down (`GET /skills/jobs`).** Turns an aggregate skill count into the underlying postings. It joins `staging.stg_jobs` × `staging.stg_job_skills` to page through every job where the skill was detected (for a role, optionally a country), and returns each posting's metadata + full `description`. Alongside the jobs it returns `highlight_skills` — the role's top skills from `mart_skill_demand`, each with its `dim_skills` aliases and an `is_selected` flag — so the frontend can highlight all top skills in each description and colour the clicked one distinctly. No schema or pipeline changes were needed: the job text and job↔skill links already exist in `staging`.
 
 ### 4.5 Pydantic Schemas (`backend/app/models/schemas.py`)
 
@@ -448,7 +450,8 @@ frontend/src/
 │   ├── CompaniesPage.jsx
 │   ├── CareerPage.jsx
 │   ├── GlobalPage.jsx
-│   └── ResumePage.jsx       # Resume Analyzer (upload + gap analysis / role match)
+│   ├── ResumePage.jsx       # Resume Analyzer (upload + gap analysis / role match)
+│   └── JobsPage.jsx         # Skill drill-down: real postings for a skill, with highlights
 └── utils/
     └── helpers.js           # Country metadata, formatters, color palettes
 ```

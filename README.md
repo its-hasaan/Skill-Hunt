@@ -340,13 +340,14 @@ npm run dev
 
 ## 📖 Usage
 
-1. **Dashboard** (`/`) – High-level market stats, top skills, and skills-by-category charts. Use the sidebar **Role** and **Country** filters to scope every page.
-2. **Skills Analysis** (`/skills`) – "Top Skills" and "Skill Connections" tabs; view demand charts, category breakdown, and co-occurring skills with Jaccard similarity.
-3. **Salary** (`/salary`) – Highest salary premiums, top-paying skills, full salary comparison table, and insight cards.
-4. **Companies** (`/companies`) – Top hiring companies, contract-type distribution, and company details.
-5. **Career Paths** (`/career`) – Pick a current role to see similar roles, transition difficulty, and skill gaps.
-6. **Global** (`/global`) – Compare a skill's demand and job counts across countries.
-7. **Resume Analyzer** (`/resume`) – Upload a resume, then run **Gap Analysis** (against a target role) or **Role Match** (ranked best-fit roles).
+1. **Dashboard** (`/`) – High-level market stats, top skills, and skills-by-category charts. Use the sidebar **Role** and **Country** filters to scope every page. **Click any skill in the "Skill Demand Breakdown" table** to drill into the actual job postings for it.
+2. **Skills Analysis** (`/skills`) – "Top Skills" and "Skill Connections" tabs; view demand charts, category breakdown, and co-occurring skills with Jaccard similarity. Each skill's job count links to its postings.
+3. **Job Postings** (`/jobs`) – Drill-down screen listing the real postings that mention a chosen skill (title, company, location, salary, apply link). The role's top skills are highlighted in each description, with the clicked skill highlighted in a distinct colour.
+4. **Salary** (`/salary`) – Highest salary premiums, top-paying skills, full salary comparison table, and insight cards.
+5. **Companies** (`/companies`) – Top hiring companies, contract-type distribution, and company details.
+6. **Career Paths** (`/career`) – Pick a current role to see similar roles, transition difficulty, and skill gaps.
+7. **Global** (`/global`) – Compare a skill's demand and job counts across countries.
+8. **Resume Analyzer** (`/resume`) – Upload a resume, then run **Gap Analysis** (against a target role) or **Role Match** (ranked best-fit roles).
 
 ---
 
@@ -378,6 +379,7 @@ The API is currently open (no authentication required).
 | GET | `/skills/cooccurrence` | Skill co-occurrence pairs |
 | GET | `/skills/network` | Skill network graph data (D3 nodes/links) |
 | GET | `/skills/by-country` | Compare a skill across countries |
+| GET | `/skills/jobs` | **Real job postings mentioning a skill** (drill-down) — returns each posting + the role's top skills to highlight |
 | GET | `/skills/categories` | List skill categories |
 | GET | `/skills/list` | List skills (optional category filter) |
 

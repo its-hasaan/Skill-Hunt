@@ -9,9 +9,10 @@ import logging
 
 from ..database import Database, get_db
 from ..models.schemas import (
-    SkillDemand, SkillDemandResponse, 
+    SkillDemand, SkillDemandResponse,
     SkillCooccurrence, SkillNetworkResponse, SkillConnection,
-    SkillByCountry, GlobalComparisonResponse
+    SkillByCountry, GlobalComparisonResponse,
+    SkillJobsResponse, JobPosting, HighlightSkill
 )
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,167 @@ async def get_all_skill_demand(
     """
     rows = await db.fetch_all(query, limit)
     return [SkillDemand(**row) for row in rows]
+
+
+# ============================================
+# Job Postings Drill-down
+# ============================================
+
+@router.get("/jobs", response_model=SkillJobsResponse)
+async def get_jobs_for_skill(
+    skill: str = Query(..., description="Skill that must be mentioned in the job"),
+    role: str = Query(..., description="Job role to filter by"),
+    country: Optional[str] = Query(None, description="Country code (e.g., 'gb', 'us')"),
+    limit: int = Query(20, ge=1, le=100, description="Jobs per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    top_skills: int = Query(25, ge=1, le=100, description="How many top role skills to highlight"),
+    db: Database = Depends(get_db)
+):
+    """
+    List the real job postings where a given skill was detected, for a role
+    (optionally scoped to a country). Also returns the role's top skills (with
+    aliases) so the frontend can highlight every top skill in each description,
+    with the selected skill highlighted distinctly.
+    """
+    # --- 1. Count + page of jobs mentioning this skill --------------------
+    if country:
+        count_query = """
+            SELECT COUNT(DISTINCT j.job_id) AS count
+            FROM staging.stg_jobs j
+            JOIN staging.stg_job_skills js ON js.job_id = j.job_id
+            WHERE js.skill_name = $1 AND j.search_role = $2 AND j.country_code = $3
+        """
+        total = await db.fetch_one(count_query, skill, role, country)
+
+        jobs_query = """
+            SELECT DISTINCT
+                j.job_id, j.title, j.company_name, j.location_display, j.country_code,
+                j.salary_min, j.salary_max, j.salary_currency, j.salary_is_predicted,
+                j.contract_type, j.contract_time, j.redirect_url, j.job_posted_at,
+                j.description
+            FROM staging.stg_jobs j
+            JOIN staging.stg_job_skills js ON js.job_id = j.job_id
+            WHERE js.skill_name = $1 AND j.search_role = $2 AND j.country_code = $3
+            ORDER BY j.job_posted_at DESC NULLS LAST, j.job_id DESC
+            LIMIT $4 OFFSET $5
+        """
+        job_rows = await db.fetch_all(jobs_query, skill, role, country, limit, offset)
+    else:
+        count_query = """
+            SELECT COUNT(DISTINCT j.job_id) AS count
+            FROM staging.stg_jobs j
+            JOIN staging.stg_job_skills js ON js.job_id = j.job_id
+            WHERE js.skill_name = $1 AND j.search_role = $2
+        """
+        total = await db.fetch_one(count_query, skill, role)
+
+        jobs_query = """
+            SELECT DISTINCT
+                j.job_id, j.title, j.company_name, j.location_display, j.country_code,
+                j.salary_min, j.salary_max, j.salary_currency, j.salary_is_predicted,
+                j.contract_type, j.contract_time, j.redirect_url, j.job_posted_at,
+                j.description
+            FROM staging.stg_jobs j
+            JOIN staging.stg_job_skills js ON js.job_id = j.job_id
+            WHERE js.skill_name = $1 AND j.search_role = $2
+            ORDER BY j.job_posted_at DESC NULLS LAST, j.job_id DESC
+            LIMIT $3 OFFSET $4
+        """
+        job_rows = await db.fetch_all(jobs_query, skill, role, limit, offset)
+
+    total_count = total['count'] if total else 0
+
+    # --- 2. Top skills for the role (the highlight set) -------------------
+    if country:
+        top_query = """
+            SELECT skill_name, skill_category
+            FROM staging_marts.mart_skill_demand
+            WHERE search_role = $1 AND country_code = $2
+            ORDER BY rank_in_role_country
+            LIMIT $3
+        """
+        top_rows = await db.fetch_all(top_query, role, country, top_skills)
+    else:
+        top_query = """
+            SELECT skill_name, MAX(skill_category) AS skill_category
+            FROM staging_marts.mart_skill_demand
+            WHERE search_role = $1
+            GROUP BY skill_name
+            ORDER BY SUM(job_count) DESC
+            LIMIT $2
+        """
+        top_rows = await db.fetch_all(top_query, role, top_skills)
+
+    # Ordered map of highlight skill_name -> category (selected skill guaranteed present)
+    highlight_map = {}
+    for r in top_rows:
+        highlight_map[r['skill_name']] = r['skill_category']
+    if skill not in highlight_map:
+        highlight_map[skill] = None  # backfilled from dim_skills below
+
+    # --- 3. Aliases + categories for the highlight skills -----------------
+    names = list(highlight_map.keys())
+    alias_rows = await db.fetch_all(
+        """
+        SELECT skill_name, skill_category, aliases
+        FROM staging.dim_skills
+        WHERE skill_name = ANY($1::text[])
+        """,
+        names
+    )
+    alias_map = {r['skill_name']: (r['aliases'] or []) for r in alias_rows}
+    for r in alias_rows:
+        if highlight_map.get(r['skill_name']) is None and r['skill_category']:
+            highlight_map[r['skill_name']] = r['skill_category']
+
+    highlight_skills = [
+        HighlightSkill(
+            skill_name=name,
+            skill_category=highlight_map.get(name),
+            aliases=alias_map.get(name, []),
+            is_selected=(name == skill),
+        )
+        for name in names
+    ]
+    highlight_names = set(names)
+
+    # --- 4. Which highlight skills were detected in each returned job -----
+    job_ids = [row['job_id'] for row in job_rows]
+    detected_by_job = {}
+    if job_ids:
+        detected_rows = await db.fetch_all(
+            """
+            SELECT job_id, skill_name
+            FROM staging.stg_job_skills
+            WHERE job_id = ANY($1::int[])
+            """,
+            job_ids
+        )
+        for r in detected_rows:
+            if r['skill_name'] in highlight_names:
+                detected_by_job.setdefault(r['job_id'], []).append(r['skill_name'])
+
+    def order_matched(matched):
+        # Selected skill first, then the rest alphabetically
+        rest = sorted(s for s in matched if s != skill)
+        return ([skill] if skill in matched else []) + rest
+
+    jobs = []
+    for row in job_rows:
+        data = dict(row)
+        data['matched_skills'] = order_matched(detected_by_job.get(row['job_id'], []))
+        jobs.append(JobPosting(**data))
+
+    return SkillJobsResponse(
+        skill=skill,
+        role=role,
+        country=country,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+        highlight_skills=highlight_skills,
+        jobs=jobs,
+    )
 
 
 # ============================================

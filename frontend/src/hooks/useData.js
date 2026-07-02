@@ -68,6 +68,15 @@ export function useSkillCategories() {
   })
 }
 
+export function useSkillJobs(skill, role, country = null, limit = 20, offset = 0) {
+  return useQuery({
+    queryKey: ['skills', 'jobs', skill, role, country, limit, offset],
+    queryFn: () => skillsApi.getJobs(skill, role, country, limit, offset),
+    enabled: !!skill && !!role,
+    keepPreviousData: true,
+  })
+}
+
 // ============================================
 // Companies Hooks
 // ============================================

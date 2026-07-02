@@ -83,6 +83,49 @@ class SkillNetworkResponse(BaseModel):
 
 
 # ============================================
+# Job Postings (drill-down) Models
+# ============================================
+
+class HighlightSkill(BaseModel):
+    """A skill to highlight inside job descriptions."""
+    skill_name: str
+    skill_category: Optional[str] = None
+    aliases: List[str] = []
+    is_selected: bool = False
+
+
+class JobPosting(BaseModel):
+    """A single real job posting for the skill drill-down view."""
+    job_id: int
+    title: Optional[str] = None
+    company_name: Optional[str] = None
+    location_display: Optional[str] = None
+    country_code: Optional[str] = None
+    salary_min: Optional[float] = None
+    salary_max: Optional[float] = None
+    salary_currency: Optional[str] = None
+    salary_is_predicted: Optional[bool] = None
+    contract_type: Optional[str] = None
+    contract_time: Optional[str] = None
+    redirect_url: Optional[str] = None
+    job_posted_at: Optional[datetime] = None
+    description: Optional[str] = None
+    matched_skills: List[str] = []  # highlight skills detected in this job (selected first)
+
+
+class SkillJobsResponse(BaseModel):
+    """Response wrapper for jobs mentioning a specific skill."""
+    skill: str
+    role: str
+    country: Optional[str] = None
+    total_count: int
+    limit: int
+    offset: int
+    highlight_skills: List[HighlightSkill]
+    jobs: List[JobPosting]
+
+
+# ============================================
 # Salary Models
 # ============================================
 

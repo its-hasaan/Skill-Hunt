@@ -7,6 +7,7 @@ import CompaniesPage from './pages/CompaniesPage'
 import CareerPage from './pages/CareerPage'
 import GlobalPage from './pages/GlobalPage'
 import ResumePage from './pages/ResumePage'
+import JobsPage from './pages/JobsPage'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="career" element={<CareerPage />} />
           <Route path="global" element={<GlobalPage />} />
           <Route path="resume" element={<ResumePage />} />
+          <Route path="jobs" element={<JobsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

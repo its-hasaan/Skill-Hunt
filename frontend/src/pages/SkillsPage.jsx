@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useNavigate } from 'react-router-dom'
 import { useSkillDemand, useSkillCooccurrence } from '../hooks/useData'
 import { Card, ChartLoading, EmptyState, Tabs } from '../components/ui'
 import { CategoryBarChart, CategoryPieChart } from '../components/charts/Charts'
@@ -7,8 +7,16 @@ import { formatNumber } from '../utils/helpers'
 
 export default function SkillsPage() {
   const { selectedRole, selectedCountry } = useOutletContext()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('demand')
   const [selectedSkill, setSelectedSkill] = useState(null)
+
+  const openJobs = (skillName) => {
+    if (!selectedRole || !skillName) return
+    const params = new URLSearchParams({ skill: skillName, role: selectedRole })
+    if (selectedCountry) params.set('country', selectedCountry)
+    navigate(`/jobs?${params.toString()}`)
+  }
 
   const { data: skillDemand, isLoading: demandLoading } = useSkillDemand(
     selectedRole, 
@@ -187,21 +195,39 @@ export default function SkillsPage() {
                   <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Category</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400"></th>
                 </tr>
               </thead>
               <tbody>
                 {skillDemand.data.map((skill, index) => (
-                  <tr 
-                    key={index} 
+                  <tr
+                    key={index}
                     className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                    onClick={() => setSelectedSkill(skill.skill_name)}
+                    onClick={() => { setSelectedSkill(skill.skill_name); setActiveTab('connections') }}
+                    title={`Show ${skill.skill_name} connections`}
                   >
                     <td className="py-3 px-4 text-gray-500 dark:text-gray-500">{index + 1}</td>
                     <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{skill.skill_name}</td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
-                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openJobs(skill.skill_name) }}
+                        title={`View jobs mentioning ${skill.skill_name}`}
+                        className="font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                      >
+                        {formatNumber(skill.job_count)}
+                      </button>
+                    </td>
                     <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
                       {skill.demand_percentage ? `${skill.demand_percentage.toFixed(1)}%` : '-'}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openJobs(skill.skill_name) }}
+                        className="text-xs text-primary-600 dark:text-primary-400 hover:underline whitespace-nowrap"
+                      >
+                        View jobs →
+                      </button>
                     </td>
                   </tr>
                 ))}
