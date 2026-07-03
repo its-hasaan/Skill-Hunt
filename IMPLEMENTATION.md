@@ -47,20 +47,30 @@ Job Script follows a **Modern Data Stack (MDS)** architecture:
 ### 1.3 Data Flow
 
 ```
-Adzuna API → extractor.py → raw.jobs (JSONB)
-                               │
-                    transformer.py (fast path + GLiNER)
-                               │
+Adzuna API ─► extractor.py ────────┐
+                                   ├─► raw.jobs (JSONB + source tag)
+Multi-source bots ─► ingest_sources.py
+(RemoteOK, WWR, Arbeitnow,         │
+ Jobicy, Himalayas, Jooble 🇵🇰🇮🇳,   │
+ The Muse, USAJobs)                │
+                        transformer.py (fast path + GLiNER;
+                        dispatches per source on the normalized envelope)
+                                   │
                     staging.stg_jobs / staging.stg_job_skills
-                               │
-                          dbt (int + marts)
-                               │
-                          marts.* (tables)
-                               │
-                            FastAPI  ──►  React SPA
-                               │
-                    (resume endpoints read staging + taxonomy)
+                                   │
+                              dbt (int + marts)
+                                   │
+                              marts.* (tables)
+                                   │
+                                FastAPI  ──►  React SPA ◄── Supabase Auth
+                                   │           (email/password + Google OAuth)
+                    (resume endpoints read staging + taxonomy;
+                     /user endpoints read public.* with verified JWT)
 ```
+
+Two companion guides cover the newer subsystems in depth:
+[SCRAPING_BOTS.md](SCRAPING_BOTS.md) (multi-source ingestion) and
+[AUTH_SETUP.md](AUTH_SETUP.md) (auth manual setup).
 
 ---
 
@@ -84,7 +94,7 @@ The canonical DDL lives in [`database/schema.sql`](database/schema.sql); the res
 Seeded with the **15 target roles** (`role_id`, `role_name` unique, `role_category`, `is_active`, `created_at`).
 
 #### `staging.dim_countries`
-Seeded with **18 countries** (`country_code` PK, `country_name`, `is_active`).
+Seeded with **20 geographies** (`country_code` PK, `country_name`, `is_active`) — the original 18 plus `pk` (Pakistan) and the `remote` pseudo-country (worldwide-remote roles), added by migration 001 for the multi-source bots.
 
 #### `staging.dim_skills`
 ```sql
@@ -103,16 +113,17 @@ CREATE TABLE staging.dim_skills (
 ```sql
 CREATE TABLE raw.jobs (
     id SERIAL PRIMARY KEY,
-    job_platform_id TEXT NOT NULL,        -- Adzuna job ID
+    job_platform_id TEXT NOT NULL,        -- provider job ID ("<source>:<id>" for non-Adzuna)
     search_role TEXT NOT NULL,
     country_code TEXT NOT NULL,
-    raw_data JSONB NOT NULL,              -- complete API response
+    raw_data JSONB NOT NULL,              -- API response, or connector's normalized envelope
+    source TEXT NOT NULL DEFAULT 'adzuna',-- 'adzuna' | 'remoteok' | 'jooble' | ...
     extracted_at TIMESTAMP DEFAULT NOW(),
     extraction_batch_id UUID DEFAULT uuid_generate_v4(),
     CONSTRAINT raw_jobs_unique UNIQUE (job_platform_id, country_code)
 );
 ```
-**Design notes:** JSONB preserves the full response for reprocessing; the composite unique key allows the same job to appear per-country; the batch ID tracks extraction runs.
+**Design notes:** JSONB preserves the full response for reprocessing; the composite unique key allows the same job to appear per-country; the batch ID tracks extraction runs. Multi-source connectors namespace `job_platform_id` as `<source>:<external_id>` so IDs never collide across providers, and store an envelope `{"_source", "_normalized", "_raw"}` in `raw_data` (the transformer reads `_normalized` directly).
 
 #### `staging.stg_jobs`
 ```sql
@@ -139,6 +150,7 @@ CREATE TABLE staging.stg_jobs (
     extracted_at TIMESTAMP,               -- when we extracted it
     processed_at TIMESTAMP DEFAULT NOW(), -- when we cleaned it
     raw_job_id INTEGER REFERENCES raw.jobs(id),
+    source TEXT NOT NULL DEFAULT 'adzuna', -- provider this job came from
     CONSTRAINT stg_jobs_unique UNIQUE (job_platform_id, country_code)
 );
 ```
@@ -167,12 +179,18 @@ CREATE TABLE staging.stg_job_skills (
 
 #### Resume Analyzer tables (`database/Resume_upload.sql`)
 
-- **`public.resume_uploads`** (parent) — one row per analysis: `id` (UUID), `filename`, `file_size`, `analysis_type` (`gap_analysis` | `role_match`), `target_role`, `country`, `extracted_skills_count`, `extracted_skills` (JSONB snapshot), `match_score`, `storage_path`, `storage_url`, `uploaded_at`.
+- **`public.resume_uploads`** (parent) — one row per analysis: `id` (UUID), `filename`, `file_size`, `analysis_type` (`gap_analysis` | `role_match`), `target_role`, `country`, `extracted_skills_count`, `extracted_skills` (JSONB snapshot), `match_score`, `storage_path`, `storage_url`, `uploaded_at`, and (migration 002) `user_id` — NULL for anonymous uploads, the Supabase Auth user id when the analysis ran signed-in.
 - **`public.resume_skills`** — one row per skill extracted from the resume (`resume_id` FK, `skill_name`, `skill_category`, `mention_count`).
 - **`public.resume_gap_analysis`** — gap-run detail, one row per market skill for the target role (`resume_id` FK, `target_role`, `country`, `skill_name`, `skill_category`, `has_skill`, `job_count`, `demand_percentage`, `avg_salary`, `market_rank`).
 - **`public.resume_role_matches`** — role-match detail, one ranked row per evaluated role (`resume_id` FK, `country`, `role`, `match_score`, `matched_skills_count`, `total_skills_evaluated`, `rank`, `top_matched_skills` JSONB, `top_missing_skills` JSONB).
 
 All three detail tables reference `resume_uploads(id)` with `ON DELETE CASCADE`.
+
+#### Auth & personalization tables (`database/migrations/002_auth_personalization.sql`)
+
+- **`public.user_profiles`** — 1:1 with `auth.users` (`id` UUID PK/FK): `email`, `display_name`, `avatar_url`, `default_role`, `default_country`. Auto-created by an `AFTER INSERT ON auth.users` trigger (`handle_new_user()`, SECURITY DEFINER) for both email and Google signups; the API also creates it lazily as a fallback.
+- **`public.saved_searches`** — `user_id` FK, `name`, `role`, `country` (NULL = all), unique per `(user_id, role, country)`.
+- **Row-Level Security** is enabled on `user_profiles`, `saved_searches`, and all four resume tables with own-row policies (`auth.uid()`). The FastAPI backend connects as the `postgres` role and bypasses RLS; the policies protect against direct PostgREST access with the public anon key.
 
 ### 2.3 Indexing
 
@@ -237,11 +255,41 @@ ON CONFLICT (job_platform_id, country_code) DO NOTHING
 
 `etl/check_progress.py` prints row counts across `raw.jobs`, `staging.stg_jobs`, and `staging.stg_job_skills`. `etl/truncate_old.sql` truncates staging/marts tables for a clean rebuild.
 
+### 3.1b Multi-Source Ingestion (`etl/ingest_sources.py` + `etl/connectors/`)
+
+Runs alongside the Adzuna extractor in the same CI job. Each source has a
+connector class (subclass of `BaseConnector`) that fetches jobs and yields
+`NormalizedJob` records — one shared dataclass whose fields mirror
+`staging.stg_jobs`. The orchestrator wraps each record in a
+`{"_source", "_normalized", "_raw"}` envelope and batch-inserts into `raw.jobs`
+(idempotent, `source`-tagged, per-run batch UUID).
+
+**Connectors** (registry in `connectors/__init__.py`, config in
+`config/sources_config.json`): `remoteok`, `weworkremotely` (RSS),
+`arbeitnow`, `jobicy`, `himalayas` — keyless; `jooble` (local Pakistan+India,
+free key), `themuse` (keyless, optional key), `usajobs` (free key, disabled by
+default), plus a robots.txt-respecting `generic_scraper` template (disabled).
+
+**Shared machinery** (`connectors/utils.py` + `base.py`):
+- `RoleMatcher` — classifies free-text titles into the 15 tracked roles
+  (specific-before-generic regex ordering; title is primary, tags are matched
+  individually as fallback). Non-matching jobs are dropped.
+- `html_to_text`, `to_iso`/`epoch_to_iso`, `parse_salary_range`,
+  `detect_country_code` (maps PK/IN city+country mentions → `pk`/`in`,
+  default `remote`).
+- `build_session` — requests.Session with 4 retries, exponential backoff on
+  429/5xx, `Retry-After` support, honest `SkillHuntBot/1.0` User-Agent, 30s
+  timeouts. Per-source `delay_seconds` rate limiting; per-source isolation
+  (one failing source never kills the run); missing keys → logged skip.
+
+**CLI:** `--source X`, `--test`, `--dry-run`. Logs to `etl/ingestion.log`.
+Compliance stance and full setup/usage: [SCRAPING_BOTS.md](SCRAPING_BOTS.md).
+
 ### 3.2 Transformation & Skill Extraction (`etl/transformer.py`)
 
 Transforms `raw.jobs` → `staging.stg_jobs` (+ `staging.stg_job_skills`):
-- `get_unprocessed_jobs()` — selects `raw.jobs` rows that don't yet have a `stg_jobs` row (LEFT JOIN, batched).
-- `parse_raw_job()` — flattens the Adzuna JSON (title, company, description, location display + areas, category tag/label, salary min/max/predicted, contract type/time, redirect URL, `job_posted_at`) and maps country → currency.
+- `get_unprocessed_jobs()` — selects `raw.jobs` rows that don't yet have a `stg_jobs` row (LEFT JOIN, batched), including each row's `source`.
+- `parse_raw_job()` — dispatches by source: connector-ingested rows carry a `_normalized` envelope and pass straight through (`parse_normalized_job()`); Adzuna rows are flattened as before (title, company, description, location display + areas, category tag/label, salary min/max/predicted, contract type/time, redirect URL, `job_posted_at`) with country → currency mapping (now incl. `pk`→PKR, `remote`→USD). Both paths carry `source` into `stg_jobs`.
 - Upserts into `stg_jobs` (`ON CONFLICT ... DO UPDATE SET processed_at = NOW()`), then runs the hybrid extractor on `title + description`.
 - `get_or_create_skill()` — looks up/creates a `dim_skills` row, then upserts into `stg_job_skills` (`ON CONFLICT (job_id, skill_id)`).
 
@@ -335,6 +383,7 @@ Pydantic `Settings(BaseSettings)` loaded from environment/`.env`:
 - `app_name` = "Job Script API", `app_version` = "1.0.0", `debug` = False
 - `supabase_url` (**required**, DB connection string), `supabase_anon_key` (optional)
 - `supabase_project_url`, `supabase_service_key` (optional — for resume storage)
+- `supabase_jwt_secret` (optional — enables fast local verification of user tokens; without it the backend verifies remotely via `supabase_project_url` + `supabase_anon_key`)
 - `cors_origins` (comma-split), `cache_ttl_seconds` = 3600, `api_prefix` = "/api/v1"
 - `rate_limit_per_minute` = 100 (declared for future use; **not enforced yet**)
 
@@ -342,7 +391,7 @@ Pydantic `Settings(BaseSettings)` loaded from environment/`.env`:
 
 ### 4.4 Routers
 
-Routers live in `backend/app/routers/` and are mounted under `settings.api_prefix` (`/api/v1`). The `skills`, `companies`, `salary`, `career`, and `stats` routers are exported via `routers/__init__.py`; the `resume` router is imported separately in `main.py`.
+Routers live in `backend/app/routers/` and are mounted under `settings.api_prefix` (`/api/v1`). The `skills`, `companies`, `salary`, `career`, and `stats` routers are exported via `routers/__init__.py`; the `resume` and `user` routers are imported separately in `main.py`.
 
 | Router | Prefix | Endpoints |
 |--------|--------|-----------|
@@ -352,6 +401,7 @@ Routers live in `backend/app/routers/` and are mounted under `settings.api_prefi
 | career | `/career` | `role-similarity`, `transitions/{current_role}`, `similarity-matrix`, `skill-gap` |
 | stats | `/stats` | `summary`, `filters`, `roles`, `countries` |
 | resume | `/resume` | `extract-skills` (POST), `analyze` (POST), `match-roles` (POST), `supported-roles` (GET) |
+| user 🔐 | `/user` | `me` (GET/PUT), `saved-searches` (GET/POST/DELETE), `resume-history` (GET/DELETE) — all require a Supabase session token |
 
 **Example — `routers/skills.py`:**
 ```python
@@ -411,6 +461,25 @@ The resume feature is fully implemented:
 
 Relevant schemas: `ExtractedSkill`, `SkillGapAnalysis`, `ResumeAnalysisResponse`, `MatchedSkill`, `RoleMatchResult`. (`ResumeSkill`/`ResumeAnalysis` remain as older "future" models and are not used by the active endpoints.)
 
+`/analyze` and `/match-roles` also take `Depends(get_optional_user)`: anonymous uploads keep working, but when a valid session token is present the persisted `resume_uploads` row gets the caller's `user_id`, which powers the Account page's history.
+
+### 4.6b Authentication (`backend/app/auth.py` + `routers/user.py`)
+
+The frontend authenticates directly with **Supabase Auth** (email/password or
+Google OAuth via supabase-js) and sends the resulting access token as
+`Authorization: Bearer <token>`. The backend never handles passwords — it only
+**verifies** tokens, with two strategies:
+
+1. **Local HS256** (preferred): `jwt.decode(token, SUPABASE_JWT_SECRET, audience="authenticated")` via PyJWT — fast, no network.
+2. **Remote fallback**: `GET {SUPABASE_PROJECT_URL}/auth/v1/user` with the anon key — works with any signing algorithm; results cached in-process for 5 minutes.
+
+Two dependencies: `get_current_user` (401 on missing/invalid; 503 when neither
+strategy is configured) and `get_optional_user` (returns `None`, never raises).
+`routers/user.py` implements profile get/update (lazy profile creation as a
+fallback to the DB trigger), saved-search CRUD (capped at 30, upsert on
+duplicate role+country), and resume history (list + delete, cascade removes
+detail rows). Manual setup steps: [AUTH_SETUP.md](AUTH_SETUP.md).
+
 ### 4.7 CORS, Timing & Error Handling
 
 ```python
@@ -438,13 +507,15 @@ async def add_process_time_header(request, call_next):
 
 ```
 frontend/src/
-├── main.jsx                 # Bootstrap: ThemeProvider → QueryClientProvider → App
-├── App.jsx                  # BrowserRouter + routes under <Layout>
+├── main.jsx                 # Bootstrap: ThemeProvider → AuthProvider → QueryClientProvider → App
+├── App.jsx                  # BrowserRouter + routes under <Layout> (incl. /login, /account)
 ├── index.css                # Global styles (Tailwind)
 ├── api/
-│   └── index.js             # Axios client + grouped API objects
+│   └── index.js             # Axios client (auto-attaches Supabase token) + grouped API objects incl. userApi
+├── lib/
+│   └── supabase.js          # supabase-js client (auth only); null-safe when env vars absent
 ├── components/
-│   ├── Layout.jsx           # Sidebar nav, global Role/Country filters, theme toggle
+│   ├── Layout.jsx           # Sidebar nav, global filters, theme toggle, sign-in/avatar, save-search bookmark
 │   ├── charts/
 │   │   ├── Charts.jsx       # Recharts components
 │   │   ├── Heatmap.jsx      # D3 SimilarityHeatmap
@@ -452,7 +523,8 @@ frontend/src/
 │   └── ui/
 │       └── index.jsx        # Skeleton, Spinner, StatCard, Card, Tabs, Badge, ...
 ├── context/
-│   └── ThemeContext.jsx     # Light/dark theme (localStorage + prefers-color-scheme)
+│   ├── ThemeContext.jsx     # Light/dark theme (localStorage + prefers-color-scheme)
+│   └── AuthContext.jsx      # Supabase session state + signIn/signUp/signInWithGoogle/signOut
 ├── hooks/
 │   └── useData.js           # React Query hooks
 ├── pages/
@@ -463,14 +535,18 @@ frontend/src/
 │   ├── CareerPage.jsx
 │   ├── GlobalPage.jsx
 │   ├── ResumePage.jsx       # Resume Analyzer (upload + gap analysis / role match)
-│   └── JobsPage.jsx         # Skill drill-down: real postings for a skill, with highlights
+│   ├── JobsPage.jsx         # Skill drill-down: real postings for a skill, with highlights
+│   ├── LoginPage.jsx        # Email/password + "Continue with Google"
+│   └── AccountPage.jsx      # Profile & defaults, saved searches, resume history
 └── utils/
     └── helpers.js           # Country metadata, formatters, color palettes
 ```
 
 ### 5.2 Tech Stack
 
-React 18.2, Vite 5, React Router 6, TanStack React Query 5, Recharts 2.10, D3 7, Axios 1.6, Tailwind 3.4, Lucide icons. The dev server (`vite.config.js`) proxies `/api` → `http://localhost:8000`.
+React 18.2, Vite 5, React Router 6, TanStack React Query 5, Recharts 2.10, D3 7, Axios 1.6, Tailwind 3.4, Lucide icons, supabase-js 2 (auth). The dev server (`vite.config.js`) proxies `/api` → `http://localhost:8000`.
+
+**Auth flow:** `AuthContext` subscribes to `supabase.auth.onAuthStateChange`; the session persists in localStorage with silent token refresh, and `detectSessionInUrl` completes the Google OAuth redirect. An axios request interceptor attaches the access token to every API call. `Layout` shows a Sign-in link or the user's avatar, plus a bookmark button that saves the current role+country as a saved search. `AccountPage` redirects to `/login` when signed out; signed-in users get their `default_role`/`default_country` applied to the global filters once per visit.
 
 ### 5.3 API Client (`src/api/index.js`)
 
@@ -486,7 +562,7 @@ api.interceptors.response.use(
   (error) => { console.error('API Error:', error.response?.data || error.message); throw error }
 )
 ```
-Grouped exports: `statsApi`, `skillsApi`, `companiesApi`, `salaryApi`, `careerApi`, and `resumeApi`. The resume calls post `multipart/form-data` directly with a 60s timeout.
+Grouped exports: `statsApi`, `skillsApi`, `companiesApi`, `salaryApi`, `careerApi`, `resumeApi`, and `userApi` (profile, saved searches, resume history). A request interceptor awaits `getAccessToken()` from the Supabase session and adds `Authorization: Bearer <token>` when signed in. The resume calls post `multipart/form-data` through the same instance with a 60s timeout, so they carry the token too (linking analyses to the account).
 
 ### 5.4 Data Fetching (`src/hooks/useData.js`)
 
@@ -588,9 +664,9 @@ Data tests are intentionally minimal: `not_null` on `int_job_skills_enriched.job
 
 - **Schedule**: `cron: '0 3 1,15 * *'` — the 1st and 15th of each month at 03:00 UTC. Also supports `workflow_dispatch` with `run_extraction` / `run_transformation` / `run_dbt` / `test_mode` inputs.
 - **Python** 3.11, `actions/checkout@v4`, `actions/setup-python@v5`.
-- **Secrets**: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `SUPABASE_URL`, `SUPABASE_HOST`, `SUPABASE_USER`, `SUPABASE_PASSWORD`, `SUPABASE_DB`. (No Gemini key — discovery is local GLiNER.)
+- **Secrets**: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `SUPABASE_URL`, `SUPABASE_HOST`, `SUPABASE_USER`, `SUPABASE_PASSWORD`, `SUPABASE_DB`, plus optional multi-source keys `JOOBLE_API_KEY`, `THEMUSE_API_KEY`, `USAJOBS_API_KEY`/`USAJOBS_USER_AGENT` (sources auto-skip when blank). (No Gemini key — discovery is local GLiNER.)
 - **Jobs**:
-  1. `extract` — `python extractor.py --days 60 --pages 3 --delay 1.5` (or `--test` in test mode).
+  1. `extract` — `python extractor.py --days 60 --pages 3 --delay 1.5` followed by `python ingest_sources.py` (multi-source bots); both use `--test` in test mode. Uploads `extraction.log` + `ingestion.log` as artifacts.
   2. `transform` — `python transformer.py --batch-size 500 --fast-only` (taxonomy-only; GLiNER disabled).
   3. `dbt` — writes a `~/.dbt/profiles.yml`, then `dbt debug`, `dbt deps`, `dbt run --full-refresh`, `dbt test`, `dbt docs generate`; uploads artifacts.
   4. `archive` — (scheduled runs) calls `SELECT archive_skill_demand()`.
@@ -658,6 +734,7 @@ A second `frontend/vercel.json` handles SPA client-side routing (rewrites to `in
 ## 9. Security & Best Practices
 
 - **Secrets** are provided via environment variables / GitHub Actions secrets, not committed.
+- **Authentication**: Supabase Auth issues the tokens (passwords/OAuth never touch this backend); FastAPI verifies JWTs locally (HS256, `SUPABASE_JWT_SECRET`) or remotely against the Supabase Auth API. Personalized tables are protected by Row-Level Security against direct anon-key access.
 - **SQL injection**: queries use asyncpg positional parameters (`$1, $2, …`); the company search builds an ILIKE pattern but still passes it as a bound parameter.
 - **CORS**: restricted to an explicit origin whitelist from `CORS_ORIGINS`.
 - **HTTPS**: enforced by Render and Vercel in production.
@@ -677,9 +754,11 @@ There is currently **no automated test suite committed** to the repository. `pyt
 Job Script implements:
 
 ✅ **Layered ELT architecture** — raw → staging → marts → API → SPA  
+✅ **Multi-source ingestion** — Adzuna + 7 connector bots (incl. Jooble for local 🇵🇰/🇮🇳 postings and 5 remote-jobs boards) normalized into one contract ([SCRAPING_BOTS.md](SCRAPING_BOTS.md))  
 ✅ **Hybrid skill extraction** — regex fast path + local GLiNER NER discovery (no LLM cost)  
 ✅ **Modern stack** — FastAPI + asyncpg, React + Vite, dbt-postgres, Supabase  
-✅ **Resume Analyzer** — upload, parse, gap analysis, and role matching  
+✅ **Auth & personalization** — Supabase Auth (email + Google OAuth), profiles with dashboard defaults, saved searches, resume history ([AUTH_SETUP.md](AUTH_SETUP.md))  
+✅ **Resume Analyzer** — upload, parse, gap analysis, and role matching (account-linked when signed in)  
 ✅ **Automated pipeline** — GitHub Actions on the 1st & 15th, plus keep-warm ping  
 ✅ **Honest docs** — this guide reflects the code as it actually stands, including current limitations
 

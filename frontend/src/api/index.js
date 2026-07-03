@@ -2,6 +2,7 @@
  * API client for Job Script backend
  */
 import axios from 'axios'
+import { getAccessToken } from '../lib/supabase'
 
 // Base URL - use environment variable in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
@@ -12,6 +13,14 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+// Request interceptor: attach the Supabase session token when logged in,
+// so the backend can personalize (resume history, saved searches, ...).
+api.interceptors.request.use(async (config) => {
+  const token = await getAccessToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
 })
 
 // Response interceptor for error handling
@@ -153,15 +162,13 @@ export const resumeApi = {
    * Extract skills from uploaded resume
    * @param {File} file - Resume file (PDF, DOCX, TXT)
    */
-  extractSkills: async (file) => {
+  extractSkills: (file) => {
     const formData = new FormData()
     formData.append('file', file)
-    
-    const response = await axios.post(`${API_BASE_URL}/resume/extract-skills`, formData, {
+    return api.post('/resume/extract-skills', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     })
-    return response.data
   },
 
   /**
@@ -170,17 +177,15 @@ export const resumeApi = {
    * @param {string} targetRole - Target job role
    * @param {string|null} country - Country code (optional)
    */
-  analyze: async (file, targetRole, country = null) => {
+  analyze: (file, targetRole, country = null) => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('target_role', targetRole)
     if (country) formData.append('country', country)
-    
-    const response = await axios.post(`${API_BASE_URL}/resume/analyze`, formData, {
+    return api.post('/resume/analyze', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     })
-    return response.data
   },
 
   /**
@@ -189,23 +194,38 @@ export const resumeApi = {
    * @param {string|null} country - Country code (optional)
    * @param {number} limit - Max roles to return
    */
-  matchRoles: async (file, country = null, limit = 10) => {
+  matchRoles: (file, country = null, limit = 10) => {
     const formData = new FormData()
     formData.append('file', file)
     if (country) formData.append('country', country)
     formData.append('limit', limit)
-    
-    const response = await axios.post(`${API_BASE_URL}/resume/match-roles`, formData, {
+    return api.post('/resume/match-roles', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     })
-    return response.data
   },
 
   /**
    * Get list of supported roles for analysis
    */
   getSupportedRoles: () => api.get('/resume/supported-roles'),
+}
+
+// ============================================
+// User API (requires sign-in; token attached automatically)
+// ============================================
+
+export const userApi = {
+  getProfile: () => api.get('/user/me'),
+  updateProfile: (updates) => api.put('/user/me', updates),
+
+  getSavedSearches: () => api.get('/user/saved-searches'),
+  saveSearch: (name, role, country = null) =>
+    api.post('/user/saved-searches', { name, role, country }),
+  deleteSavedSearch: (id) => api.delete(`/user/saved-searches/${id}`),
+
+  getResumeHistory: () => api.get('/user/resume-history'),
+  deleteResumeAnalysis: (id) => api.delete(`/user/resume-history/${id}`),
 }
 
 export default api

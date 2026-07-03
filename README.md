@@ -13,7 +13,7 @@
 
 [Live Frontend](https://jobscript.vercel.app) • [Backend API](https://skill-hunt.onrender.com) • [API Docs](https://skill-hunt.onrender.com/docs)
 
-📖 Deep dives: [Implementation Guide](IMPLEMENTATION.md) • [Scraping Bots / Multi-Source Ingestion](SCRAPING_BOTS.md)
+📖 Deep dives: [Implementation Guide](IMPLEMENTATION.md) • [Scraping Bots / Multi-Source Ingestion](SCRAPING_BOTS.md) • [Auth Setup](AUTH_SETUP.md)
 
 </div>
 
@@ -53,11 +53,11 @@ To democratize access to job market intelligence, enabling individuals to make i
 
 ### 🌍 Coverage
 
-Job Script aggregates job postings via the **Adzuna API**, analyzing **15 job roles** spanning Data, AI/ML, Software Development, DevOps/Cloud, and Cybersecurity across up to **18 countries** (17 currently active in the extraction config).
+Job Script aggregates job postings from the **Adzuna API plus a fleet of multi-source ingestion bots** (RemoteOK, We Work Remotely, Arbeitnow, Jobicy, Himalayas, Jooble, The Muse — see [SCRAPING_BOTS.md](SCRAPING_BOTS.md)), analyzing **15 job roles** spanning Data, AI/ML, Software Development, DevOps/Cloud, and Cybersecurity.
 
 **Job Roles Tracked:** Data Engineer, Analytics Engineer, Data Scientist, Data Analyst, Business Intelligence Developer, Machine Learning Engineer, AI Engineer, Computer Vision Engineer, Backend Developer, Frontend Developer, Full Stack Developer, Mobile Developer, DevOps Engineer, Cloud Architect, Cyber Security Engineer.
 
-**Countries:** 🇬🇧 UK • 🇺🇸 US • 🇦🇺 Australia • 🇦🇹 Austria • 🇧🇪 Belgium • 🇧🇷 Brazil • 🇨🇦 Canada • 🇩🇪 Germany • 🇫🇷 France • 🇮🇳 India • 🇮🇹 Italy • 🇲🇽 Mexico • 🇳🇱 Netherlands • 🇳🇿 New Zealand • 🇵🇱 Poland • 🇸🇬 Singapore • 🇿🇦 South Africa (plus 🇷🇺 Russia in the country dimension).
+**Countries:** 🇬🇧 UK • 🇺🇸 US • 🇦🇺 Australia • 🇦🇹 Austria • 🇧🇪 Belgium • 🇧🇷 Brazil • 🇨🇦 Canada • 🇩🇪 Germany • 🇫🇷 France • 🇮🇳 India • 🇮🇹 Italy • 🇲🇽 Mexico • 🇳🇱 Netherlands • 🇳🇿 New Zealand • 🇵🇰 Pakistan • 🇵🇱 Poland • 🇸🇬 Singapore • 🇿🇦 South Africa • 🌐 Remote/Worldwide (plus 🇷🇺 Russia in the country dimension). Pakistan and the Remote bucket come from the multi-source bots — built specifically so talent in Pakistan/India can use the platform for both local and worldwide-remote roles.
 
 ---
 
@@ -103,6 +103,19 @@ Job Script aggregates job postings via the **Adzuna API**, analyzing **15 job ro
 - **Gap Analysis**: Compares your resume against the demand for a target role — shows skills you have, skills to learn, and a demand-weighted match percentage
 - **Role Match**: Scores your resume against every tracked role and ranks the best-fitting roles
 
+### 👤 **Accounts & Personalization** (Supabase Auth)
+- **Sign in with email/password or "Continue with Google"** (OAuth) — sessions persist across reloads
+- **Personal dashboard defaults**: your preferred role & country are applied automatically on every visit
+- **Saved searches**: bookmark any role + country combo from the top bar and re-apply it in one click
+- **Resume history**: analyses run while signed in are saved to your account and browsable on the Account page
+- Setup guide: [AUTH_SETUP.md](AUTH_SETUP.md)
+
+### 🤖 **Multi-Source Ingestion Bots**
+- **7 connector bots** beyond Adzuna: RemoteOK, We Work Remotely (RSS), Arbeitnow, Jobicy, Himalayas (no keys needed), plus Jooble (local 🇵🇰 Pakistan + 🇮🇳 India postings) and The Muse (free keys)
+- **Robust by design**: retries with exponential backoff, rate limiting, per-source isolation, idempotent writes, role classification, dry-run mode
+- **ToS-compliant**: honest User-Agent, attribution links, robots.txt-aware scraper template — no anti-bot evasion
+- Runs automatically every two weeks with the ETL pipeline — full guide: [SCRAPING_BOTS.md](SCRAPING_BOTS.md)
+
 ---
 
 ## 🛠️ Technology Stack
@@ -115,6 +128,7 @@ Job Script aggregates job postings via the **Adzuna API**, analyzing **15 job ro
 - **[Uvicorn](https://www.uvicorn.org/)** – ASGI server
 - **PyPDF2 / python-docx / Pillow** – Resume file parsing (PDF, Word, images)
 - **[Supabase Storage](https://supabase.com/storage)** – Resume file storage (optional)
+- **[Supabase Auth](https://supabase.com/auth) + PyJWT** – User authentication (JWT verification for personalized endpoints)
 
 ### **Frontend**
 - **[React 18](https://react.dev/)** – Component-based UI library
@@ -125,10 +139,12 @@ Job Script aggregates job postings via the **Adzuna API**, analyzing **15 job ro
 - **[D3.js](https://d3js.org/)** – Force-directed network graph & similarity heatmap components
 - **[Tailwind CSS](https://tailwindcss.com/)** – Utility-first CSS (class-based dark mode)
 - **[Lucide React](https://lucide.dev/)** – Icon set
-- **[Axios](https://axios-http.com/)** – HTTP client
+- **[Axios](https://axios-http.com/)** – HTTP client (attaches the Supabase session token automatically)
+- **[supabase-js](https://supabase.com/docs/reference/javascript)** – Auth client (email/password + Google OAuth, session persistence)
 
 ### **Data Pipeline**
-- **[Adzuna API](https://www.adzuna.com/)** – Job posting data source
+- **[Adzuna API](https://www.adzuna.com/)** – Primary job posting data source (17 countries)
+- **Multi-source ingestion bots** (`etl/ingest_sources.py` + `etl/connectors/`) – RemoteOK, We Work Remotely, Arbeitnow, Jobicy, Himalayas, Jooble (local Pakistan/India), The Muse, USAJobs — normalized into one contract and landed in `raw.jobs` with a `source` tag ([SCRAPING_BOTS.md](SCRAPING_BOTS.md))
 - **Hybrid Skill Extraction System**:
   - **Fast Path**: Regex/taxonomy pattern matching (majority of skills, instant, free)
   - **Slow Path**: **GLiNER** NER model (`urchade/gliner_medium-v2.1`) for local, free skill discovery
@@ -156,15 +172,16 @@ Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract
 │                         JOB SCRIPT ARCHITECTURE                       │
 └─────────────────────────────────────────────────────────────────────┘
 
-┌──────────────┐
-│  Adzuna API  │  ← External Data Source (multi-country)
-└──────┬───────┘
-       │  (1) EXTRACT
-       ▼
-┌──────────────────┐
-│  extractor.py    │  ← Python (batched, rate-limited) → raw.jobs
-└──────┬───────────┘
-       │  (2) LOAD (raw JSONB)
+┌──────────────┐   ┌────────────────────────────────────────────┐
+│  Adzuna API  │   │ Multi-source bots: RemoteOK · WWR · Jobicy │
+│ (17 nations) │   │ Arbeitnow · Himalayas · Jooble 🇵🇰🇮🇳 · Muse │
+└──────┬───────┘   └──────────────────────┬─────────────────────┘
+       │  (1) EXTRACT                     │
+       ▼                                  ▼
+┌──────────────────┐          ┌─────────────────────┐
+│  extractor.py    │          │  ingest_sources.py  │ ← normalize + classify
+└──────┬───────────┘          └──────────┬──────────┘
+       │  (2) LOAD (raw JSONB, tagged with `source`)
        ▼
 ┌────────────────────────────────────────────────────────────────┐
 │              PostgreSQL Database (Supabase)                      │
@@ -186,13 +203,14 @@ Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract
                                ▼
                         ┌──────────────┐
                         │  FastAPI     │ ← REST API (/api/v1, CORS-enabled)
-                        │  Backend     │   + Resume Analyzer endpoints
-                        └──────┬───────┘
+                        │  Backend     │   + Resume Analyzer + /user endpoints
+                        └──────┬───────┘   (verifies Supabase Auth JWTs)
                                │  (6) CONSUME
                                ▼
-                        ┌──────────────┐
-                        │   React SPA  │ ← Vite + React Router + React Query
-                        └──────┬───────┘
+                        ┌──────────────┐   ┌────────────────┐
+                        │   React SPA  │ ← │ Supabase Auth  │
+                        │              │   │ (email+Google) │
+                        └──────┬───────┘   └────────────────┘
                                │  (7) VISUALIZE
                                ▼
                         ┌──────────────┐
@@ -202,15 +220,15 @@ Job Script follows a **Modern Data Stack (MDS)** approach with an **ELT (Extract
 
 ### Data Flow Explained
 
-1. **Extract**: `extractor.py` queries the Adzuna API across configured roles × countries.
-2. **Load**: Raw JSON is stored in `raw.jobs` (immutable landing zone, JSONB).
+1. **Extract**: `extractor.py` queries the Adzuna API across configured roles × countries, and `ingest_sources.py` runs the multi-source connector bots (remote boards + Jooble for local Pakistan/India postings), normalizing every source into one shared contract.
+2. **Load**: Raw JSON is stored in `raw.jobs` (immutable landing zone, JSONB), tagged with its `source`.
 3. **Skill Extraction**: `transformer.py` flattens raw jobs into `staging.stg_jobs` and extracts skills into `staging.stg_job_skills` using the hybrid extractor:
    - **Fast Path**: regex matching against the skills taxonomy (instant, free).
    - **Slow Path**: the **GLiNER** NER model discovers skills not yet in the taxonomy (local, free, sampled). *Note: the scheduled CI pipeline runs in `--fast-only` mode, so GLiNER runs only during local/manual discovery runs.*
 4. **Transform**: dbt builds analytical marts (demand, salary, co-occurrence, company leaderboard, role similarity, skills-by-country).
 5. **Serve**: FastAPI exposes REST endpoints that query the dbt marts (and, for the resume feature, the staging tables).
-6. **Consume**: The React app fetches data via the API using React Query.
-7. **Visualize**: Interactive charts, tables, and network/heatmap components.
+6. **Consume**: The React app fetches data via the API using React Query. Signed-in users (Supabase Auth: email/password or Google) get personalized features — the session token is attached to API calls automatically.
+7. **Visualize**: Interactive charts, tables, and network/heatmap components — plus a personal Account page (saved searches, resume history, dashboard defaults).
 
 ---
 
@@ -362,7 +380,8 @@ All data endpoints are served under the base path **`/api/v1`**.
 - Production: `https://skill-hunt.onrender.com/api/v1`
 
 ### Authentication
-The API is currently open (no authentication required).
+
+Analytics endpoints are open. **Personalized endpoints (`/user/*`) require a Supabase Auth session token** (`Authorization: Bearer <access_token>`), and the resume endpoints accept one optionally — analyses run while signed in are linked to the account. The frontend attaches the token automatically; the backend verifies it locally with `SUPABASE_JWT_SECRET` (or remotely via the Supabase Auth API). Setup: [AUTH_SETUP.md](AUTH_SETUP.md).
 
 ### Root & Health
 
@@ -425,9 +444,21 @@ The API is currently open (no authentication required).
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/resume/extract-skills` | Extract skills from an uploaded resume file |
-| POST | `/resume/analyze` | Gap analysis vs. a `target_role` (multipart: file + form fields) |
-| POST | `/resume/match-roles` | Rank best-fitting roles for the resume |
+| POST | `/resume/analyze` | Gap analysis vs. a `target_role` (multipart: file + form fields; linked to your account when signed in) |
+| POST | `/resume/match-roles` | Rank best-fitting roles for the resume (linked to your account when signed in) |
 | GET | `/resume/supported-roles` | Roles available for matching |
+
+#### **User** (`/api/v1/user`) — 🔐 requires sign-in
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/user/me` | Current user's profile + dashboard defaults |
+| PUT | `/user/me` | Update display name / default role / default country |
+| GET | `/user/saved-searches` | List saved searches |
+| POST | `/user/saved-searches` | Save a search (name, role, country) |
+| DELETE | `/user/saved-searches/{id}` | Delete a saved search |
+| GET | `/user/resume-history` | Past resume analyses for this account |
+| DELETE | `/user/resume-history/{id}` | Delete one of your analyses |
 
 ### Example API Calls
 
@@ -480,11 +511,11 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
 
 ### Pipeline Stages (GitHub Actions jobs)
 
-#### 1. **Extract** (`etl/extractor.py`)
-- Queries the Adzuna API for job postings across the configured roles × countries.
-- Extraction config (`etl/config/extraction_config.json`): 15 roles, 17 countries, 50 results/page, 2 pages/search default. CI overrides with `--days 60 --pages 3 --delay 1.5`.
-- Stores raw JSON in `raw.jobs`; deduplicates on `(job_platform_id, country_code)` via `ON CONFLICT DO NOTHING`.
-- Rate-limit aware (handles HTTP 429 with backoff).
+#### 1. **Extract** (`etl/extractor.py` + `etl/ingest_sources.py`)
+- **Adzuna** (`extractor.py`): queries the Adzuna API across the configured roles × countries. Extraction config (`etl/config/extraction_config.json`): 15 roles, 17 countries, 50 results/page, 2 pages/search default. CI overrides with `--days 60 --pages 3 --delay 1.5`.
+- **Multi-source bots** (`ingest_sources.py` — runs in the same CI job): RemoteOK, We Work Remotely, Arbeitnow, Jobicy, Himalayas (keyless) + Jooble (local 🇵🇰/🇮🇳) and The Muse (free keys). Each connector normalizes its source into one shared contract, classifies titles into the 15 tracked roles, and strips HTML. Config: `etl/config/sources_config.json`. Full guide: [SCRAPING_BOTS.md](SCRAPING_BOTS.md).
+- Both store raw JSON in `raw.jobs` (tagged with `source`); deduplicates on `(job_platform_id, country_code)` via `ON CONFLICT DO NOTHING` — non-Adzuna IDs are namespaced `<source>:<id>`.
+- Rate-limit aware (HTTP 429 backoff, per-source delays, automatic retries).
 
 #### 2. **Transform & Extract Skills** (`etl/transformer.py`)
 - Flattens `raw.jobs` → `staging.stg_jobs`, then extracts skills → `staging.stg_job_skills`.
@@ -515,12 +546,14 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
 
 ```bash
 cd etl
-python extractor.py --days 60 --pages 3 --delay 1.5   # extract
+python extractor.py --days 60 --pages 3 --delay 1.5   # extract (Adzuna)
+python ingest_sources.py                                # extract (multi-source bots)
 python transformer.py --batch-size 500 --fast-only     # extract skills (taxonomy only)
 cd ../dbt_project && dbt run --full-refresh             # rebuild marts
 
-# Test mode
+# Test / preview modes
 python extractor.py --test
+python ingest_sources.py --test --dry-run               # fetch samples, write nothing
 ```
 
 ---
@@ -533,19 +566,20 @@ python extractor.py --test
 - **Build**: `pip install -r backend/requirements.txt` (Python buildpack, no Docker)
 - **Start**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - **Health check path**: `/health`
-- **Environment variables**: `SUPABASE_URL` (set manually), `CORS_ORIGINS`, `DEBUG`, `CACHE_TTL_SECONDS`
+- **Environment variables**: `SUPABASE_URL` (set manually), `CORS_ORIGINS`, `DEBUG`, `CACHE_TTL_SECONDS`, plus for auth: `SUPABASE_JWT_SECRET` (recommended) or `SUPABASE_PROJECT_URL` + `SUPABASE_ANON_KEY` (see [AUTH_SETUP.md](AUTH_SETUP.md))
 - Auto-deploys on push.
 
 ### Frontend (Vercel) — `vercel.json`
 
 - Static build of `frontend/` (`@vercel/static-build`, `distDir: dist`).
 - Routes: `/api/*` is proxied to the Render backend (`https://skill-hunt.onrender.com/api/*`); all other routes serve the SPA.
-- `VITE_API_URL` set via Vercel env (`@vite_api_url`). SPA client-side routing is handled by `frontend/vercel.json`.
+- `VITE_API_URL` set via Vercel env (`@vite_api_url`); auth additionally needs `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (Vercel project env vars — see [AUTH_SETUP.md](AUTH_SETUP.md)). SPA client-side routing is handled by `frontend/vercel.json`.
 
 ### Database (Supabase)
 
 - Managed PostgreSQL with connection pooling (PgBouncer; the API disables the asyncpg statement cache for transaction-mode pooling).
 - Optional Supabase Storage bucket (`resumes`) for uploaded resume files.
+- **Supabase Auth** for user accounts (email/password + Google OAuth) — user tables (`user_profiles`, `saved_searches`) live in `public` with Row-Level Security; migrations in `database/migrations/`.
 
 ---
 
@@ -583,14 +617,16 @@ Released under the **MIT License**. (No `LICENSE` file is currently committed �
 
 ## 🗺️ Roadmap
 
-- [ ] User authentication and personalized dashboards
-- [ ] API rate limiting and authentication
+- [x] User authentication and personalized dashboards (Supabase Auth + Google OAuth, saved searches, resume history) ✅
+- [x] Expanded data sources beyond Adzuna (multi-source ingestion bots — RemoteOK, WWR, Jooble PK/IN, and more) ✅
+- [x] Resume skill gap analysis & role matching ✅
+- [ ] Email alerts for saved searches (the `saved_searches` table is the subscription list)
+- [ ] API rate limiting (per-user, using the verified identity)
 - [ ] Response-level caching (`CACHE_TTL_SECONDS` is already wired for it)
 - [ ] Automated test suite (backend + frontend)
+- [ ] Cross-source job deduplication (content hash on title+company+country)
 - [ ] Machine-learning-based salary prediction
-- [ ] Expanded data sources beyond Adzuna
 - [ ] Export reports (PDF, CSV)
-- [x] Resume skill gap analysis & role matching ✅
 
 ---
 

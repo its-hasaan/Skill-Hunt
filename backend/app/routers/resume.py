@@ -18,6 +18,7 @@ from pathlib import Path
 import io
 
 from ..database import Database, get_db
+from ..auth import AuthUser, get_optional_user
 from ..models.schemas import (
     ResumeAnalysisResponse,
     SkillGapAnalysis,
@@ -208,6 +209,7 @@ async def _persist_analysis(
     match_score: Optional[float] = None,
     gap_rows: Optional[list] = None,
     role_rows: Optional[list] = None,
+    user_id: Optional[str] = None,
 ) -> None:
     """
     Persist a full resume analysis to Supabase:
@@ -246,13 +248,13 @@ async def _persist_analysis(
                     INSERT INTO public.resume_uploads
                         (filename, file_size, analysis_type, target_role, country,
                          extracted_skills_count, extracted_skills, match_score,
-                         storage_path, storage_url)
-                    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10)
+                         storage_path, storage_url, user_id)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11::uuid)
                     RETURNING id
                     """,
                     filename, file_size, analysis_type, target_role, country,
                     len(extracted_skills), json.dumps(extracted_skills), match_score,
-                    storage_path, storage_url,
+                    storage_path, storage_url, user_id,
                 )
 
                 if extracted_skills:
@@ -356,7 +358,8 @@ async def analyze_resume(
     file: UploadFile = File(..., description="Resume file (PDF, DOCX, TXT, or image)"),
     target_role: str = Form(..., description="Target job role (e.g., 'Data Engineer')"),
     country: Optional[str] = Form(None, description="Country code for market comparison (e.g., 'gb', 'us')"),
-    db: Database = Depends(get_db)
+    db: Database = Depends(get_db),
+    user: Optional[AuthUser] = Depends(get_optional_user),
 ):
     """
     Full resume analysis: Extract skills and compare against market demand.
@@ -489,6 +492,7 @@ async def analyze_resume(
         ],
         match_score=round(match_percentage, 1),
         gap_rows=gap_rows,
+        user_id=user.id if user else None,
     )
 
     return ResumeAnalysisResponse(
@@ -509,7 +513,8 @@ async def match_resume_to_roles(
     file: UploadFile = File(..., description="Resume file (PDF, DOCX, TXT, or image)"),
     country: Optional[str] = Form(None, description="Country code (e.g., 'gb', 'us')"),
     limit: int = Form(10, ge=1, le=20, description="Number of top matching roles to return"),
-    db: Database = Depends(get_db)
+    db: Database = Depends(get_db),
+    user: Optional[AuthUser] = Depends(get_optional_user),
 ):
     """
     Match resume skills against all job roles to find the best fit.
@@ -656,6 +661,7 @@ async def match_resume_to_roles(
         ],
         match_score=top_score,
         role_rows=role_rows,
+        user_id=user.id if user else None,
     )
 
     return [RoleMatchResult(**r) for r in top_matches]

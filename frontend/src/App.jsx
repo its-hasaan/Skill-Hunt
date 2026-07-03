@@ -8,6 +8,8 @@ import CareerPage from './pages/CareerPage'
 import GlobalPage from './pages/GlobalPage'
 import ResumePage from './pages/ResumePage'
 import JobsPage from './pages/JobsPage'
+import LoginPage from './pages/LoginPage'
+import AccountPage from './pages/AccountPage'
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
           <Route path="global" element={<GlobalPage />} />
           <Route path="resume" element={<ResumePage />} />
           <Route path="jobs" element={<JobsPage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="account" element={<AccountPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Supabase Storage (for resume file uploads)
     supabase_project_url: Optional[str] = None  # e.g. https://xxxx.supabase.co
     supabase_service_key: Optional[str] = None  # service_role key from Supabase dashboard
+
+    # Supabase Auth (JWT verification for logged-in users)
+    # Project Settings -> API -> "JWT Secret". If unset, the backend falls
+    # back to verifying tokens remotely via supabase_project_url + anon key.
+    supabase_jwt_secret: Optional[str] = None
     
     # CORS - Frontend URLs
     cors_origins: str = "http://localhost:5173,http://localhost:3000"

@@ -1,12 +1,16 @@
-import { useState } from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
-import { 
-  Target, BarChart3, DollarSign, Building2, 
-  GitBranch, Globe, Menu, X, FileText, Sun, Moon
+import { useState, useEffect, useRef } from 'react'
+import { Outlet, NavLink, Link } from 'react-router-dom'
+import {
+  Target, BarChart3, DollarSign, Building2,
+  GitBranch, Globe, Menu, X, FileText, Sun, Moon,
+  Bookmark, BookmarkCheck, LogIn, UserCircle
 } from 'lucide-react'
 import clsx from 'clsx'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useFilterOptions } from '../hooks/useData'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import { userApi } from '../api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
@@ -16,19 +20,56 @@ const navigation = [
   { name: 'Career Paths', href: '/career', icon: GitBranch },
   { name: 'Global', href: '/global', icon: Globe },
   { name: 'Resume Analyzer', href: '/resume', icon: FileText },
+  { name: 'My Account', href: '/account', icon: UserCircle },
 ]
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedRole, setSelectedRole] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('')
+  const [justSaved, setJustSaved] = useState(false)
   const { isDark, toggleTheme } = useTheme()
-  
+  const { user, isAuthEnabled } = useAuth()
+  const queryClient = useQueryClient()
+
   const { data: filters, isLoading: filtersLoading } = useFilterOptions()
+
+  // Signed-in users get their saved dashboard defaults applied once per visit.
+  const { data: profile } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: userApi.getProfile,
+    enabled: Boolean(user),
+    retry: 1,
+  })
+  const defaultsApplied = useRef(false)
+  useEffect(() => {
+    if (defaultsApplied.current || !profile || !filters?.roles?.length) return
+    if (profile.default_role && filters.roles.includes(profile.default_role)) {
+      setSelectedRole(profile.default_role)
+    }
+    if (profile.default_country) {
+      setSelectedCountry(profile.default_country)
+    }
+    defaultsApplied.current = true
+  }, [profile, filters])
 
   // Set default role once filters load
   if (filters?.roles?.length && !selectedRole) {
     setSelectedRole(filters.roles[0])
+  }
+
+  const handleSaveSearch = async () => {
+    if (!user || !selectedRole) return
+    const countryName = filters?.countries?.find(c => c.country_code === selectedCountry)?.country_name
+    const name = selectedCountry ? `${selectedRole} — ${countryName || selectedCountry}` : selectedRole
+    try {
+      await userApi.saveSearch(name, selectedRole, selectedCountry || null)
+      queryClient.invalidateQueries({ queryKey: ['user', 'saved-searches'] })
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 2000)
+    } catch (e) {
+      console.error('Failed to save search', e)
+    }
   }
 
   return (
@@ -161,14 +202,60 @@ export default function Layout() {
             )}
           </div>
 
+          {/* Save current search (signed-in only) */}
+          {user && (
+            <button
+              onClick={handleSaveSearch}
+              disabled={!selectedRole}
+              className="ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40"
+              title={justSaved ? 'Saved!' : 'Save current search to your account'}
+            >
+              {justSaved
+                ? <BookmarkCheck className="h-5 w-5 text-green-500" />
+                : <Bookmark className="h-5 w-5" />}
+            </button>
+          )}
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="ml-4 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
+
+          {/* Auth: avatar -> account, or sign-in link */}
+          {isAuthEnabled && (
+            user ? (
+              <Link
+                to="/account"
+                className="ml-2 flex items-center"
+                title={user.email}
+              >
+                {user.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="Account"
+                    referrerPolicy="no-referrer"
+                    className="h-8 w-8 rounded-full border border-gray-200 dark:border-gray-600 hover:ring-2 hover:ring-primary-400 transition-shadow"
+                  />
+                ) : (
+                  <span className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-sm font-semibold text-primary-700 dark:text-primary-300 hover:ring-2 hover:ring-primary-400 transition-shadow">
+                    {(user.email || '?')[0].toUpperCase()}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign in</span>
+              </Link>
+            )
+          )}
         </header>
 
         {/* Page content */}

@@ -10,6 +10,9 @@ asyncpg>=0.29.0
 psycopg2-binary>=2.9.9
 supabase>=2.3.0
 
+# Auth (Supabase JWT verification)
+PyJWT>=2.8.0
+
 # Data validation & serialization
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
