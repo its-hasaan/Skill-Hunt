@@ -13,6 +13,8 @@
 
 [Live Frontend](https://jobscript.vercel.app) • [Backend API](https://skill-hunt.onrender.com) • [API Docs](https://skill-hunt.onrender.com/docs)
 
+📖 Deep dives: [Implementation Guide](IMPLEMENTATION.md) • [Scraping Bots / Multi-Source Ingestion](SCRAPING_BOTS.md)
+
 </div>
 
 ---

@@ -79,7 +79,9 @@ INSERT INTO staging.dim_countries (country_code, country_name) VALUES
     ('pl', 'Poland'),
     ('ru', 'Russia'),
     ('sg', 'Singapore'),
-    ('za', 'South Africa')
+    ('za', 'South Africa'),
+    ('pk', 'Pakistan'),
+    ('remote', 'Remote / Worldwide')
 ON CONFLICT (country_code) DO NOTHING;
 
 -- Master skills taxonomy
@@ -100,10 +102,11 @@ CREATE TABLE IF NOT EXISTS staging.dim_skills (
 -- Raw job postings directly from API
 CREATE TABLE IF NOT EXISTS raw.jobs (
     id SERIAL PRIMARY KEY,
-    job_platform_id TEXT NOT NULL,            -- Adzuna job ID
+    job_platform_id TEXT NOT NULL,            -- Provider job ID (namespaced as "<source>:<id>" for non-Adzuna sources)
     search_role TEXT NOT NULL,                -- Role searched for
-    country_code TEXT NOT NULL,               -- Country code used in API call
-    raw_data JSONB NOT NULL,                  -- Complete API response
+    country_code TEXT NOT NULL,               -- Country code used in API call ('pk','in','remote',...)
+    raw_data JSONB NOT NULL,                  -- Complete API response (or connector's normalized envelope)
+    source TEXT NOT NULL DEFAULT 'adzuna',    -- Provider: 'adzuna','remoteok','jooble',...
     extracted_at TIMESTAMP DEFAULT NOW(),
     extraction_batch_id UUID DEFAULT uuid_generate_v4(),
     
@@ -116,6 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_raw_jobs_extracted_at ON raw.jobs(extracted_at);
 CREATE INDEX IF NOT EXISTS idx_raw_jobs_search_role ON raw.jobs(search_role);
 CREATE INDEX IF NOT EXISTS idx_raw_jobs_country ON raw.jobs(country_code);
 CREATE INDEX IF NOT EXISTS idx_raw_jobs_batch ON raw.jobs(extraction_batch_id);
+CREATE INDEX IF NOT EXISTS idx_raw_jobs_source ON raw.jobs(source);
 
 -- ============================================================
 -- STAGING LAYER - Cleaned & Normalized
@@ -161,7 +165,8 @@ CREATE TABLE IF NOT EXISTS staging.stg_jobs (
     
     -- Source tracking
     raw_job_id INTEGER REFERENCES raw.jobs(id),
-    
+    source TEXT NOT NULL DEFAULT 'adzuna',    -- Provider this job came from
+
     CONSTRAINT stg_jobs_unique UNIQUE (job_platform_id, country_code)
 );
 
@@ -170,6 +175,7 @@ CREATE INDEX IF NOT EXISTS idx_stg_jobs_search_role ON staging.stg_jobs(search_r
 CREATE INDEX IF NOT EXISTS idx_stg_jobs_country ON staging.stg_jobs(country_code);
 CREATE INDEX IF NOT EXISTS idx_stg_jobs_company ON staging.stg_jobs(company_name);
 CREATE INDEX IF NOT EXISTS idx_stg_jobs_posted_at ON staging.stg_jobs(job_posted_at);
+CREATE INDEX IF NOT EXISTS idx_stg_jobs_source ON staging.stg_jobs(source);
 
 -- Skills extracted from job descriptions
 CREATE TABLE IF NOT EXISTS staging.stg_job_skills (
@@ -378,6 +384,8 @@ BEGIN
         WHEN 'sg' THEN 'SGD'
         WHEN 'za' THEN 'ZAR'
         WHEN 'nz' THEN 'NZD'
+        WHEN 'pk' THEN 'PKR'
+        WHEN 'remote' THEN 'USD'
         ELSE 'USD'
     END;
 END;

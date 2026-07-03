@@ -327,28 +327,85 @@ def get_or_create_skill(cursor, skill_name: str, category: str, subcategory: str
     return cursor.fetchone()[0]
 
 
-def parse_raw_job(raw_data: dict, raw_job_id: int, search_role: str, country_code: str) -> dict:
+def _parse_datetime(value):
+    """Coerce an ISO string / datetime / None into a datetime (or None)."""
+    if value is None or value == '':
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_normalized_job(raw_data: dict, raw_job_id: int, search_role: str,
+                         country_code: str, source: str, job_platform_id: str) -> dict:
+    """Parse a job stored by the multi-source connectors.
+
+    These land in raw.jobs with a `_normalized` envelope already in the exact
+    staging shape (see etl/connectors/base.NormalizedJob), so this is a
+    straight pass-through — no source-specific logic needed here.
+    """
+    n = raw_data.get('_normalized', {})
+    return {
+        'job_platform_id': job_platform_id or n.get('job_platform_id') or f"{source}:{n.get('external_id', '')}",
+        'search_role': search_role,
+        'country_code': country_code,
+        'title': n.get('title', ''),
+        'company_name': n.get('company_name', ''),
+        'description': n.get('description', ''),
+        'location_display': n.get('location_display', ''),
+        'location_areas': n.get('location_areas', []) or [],
+        'category_tag': n.get('category_tag', ''),
+        'category_label': n.get('category_label', ''),
+        'salary_min': n.get('salary_min'),
+        'salary_max': n.get('salary_max'),
+        'salary_is_predicted': bool(n.get('salary_is_predicted', False)),
+        'salary_currency': n.get('salary_currency', 'USD'),
+        'contract_type': n.get('contract_type', ''),
+        'contract_time': n.get('contract_time', ''),
+        'redirect_url': n.get('redirect_url', ''),
+        'job_posted_at': _parse_datetime(n.get('job_posted_at')),
+        'raw_job_id': raw_job_id,
+        'source': source,
+    }
+
+
+def parse_raw_job(raw_data: dict, raw_job_id: int, search_role: str, country_code: str,
+                  source: str = 'adzuna', job_platform_id: str = None) -> dict:
     """
     Parse raw job JSON into cleaned staging format.
-    
+
+    Dispatches by source: connector-ingested jobs carry a `_normalized`
+    envelope and pass straight through; everything else is treated as the
+    Adzuna API shape (original behavior, unchanged).
+
     Args:
-        raw_data: Raw JSON from Adzuna API
+        raw_data: Raw JSON (Adzuna response or connector envelope)
         raw_job_id: ID from raw.jobs table
         search_role: Role that was searched
         country_code: Country code
-    
+        source: Provider name ('adzuna' by default)
+        job_platform_id: Namespaced id from raw.jobs (used for non-Adzuna sources)
+
     Returns:
         Dict with cleaned job data
     """
+    # Multi-source fast path: already normalized by the connector.
+    if isinstance(raw_data, dict) and raw_data.get('_normalized'):
+        return parse_normalized_job(raw_data, raw_job_id, search_role, country_code,
+                                    source, job_platform_id)
+
     # Currency mapping by country
     currency_map = {
         'gb': 'GBP', 'us': 'USD', 'au': 'AUD', 'ca': 'CAD',
         'de': 'EUR', 'fr': 'EUR', 'it': 'EUR', 'nl': 'EUR',
         'at': 'EUR', 'be': 'EUR', 'in': 'INR', 'br': 'BRL',
         'mx': 'MXN', 'pl': 'PLN', 'ru': 'RUB', 'sg': 'SGD',
-        'za': 'ZAR', 'nz': 'NZD'
+        'za': 'ZAR', 'nz': 'NZD', 'pk': 'PKR', 'remote': 'USD'
     }
-    
+
     # Parse location
     location = raw_data.get('location', {})
     location_areas = location.get('area', []) if isinstance(location, dict) else []
@@ -396,7 +453,8 @@ def parse_raw_job(raw_data: dict, raw_job_id: int, search_role: str, country_cod
         'contract_time': raw_data.get('contract_time', ''),
         'redirect_url': raw_data.get('redirect_url', ''),
         'job_posted_at': job_posted_at,
-        'raw_job_id': raw_job_id
+        'raw_job_id': raw_job_id,
+        'source': source
     }
 
 
@@ -413,7 +471,8 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
     """
     cursor.execute(
         """
-        SELECT r.id, r.job_platform_id, r.search_role, r.country_code, r.raw_data, r.extracted_at
+        SELECT r.id, r.job_platform_id, r.search_role, r.country_code, r.raw_data, r.extracted_at,
+               COALESCE(r.source, 'adzuna') AS source
         FROM raw.jobs r
         LEFT JOIN staging.stg_jobs s ON r.id = s.raw_job_id
         WHERE s.job_id IS NULL
@@ -422,8 +481,8 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
         """,
         (batch_size,)
     )
-    
-    columns = ['id', 'job_platform_id', 'search_role', 'country_code', 'raw_data', 'extracted_at']
+
+    columns = ['id', 'job_platform_id', 'search_role', 'country_code', 'raw_data', 'extracted_at', 'source']
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
@@ -482,14 +541,16 @@ def transform_and_load(
                 if isinstance(raw_data, str):
                     raw_data = json.loads(raw_data)
                 
-                # Parse raw job into staging format
+                # Parse raw job into staging format (dispatches on source)
                 parsed_job = parse_raw_job(
                     raw_data,
                     raw_job['id'],
                     raw_job['search_role'],
-                    raw_job['country_code']
+                    raw_job['country_code'],
+                    source=raw_job.get('source', 'adzuna'),
+                    job_platform_id=raw_job.get('job_platform_id')
                 )
-                
+
                 # Insert into stg_jobs
                 cursor.execute(
                     """
@@ -498,14 +559,15 @@ def transform_and_load(
                         description, location_display, location_areas, category_tag,
                         category_label, salary_min, salary_max, salary_is_predicted,
                         salary_currency, contract_type, contract_time, redirect_url,
-                        job_posted_at, extracted_at, raw_job_id
+                        job_posted_at, extracted_at, raw_job_id, source
                     ) VALUES (
                         %(job_platform_id)s, %(search_role)s, %(country_code)s, %(title)s,
                         %(company_name)s, %(description)s, %(location_display)s,
                         %(location_areas)s, %(category_tag)s, %(category_label)s,
                         %(salary_min)s, %(salary_max)s, %(salary_is_predicted)s,
                         %(salary_currency)s, %(contract_type)s, %(contract_time)s,
-                        %(redirect_url)s, %(job_posted_at)s, %(extracted_at)s, %(raw_job_id)s
+                        %(redirect_url)s, %(job_posted_at)s, %(extracted_at)s, %(raw_job_id)s,
+                        %(source)s
                     )
                     ON CONFLICT (job_platform_id, country_code) DO UPDATE SET
                         processed_at = NOW()

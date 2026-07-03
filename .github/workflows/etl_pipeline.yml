@@ -34,6 +34,11 @@ env:
   SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
   SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
   SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
+  # Multi-source ingestion keys (optional — each source auto-skips if blank)
+  JOOBLE_API_KEY: ${{ secrets.JOOBLE_API_KEY }}
+  THEMUSE_API_KEY: ${{ secrets.THEMUSE_API_KEY }}
+  USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
+  USAJOBS_USER_AGENT: ${{ secrets.USAJOBS_USER_AGENT }}
 
 jobs:
   extract:
@@ -56,7 +61,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r etl/requirements.txt
       
-      - name: Run extraction
+      - name: Run extraction (Adzuna)
         run: |
           cd etl
           if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
@@ -65,13 +70,24 @@ jobs:
             # Extract jobs from last 60 days only
             python extractor.py --days 60 --pages 3 --delay 1.5
           fi
-      
+
+      - name: Run multi-source ingestion (RemoteOK, WWR, Jooble, ...)
+        run: |
+          cd etl
+          if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
+            python ingest_sources.py --test
+          else
+            python ingest_sources.py
+          fi
+
       - name: Upload extraction log
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: extraction-log
-          path: etl/extraction.log
+          path: |
+            etl/extraction.log
+            etl/ingestion.log
           retention-days: 7
 
   transform:

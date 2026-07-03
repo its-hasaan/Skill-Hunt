@@ -20,7 +20,8 @@ COUNTRY_NAMES = {
     'ca': 'Canada', 'de': 'Germany', 'fr': 'France',
     'in': 'India', 'it': 'Italy', 'mx': 'Mexico',
     'nl': 'Netherlands', 'nz': 'New Zealand', 'pl': 'Poland',
-    'sg': 'Singapore', 'za': 'South Africa'
+    'sg': 'Singapore', 'za': 'South Africa',
+    'pk': 'Pakistan', 'remote': 'Remote / Worldwide'
 }
 
 

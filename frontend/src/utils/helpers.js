@@ -19,6 +19,8 @@ export const COUNTRY_INFO = {
   pl: { name: 'Poland', flag: '🇵🇱' },
   sg: { name: 'Singapore', flag: '🇸🇬' },
   za: { name: 'South Africa', flag: '🇿🇦' },
+  pk: { name: 'Pakistan', flag: '🇵🇰' },
+  remote: { name: 'Remote / Worldwide', flag: '🌐' },
 }
 
 export function getCountryName(code) {

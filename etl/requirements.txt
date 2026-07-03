@@ -5,6 +5,11 @@
 python-dotenv>=1.0.0
 requests>=2.31.0
 
+# Multi-source ingestion connectors (ingest_sources.py)
+feedparser>=6.0.11        # We Work Remotely RSS feeds
+beautifulsoup4>=4.12.0    # HTML -> text cleaning + generic scraper
+lxml>=5.0.0               # fast parser backend for bs4/feedparser
+
 # Database
 psycopg2-binary>=2.9.9
 

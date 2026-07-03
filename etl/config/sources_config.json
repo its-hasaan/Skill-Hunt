@@ -1,0 +1,101 @@
+{
+  "_comment": "Config for the multi-source ingestion bots (ingest_sources.py). Roles are inherited from extraction_config.json unless overridden here. Toggle sources with `enabled`. Sources with `requires_key` are auto-skipped (with a log line) until their env var is set.",
+
+  "roles_from": "extraction_config.json",
+  "target_local_countries": ["pk", "in"],
+
+  "sources": {
+    "remoteok": {
+      "enabled": true,
+      "connector": "remoteok",
+      "requires_key": false,
+      "max_jobs": 500,
+      "delay_seconds": 2
+    },
+    "weworkremotely": {
+      "enabled": true,
+      "connector": "weworkremotely",
+      "requires_key": false,
+      "feeds": [
+        "remote-programming-jobs",
+        "remote-back-end-programming-jobs",
+        "remote-front-end-programming-jobs",
+        "remote-full-stack-programming-jobs",
+        "remote-devops-sysadmin-jobs"
+      ],
+      "delay_seconds": 2
+    },
+    "arbeitnow": {
+      "enabled": true,
+      "connector": "arbeitnow",
+      "requires_key": false,
+      "max_pages": 10,
+      "remote_only": true,
+      "delay_seconds": 2
+    },
+    "jobicy": {
+      "enabled": true,
+      "connector": "jobicy",
+      "requires_key": false,
+      "count": 50,
+      "geos": ["anywhere", "apac"],
+      "delay_seconds": 2
+    },
+    "himalayas": {
+      "enabled": true,
+      "connector": "himalayas",
+      "requires_key": false,
+      "max_records": 200,
+      "delay_seconds": 2
+    },
+    "jooble": {
+      "enabled": true,
+      "connector": "jooble",
+      "requires_key": true,
+      "env_key": "JOOBLE_API_KEY",
+      "locations": ["Pakistan", "India"],
+      "pages_per_query": 3,
+      "delay_seconds": 2
+    },
+    "themuse": {
+      "enabled": true,
+      "connector": "themuse",
+      "requires_key": false,
+      "env_key": "THEMUSE_API_KEY",
+      "max_pages": 15,
+      "categories": ["Software Engineering", "Data Science", "Data and Analytics", "IT"],
+      "locations": ["Flexible / Remote", "India"],
+      "delay_seconds": 2
+    },
+    "usajobs": {
+      "enabled": false,
+      "connector": "usajobs",
+      "requires_key": true,
+      "env_key": "USAJOBS_API_KEY",
+      "env_ua": "USAJOBS_USER_AGENT",
+      "results_per_page": 50,
+      "max_pages": 3,
+      "delay_seconds": 2
+    },
+
+    "_example_local_scraper": {
+      "enabled": false,
+      "connector": "generic_scraper",
+      "requires_key": false,
+      "source_name": "example_board",
+      "base_url": "https://example-jobboard.com",
+      "list_url": "https://example-jobboard.com/jobs?q={role}&page={page}",
+      "country_code": "pk",
+      "max_pages": 3,
+      "delay_seconds": 4,
+      "selectors": {
+        "item": "div.job-card",
+        "title": "h2.job-title",
+        "company": ".company-name",
+        "location": ".job-location",
+        "link": "a.job-link",
+        "description": ".job-desc"
+      }
+    }
+  }
+}
