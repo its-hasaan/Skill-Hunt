@@ -36,6 +36,16 @@ export function useSkillDemand(role, country = null, limit = 30) {
   })
 }
 
+export function useSkillTrend(skills, role = null, country = null, months = 6) {
+  return useQuery({
+    queryKey: ['skills', 'trend', skills, role, country, months],
+    queryFn: () => skillsApi.getTrend(skills, role, country, months),
+    enabled: skills.length > 0,
+    // Hold the previous chart while refetching — no skeleton flash.
+    placeholderData: (prev) => prev,
+  })
+}
+
 export function useSkillCooccurrence(role, skill = null, minCount = 5) {
   return useQuery({
     queryKey: ['skills', 'cooccurrence', role, skill, minCount],

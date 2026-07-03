@@ -71,6 +71,7 @@ Job Script aggregates job postings from the **Adzuna API plus a fleet of multi-s
 
 ### 🔍 **Skills Analysis**
 - **Skill Demand Tracking**: Monitor demand for specific skills across roles and countries
+- **Demand Over Time**: Track up to 5 skills at once on a line chart — % of postings mentioning each skill by month, so you can see a skill trending up or down (backed by `staging.stg_jobs` posting dates, independent of the archive snapshot cadence)
 - **Co-occurrence Analysis**: Discover skill combinations that appear together in job postings (with Jaccard similarity)
 - **Skill Connections**: Explore paired skills for a selected skill
 - **Geographic Distribution**: Compare skill popularity across different countries
@@ -397,6 +398,7 @@ Analytics endpoints are open. **Personalized endpoints (`/user/*`) require a Sup
 |--------|----------|-------------|
 | GET | `/skills/demand` | Skill demand by role (optional country) |
 | GET | `/skills/demand/all` | All skills demand |
+| GET | `/skills/trend` | **Demand over time** — % of postings mentioning each skill, by month posted, for up to 5 skills (`skills`, optional `role`/`country`, `months`) |
 | GET | `/skills/cooccurrence` | Skill co-occurrence pairs |
 | GET | `/skills/network` | Skill network graph data (D3 nodes/links) |
 | GET | `/skills/by-country` | Compare a skill across countries |
@@ -491,6 +493,34 @@ curl "http://localhost:8000/api/v1/skills/demand?role=Data%20Engineer&limit=10"
 }
 ```
 
+#### Get Skill Demand Trend
+```bash
+curl "http://localhost:8000/api/v1/skills/trend?skills=Python,SQL,AWS&role=Data%20Engineer&months=6"
+```
+
+**Response** (`SkillTrendResponse`) — one point per month per skill, as a share of that month's postings (comparable across months even when extraction volume varies; raw counts aren't):
+```json
+{
+  "role": "Data Engineer",
+  "country": null,
+  "months": 6,
+  "interval": "month",
+  "periods": [
+    { "period": "2025-11-01", "total_jobs": 72 },
+    { "period": "2025-12-01", "total_jobs": 460 }
+  ],
+  "series": [
+    {
+      "skill_name": "Python",
+      "points": [
+        { "period": "2025-11-01", "job_count": 7, "demand_percentage": 9.72 },
+        { "period": "2025-12-01", "job_count": 81, "demand_percentage": 17.61 }
+      ]
+    }
+  ]
+}
+```
+
 #### Analyze a Resume (Gap Analysis)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/resume/analyze" \
@@ -537,6 +567,7 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
 
 #### 4. **Archive & Notify**
 - `archive` job (scheduled runs only) calls the `archive_skill_demand()` Postgres function to snapshot demand into `archive.skill_demand_history`.
+- ⚠️ **One-time fix required**: this function originally read from an always-empty placeholder table, so the archive was silently never populated. Run [`database/migrations/003_fix_archive_snapshots.sql`](database/migrations/003_fix_archive_snapshots.sql) once (Supabase SQL Editor) to repoint it at the real mart and take the first snapshot — it's idempotent and safe alongside migrations 001/002 if you're setting those up too. Not required for the `/skills/trend` chart, which reads live posting data instead; it only matters if you want the historical archive itself to start accumulating.
 - `notify` job reports the status of all jobs.
 
 #### 5. **Serve**
@@ -620,6 +651,8 @@ Released under the **MIT License**. (No `LICENSE` file is currently committed �
 - [x] User authentication and personalized dashboards (Supabase Auth + Google OAuth, saved searches, resume history) ✅
 - [x] Expanded data sources beyond Adzuna (multi-source ingestion bots — RemoteOK, WWR, Jooble PK/IN, and more) ✅
 - [x] Resume skill gap analysis & role matching ✅
+- [x] Skill demand trend over time (`/skills/trend`, multi-series line chart) ✅
+- [x] CVD-validated, theme-aware chart palette with fixed category colors across the app ✅
 - [ ] Email alerts for saved searches (the `saved_searches` table is the subscription list)
 - [ ] API rate limiting (per-user, using the verified identity)
 - [ ] Response-level caching (`CACHE_TTL_SECONDS` is already wired for it)

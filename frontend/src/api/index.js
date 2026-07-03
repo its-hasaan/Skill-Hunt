@@ -54,8 +54,15 @@ export const skillsApi = {
     return api.get('/skills/demand', { params })
   },
 
-  getAllDemand: (limit = 500) => 
+  getAllDemand: (limit = 500) =>
     api.get('/skills/demand/all', { params: { limit } }),
+
+  getTrend: (skills, role = null, country = null, months = 6) => {
+    const params = { skills: skills.join(','), months }
+    if (role) params.role = role
+    if (country) params.country = country
+    return api.get('/skills/trend', { params })
+  },
 
   getCooccurrence: (role, skill = null, minCount = 5, limit = 100) => {
     const params = { role, min_count: minCount, limit }

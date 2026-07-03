@@ -10,6 +10,7 @@ import logging
 from ..database import Database, get_db
 from ..models.schemas import (
     SkillDemand, SkillDemandResponse,
+    SkillTrendPoint, SkillTrendSeries, TrendPeriod, SkillTrendResponse,
     SkillCooccurrence, SkillNetworkResponse, SkillConnection,
     SkillByCountry, GlobalComparisonResponse,
     SkillJobsResponse, JobPosting, HighlightSkill
@@ -93,6 +94,110 @@ async def get_all_skill_demand(
     """
     rows = await db.fetch_all(query, limit)
     return [SkillDemand(**row) for row in rows]
+
+
+# ============================================
+# Skill Demand Trend (over time)
+# ============================================
+
+@router.get("/trend", response_model=SkillTrendResponse)
+async def get_skill_trend(
+    skills: str = Query(..., description="Comma-separated skill names, max 5 (e.g. 'Python,SQL,AWS')"),
+    role: Optional[str] = Query(None, description="Job role to filter by (optional)"),
+    country: Optional[str] = Query(None, description="Country code (e.g., 'gb', 'us')"),
+    months: int = Query(6, ge=2, le=24, description="How many months of history"),
+    db: Database = Depends(get_db)
+):
+    """
+    Skill demand over time: for each month (bucketed by when jobs were
+    POSTED), the share of postings mentioning each skill.
+
+    Notes:
+    - The metric is `demand_percentage` (share of that month's postings),
+      not raw counts — extraction volume varies between runs, so shares are
+      comparable across months while counts are not. `total_jobs` per period
+      is returned so the UI can flag low-sample months.
+    - The window is anchored to the newest posting in the filtered data (not
+      today), so the chart stays useful even when the pipeline lags.
+    """
+    skill_list = [s.strip() for s in skills.split(",") if s.strip()]
+    if not skill_list:
+        raise HTTPException(status_code=400, detail="Provide at least one skill")
+    if len(skill_list) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 skills per request")
+
+    # Per-month totals (the denominator), anchored to the newest posting.
+    periods_query = """
+        WITH bounds AS (
+            SELECT date_trunc('month', MAX(job_posted_at)) AS anchor
+            FROM staging.stg_jobs
+            WHERE job_posted_at IS NOT NULL
+              AND ($2::text IS NULL OR search_role = $2)
+              AND ($3::text IS NULL OR country_code = $3)
+        )
+        SELECT date_trunc('month', j.job_posted_at)::date AS period,
+               COUNT(DISTINCT j.job_id) AS total_jobs
+        FROM staging.stg_jobs j, bounds b
+        WHERE j.job_posted_at IS NOT NULL
+          AND j.job_posted_at >= b.anchor - (($1::int - 1) * INTERVAL '1 month')
+          AND ($2::text IS NULL OR j.search_role = $2)
+          AND ($3::text IS NULL OR j.country_code = $3)
+        GROUP BY 1
+        ORDER BY 1
+    """
+    period_rows = await db.fetch_all(periods_query, months, role, country)
+    if not period_rows:
+        return SkillTrendResponse(role=role, country=country, months=months,
+                                  periods=[], series=[])
+
+    # Per-skill counts per month over the same window.
+    skill_query = """
+        WITH bounds AS (
+            SELECT date_trunc('month', MAX(job_posted_at)) AS anchor
+            FROM staging.stg_jobs
+            WHERE job_posted_at IS NOT NULL
+              AND ($3::text IS NULL OR search_role = $3)
+              AND ($4::text IS NULL OR country_code = $4)
+        )
+        SELECT date_trunc('month', j.job_posted_at)::date AS period,
+               js.skill_name,
+               COUNT(DISTINCT js.job_id) AS job_count
+        FROM staging.stg_job_skills js
+        JOIN staging.stg_jobs j ON j.job_id = js.job_id
+        CROSS JOIN bounds b
+        WHERE js.skill_name = ANY($1::text[])
+          AND j.job_posted_at IS NOT NULL
+          AND j.job_posted_at >= b.anchor - (($2::int - 1) * INTERVAL '1 month')
+          AND ($3::text IS NULL OR j.search_role = $3)
+          AND ($4::text IS NULL OR j.country_code = $4)
+        GROUP BY 1, 2
+    """
+    skill_rows = await db.fetch_all(skill_query, skill_list, months, role, country)
+
+    totals = {str(r["period"]): r["total_jobs"] for r in period_rows}
+    counts = {(str(r["period"]), r["skill_name"]): r["job_count"] for r in skill_rows}
+    ordered_periods = [str(r["period"]) for r in period_rows]
+
+    series = []
+    for skill in skill_list:
+        points = []
+        for period in ordered_periods:
+            job_count = counts.get((period, skill), 0)
+            total = totals.get(period, 0)
+            points.append(SkillTrendPoint(
+                period=period,
+                job_count=job_count,
+                demand_percentage=round(job_count / total * 100, 2) if total else 0.0,
+            ))
+        series.append(SkillTrendSeries(skill_name=skill, points=points))
+
+    return SkillTrendResponse(
+        role=role,
+        country=country,
+        months=months,
+        periods=[TrendPeriod(period=str(r["period"]), total_jobs=r["total_jobs"]) for r in period_rows],
+        series=series,
+    )
 
 
 # ============================================

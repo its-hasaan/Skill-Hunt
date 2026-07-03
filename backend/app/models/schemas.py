@@ -52,6 +52,39 @@ class SkillDemandResponse(BaseModel):
 
 
 # ============================================
+# Skill Trend Models
+# ============================================
+
+class SkillTrendPoint(BaseModel):
+    """One skill's demand in one time period."""
+    period: str                      # ISO month start, e.g. '2026-04-01'
+    job_count: int                   # postings that period mentioning the skill
+    demand_percentage: float         # job_count / total postings that period
+
+
+class SkillTrendSeries(BaseModel):
+    """One skill's demand across all periods (zero-filled)."""
+    skill_name: str
+    points: List[SkillTrendPoint]
+
+
+class TrendPeriod(BaseModel):
+    """A time bucket with its total posting volume (the % denominator)."""
+    period: str
+    total_jobs: int
+
+
+class SkillTrendResponse(BaseModel):
+    """Demand-over-time for up to 5 skills, bucketed by month posted."""
+    role: Optional[str] = None
+    country: Optional[str] = None
+    months: int
+    interval: str = "month"
+    periods: List[TrendPeriod]
+    series: List[SkillTrendSeries]
+
+
+# ============================================
 # Skill Co-occurrence Models
 # ============================================
 

@@ -170,11 +170,11 @@ CREATE TABLE staging.stg_job_skills (
 > Note: this table stores a `mention_count`, not extraction-method/confidence metadata. Confidence lives only in the in-memory extractor; it is not persisted here.
 
 #### Marts tables
-`schema.sql` pre-creates `marts.skill_demand`, `marts.skill_cooccurrence`, `marts.company_leaderboard`, `marts.role_similarity`, and `marts.salary_by_skill`. In production these are (re)built by dbt as `table` materializations in the `marts` schema.
+`schema.sql` pre-creates `marts.skill_demand`, `marts.skill_cooccurrence`, `marts.company_leaderboard`, `marts.role_similarity`, and `marts.salary_by_skill` as empty placeholders. **dbt does not actually materialize into `marts`** — its `generate_schema_name` macro (implicit default) prefixes the custom schema onto the target, so `mart_skill_demand.sql` (which sets `schema='marts'`) lands in **`staging_marts.mart_skill_demand`**, the table every API endpoint queries. The `marts.*` tables from `schema.sql` stay permanently empty; they're a pre-CI vestige, not a bug that affects the app.
 
 #### Archive & functions
-- `archive.skill_demand_history` — dated snapshots of demand.
-- `archive_skill_demand()` — plpgsql function that snapshots `marts.skill_demand` into the archive (invoked by the CI `archive` job).
+- `archive.skill_demand_history` — dated snapshots of demand, meant to power skill-demand-over-time (§4.4 `/skills/trend` also serves this from `staging.stg_jobs` directly, without depending on snapshot cadence).
+- `archive_skill_demand()` — plpgsql function that snapshots the mart into the archive (invoked by the CI `archive` job). **Fixed in `database/migrations/003_fix_archive_snapshots.sql`**: the original definition read from `marts.skill_demand` (always empty per above), so every scheduled archive run silently wrote 0 rows and `archive.skill_demand_history` was empty in practice. The fix repoints it at `staging_marts.mart_skill_demand`, guards for the mart not existing yet, is idempotent per day, and the migration takes the first real snapshot immediately.
 - `get_currency_by_country(country TEXT)` — maps a country code to its currency.
 
 #### Resume Analyzer tables (`database/Resume_upload.sql`)
@@ -395,7 +395,7 @@ Routers live in `backend/app/routers/` and are mounted under `settings.api_prefi
 
 | Router | Prefix | Endpoints |
 |--------|--------|-----------|
-| skills | `/skills` | `demand`, `demand/all`, `jobs`, `cooccurrence`, `network`, `by-country`, `categories`, `list` |
+| skills | `/skills` | `demand`, `demand/all`, `trend`, `jobs`, `cooccurrence`, `network`, `by-country`, `categories`, `list` |
 | salary | `/salary` | `by-skill`, `top-paying-skills`, `premium-skills`, `range` |
 | companies | `/companies` | `leaderboard`, `contract-types`, `search` |
 | career | `/career` | `role-similarity`, `transitions/{current_role}`, `similarity-matrix`, `skill-gap` |
@@ -417,6 +417,8 @@ async def get_skill_demand(
 ```
 
 **Skill drill-down (`GET /skills/jobs`).** Turns an aggregate skill count into the underlying postings. It joins `staging.stg_jobs` × `staging.stg_job_skills` to page through every job where the skill was detected (for a role, optionally a country), and returns each posting's metadata + full `description`. Alongside the jobs it returns `highlight_skills` — the role's top skills from `mart_skill_demand`, each with its `dim_skills` aliases and an `is_selected` flag — so the frontend can highlight all top skills in each description and colour the clicked one distinctly. No schema or pipeline changes were needed: the job text and job↔skill links already exist in `staging`.
+
+**Demand trend (`GET /skills/trend`).** Deliberately built on `staging.stg_jobs`/`staging.stg_job_skills` directly rather than `archive.skill_demand_history` — the archive only gets one row per skill per calendar day the CI `archive` job runs (bi-weekly, and was silently broken until migration 003; see §2.2), which is too sparse and fragile for a live chart. The endpoint instead buckets postings by `date_trunc('month', job_posted_at)` for up to 5 comma-separated skill names, computing `demand_percentage = jobs_with_skill / total_jobs_that_month` per bucket — a share, not a raw count, because extraction volume varies run-to-run and only the share is comparable across months. The window is anchored to `MAX(job_posted_at)` in the filtered set (not `NOW()`), so the chart stays meaningful even when the pipeline is behind schedule. Two queries: one for the per-month `total_jobs` denominator, one for per-skill-per-month counts (`ANY($skills)` + `GROUP BY`), joined in Python into zero-filled series so every skill has a point for every period even with no mentions that month.
 
 ### 4.5 Pydantic Schemas (`backend/app/models/schemas.py`)
 
@@ -566,7 +568,7 @@ Grouped exports: `statsApi`, `skillsApi`, `companiesApi`, `salaryApi`, `careerAp
 
 ### 5.4 Data Fetching (`src/hooks/useData.js`)
 
-Most endpoints are wrapped in React Query hooks (`useSummaryStats`, `useFilterOptions`, `useSkillDemand`, `useSkillCooccurrence`, `useCompanyLeaderboard`, `useSalaryBySkill`, `useRoleSimilarity`, `useSkillGap`, …). The global `QueryClient` (in `main.jsx`) sets `staleTime` 5 min, `cacheTime` 30 min, `refetchOnWindowFocus: false`, `retry: 2`. `ResumePage` calls `resumeApi` directly rather than through a hook.
+Most endpoints are wrapped in React Query hooks (`useSummaryStats`, `useFilterOptions`, `useSkillDemand`, `useSkillTrend`, `useSkillCooccurrence`, `useCompanyLeaderboard`, `useSalaryBySkill`, `useRoleSimilarity`, `useSkillGap`, …). The global `QueryClient` (in `main.jsx`) sets `staleTime` 5 min, `cacheTime` 30 min, `refetchOnWindowFocus: false`, `retry: 2`. `useSkillTrend` additionally sets `placeholderData: (prev) => prev` so the line chart holds its previous render (no skeleton flash) while refetching after a skill is added/removed. `ResumePage` calls `resumeApi` directly rather than through a hook.
 
 ### 5.5 Theming (`src/context/ThemeContext.jsx`)
 
@@ -574,8 +576,22 @@ Most endpoints are wrapped in React Query hooks (`useSummaryStats`, `useFilterOp
 
 ### 5.6 Charts
 
-- **Recharts** (`charts/Charts.jsx`): `SkillBarChart`, `CategoryBarChart`, `CategoryPieChart`, `SalaryPremiumChart`, `SalaryComparisonChart`, `CompanyBarChart`, `ContractTypePieChart`, `CountryComparisonChart`, with a `useChartColors` hook that adapts to the theme.
+- **Recharts** (`charts/Charts.jsx`): `SkillBarChart`, `CategoryBarChart`, `CategoryPieChart`, `SalaryPremiumChart`, `SalaryComparisonChart`, `CompanyBarChart`, `ContractTypePieChart`, `CountryComparisonChart`, `SkillTrendChart`, with a `useChartColors` hook that adapts to the theme.
 - **D3** (named exports): `SimilarityHeatmap` (`Heatmap.jsx`) and `SkillNetworkGraph` (`NetworkGraph.jsx`) — force-directed graph and RdYlGn heatmap with zoom, drag, tooltips, and legends. These components exist in the codebase; the Skills and Career pages currently render their relationship data as tables/lists.
+
+#### Chart design system (`utils/helpers.js` + `charts/Charts.jsx`)
+
+All charts were rebuilt on a CVD-validated, theme-aware palette (light/dark hue sets chosen to clear a ≥12 ΔE colorblind-separation target and a lightness/chroma band against each theme's card surface — validated with the Claude Code `dataviz` skill's palette script, not eyeballed):
+
+- **`SERIES_COLORS.light` / `.dark`** — 8 fixed categorical hue slots (blue, aqua, yellow, green, violet, red, magenta, orange). `getSeriesColor(index, isDark)` reads by slot; **slot order is the colorblind-safety mechanism** and is never reordered or extended — a 9th series folds into `SERIES_NEUTRAL` gray rather than generating a new hue.
+- **`CATEGORY_SLOTS`** — a fixed skill-category → slot map covering all ~26 real taxonomy categories (grouped into 8 semantic families, e.g. `Data Warehouse`/`Database`/`Data Platform` all → the "yellow" storage slot), so a category keeps the *same* color on every chart, filter, and page — color follows the entity, never its current rank in a sorted list. `getCategoryColor(category, isDark)` looks it up; anything not in the map renders neutral gray (visibly "uncategorized") instead of silently colliding with a real slot.
+- **Shared `ChartTooltip`** — one tooltip implementation used by every chart via a `rows(payload, label)` render-prop, so every chart gets a consistent color-chip-per-row, formatted values, and a themed border/background instead of each chart hand-rolling `formatter`/`contentStyle`.
+- **Diverging measures** (salary premium: above/below market) use the blue↔red diverging pair with a `ReferenceLine` at zero, not a single hue — the sign is the point.
+- **Bar charts**: solid hairline grids (never dashed), rounded data-ends, axis-label truncation (`truncate(n)`) with the full name still in the tooltip, and a `ReferenceLine` for "market average" on the salary-comparison chart so raw bars read as an instant comparison.
+- **Pie/donut charts**: fold anything past the top 6 slices into an "Other" gray wedge (a chart can't carry more than ~6-7 color classes and stay readable), a center total label, and a legend with computed shares — no per-slice text labels cluttering the ring.
+- **`SkillTrendChart`** (new): multi-series line chart for `/skills/trend`. Takes a `colorMap: {skill_name: slotIndex}` from the caller rather than assigning colors by array position, so a skill keeps its line color when another tracked skill is removed (the anti-pattern this avoids: "recolor on filter"). Small-sample months (< 200 postings) are flagged in the tooltip rather than hidden, so a spike isn't misread as a demand shift when it's really a thin month of data.
+
+**`SkillsPage.jsx`** owns the trend UI: a chip row (add up to 5 skills via a `+ Add skill` select, remove via the chip's ×) backed by a `useRef` slot map that assigns each skill the next free color slot and never reassigns on removal; a 6m/12m/24m range toggle; and it auto-seeds the chart with the current role's top 3 skills the first time a role's data loads.
 
 ---
 
