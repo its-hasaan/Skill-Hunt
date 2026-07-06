@@ -56,6 +56,12 @@ class JoobleConnector(BaseConnector):
         self.roles: List[str] = config.get("roles", [])
         self.locations: List[str] = config.get("locations", ["Pakistan", "India"])
         self.pages_per_query = int(config.get("pages_per_query", 3))
+        # Safety net for Jooble's free-plan request cap (500/period as of the
+        # account's signup confirmation). Default leaves headroom below 500
+        # for manual/test runs made outside the scheduled job. The connector
+        # stops issuing new searches once hit rather than erroring.
+        self.max_requests_per_run = int(config.get("max_requests_per_run", 450))
+        self._requests_made = 0
 
     def is_available(self) -> bool:
         if not self.api_key:
@@ -73,6 +79,11 @@ class JoobleConnector(BaseConnector):
                 headers={"Content-Type": "application/json"},
                 timeout=getattr(self.session, "request_timeout", 30),
             )
+            self._requests_made += 1
+            if resp.status_code == 429:
+                self.log.warning("jooble: HTTP 429 (rate/quota limited) — stopping this run early")
+                self._requests_made = self.max_requests_per_run  # trip the budget guard
+                return {}
             if resp.status_code != 200:
                 self.log.warning("jooble: POST -> HTTP %s", resp.status_code)
                 return {}
@@ -84,11 +95,27 @@ class JoobleConnector(BaseConnector):
     def fetch(self) -> Iterator[NormalizedJob]:
         total = 0
         seen: set[str] = set()
+        budget_hit = False
 
         for location in self.locations:
+            if budget_hit:
+                break
             country, currency = _LOCATION_MAP.get(location.lower(), ("remote", "USD"))
             for role in self.roles:
+                if budget_hit:
+                    break
                 for page in range(1, self.pages_per_query + 1):
+                    if self._requests_made >= self.max_requests_per_run:
+                        self.log.warning(
+                            "jooble: reached max_requests_per_run (%d) — stopping early. "
+                            "%d jobs collected so far this run. Increase the limit in "
+                            "sources_config.json if your Jooble plan allows more, or "
+                            "reduce roles/locations/pages_per_query.",
+                            self.max_requests_per_run, total,
+                        )
+                        budget_hit = True
+                        break
+
                     payload = self._post({
                         "keywords": role,
                         "location": location,
@@ -133,4 +160,7 @@ class JoobleConnector(BaseConnector):
                         )
                         total += 1
 
-        self.log.info("jooble: yielded %d jobs across %d locations", total, len(self.locations))
+        self.log.info(
+            "jooble: yielded %d jobs across %d locations (%d/%d requests used)",
+            total, len(self.locations), self._requests_made, self.max_requests_per_run,
+        )

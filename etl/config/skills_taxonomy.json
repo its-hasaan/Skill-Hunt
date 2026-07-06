@@ -3428,6 +3428,2481 @@
       "_first_seen": "2026-01-26T23:19:09.331168",
       "_occurrence_count": 3,
       "type": "Tool/Platform"
+    },
+    {
+      "name": "Azure",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:31:35.368324",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "data platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:31:19.689356",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Airservices Australia",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:34:57.874317",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "AWS",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:34:00.000796",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "GCP",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:31:37.000502",
+      "_occurrence_count": 5
+    },
+    {
+      "name": "Google Cloud Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:31:38.832357",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SaaS environment",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:36:27.976886",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Cloudflight",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:36:14.033864",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data & AI Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:37:11.970608",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Amazon",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:34:07.054433",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Databricks platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:38:23.914909",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud platforms",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:32:59.643195",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "After Effects",
+      "category": "Data Visualization",
+      "subcategory": "data visualization tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T21:58:47.058471",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Swap",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:33:28.826986",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Lattice OS",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:35:02.539729",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Analytics Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:34:22.035601",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Mindrift",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:26:02.050018",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CDAI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:15:28.067242",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Analytics",
+      "category": "Big Data",
+      "subcategory": "big data tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:16:18.103383",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "GenAI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:35:47.983877",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "public cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:44:55.498791",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Microsoft Fabric platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:31:46.115581",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Analysis & Decision Support Frame",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:49:30.110248",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Boam AI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:39:25.339580",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Airwallex",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:31:10.038598",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Culture Amp",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:53:54.478958",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Epistemix",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:51:39.656045",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Gen AI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:06:30.741202",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DiDi Global Inc.",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:07:37.333429",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "IQVIA",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:09:14.294875",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "dashboards",
+      "category": "Data Visualization",
+      "subcategory": "data visualization tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:21:52.271733",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "HUB International Canada",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:23:50.473632",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "TripleTen",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:45:17.645787",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "MetBrains",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:19:44.145488",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Power Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:06:06.147034",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Operating system",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:47:13.584956",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Flowserve",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:48:01.629196",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud solutions",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:23:31.806566",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:37:31.577477",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "operating systems",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:41:49.118136",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Community Services Cluster",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:43:39.150271",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Managed Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:06:19.738703",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "MCP services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:50:50.763885",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Construction Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:57:27.732822",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Replica",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:57:59.300119",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud environments",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:33:10.153164",
+      "_occurrence_count": 7
+    },
+    {
+      "name": "Amazon Music",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:03:37.655929",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Adyen",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:25:07.469069",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Meta",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:25:07.469069",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "high-performance platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:08:44.463279",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "core platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:18:10.019326",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SaaS platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:00:15.404346",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Procurify",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:18:09.766367",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DeepL",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:34:37.424166",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Perplexity",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:09:43.987301",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "agentic frameworks",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:20:19.809590",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Azure Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:22:10.446048",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "enterprise data platforms",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:57:04.167155",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Kavak",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:05:00.436060",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "GenAI platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:27:46.832749",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Workflow Data Fabric",
+      "category": "Data Engineering",
+      "subcategory": "data engineering tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:14:10.841064",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Toutiao",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:31:33.700946",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "AWS Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:09:21.855965",
+      "_occurrence_count": 5
+    },
+    {
+      "name": "Amazon Prime Air",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:14:43.533755",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "OCI",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:40:00.237791",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Paysafe",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:51:12.131538",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DevOps Toolchains",
+      "category": "DevOps",
+      "subcategory": "devops tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:14:08.152057",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "global digital asset platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:41:56.502102",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Search API",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:47:49.330480",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Laravel",
+      "category": "Web Framework",
+      "subcategory": "web framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:44:54.121983",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "multi-product platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:28:22.250896",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "hybrid cloud platforms",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:24:14.355927",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "B2B SaaS",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:50:58.769339",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "REST APIs",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:53:52.671683",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DEUNA",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:56:52.188620",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Xero",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:26:16.567687",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "PC",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:43:09.286847",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "single-page admin platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:06:11.530064",
+      "_occurrence_count": 3
+    },
+    {
+      "name": ".NET Core",
+      "category": "Web Framework",
+      "subcategory": "backend framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:47:38.146312",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Digital Experience Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:09:53.990608",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "RESTful APIs",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:54:26.552750",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud architecture",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:12:33.575027",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Tucows",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:24:36.311736",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Klaxoon",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:15:14.666566",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Hibernate",
+      "category": "Web Framework",
+      "subcategory": "backend framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:56:46.489682",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "React JS",
+      "category": "Web Framework",
+      "subcategory": "frontend framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:06:05.191299",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Web Services",
+      "category": "Web Framework",
+      "subcategory": "web framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:30:39.240014",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "payments platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:21:20.162033",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Quiet-Oceans",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:36:53.938334",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "JEE",
+      "category": "Web Framework",
+      "subcategory": "backend framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:30:49.335684",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SwiftUI",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:18:33.993701",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Inglês",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:37:56.954127",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "OS",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:23:48.901954",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SAP Business Technology Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:23:44.373541",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "OmniPoint SaaS platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:02:16.258094",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "WindowsAbout",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:47:13.585951",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "modern cloud platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:13:02.254762",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CloudFormation Automate",
+      "category": "DevOps",
+      "subcategory": "devops tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:14:32.391220",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "OpenShift",
+      "category": "DevOps",
+      "subcategory": "containerization tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:20:44.163922",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "UPS",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:03:05.405447",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Professional Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:06:19.739707",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Oracle Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:28:24.496112",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud-native architectures",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:41:33.701732",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:04:23.898360",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Public Cloud Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:38:17.204181",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "digital transformation services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:45:28.618791",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Fan Experience Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:09:29.342763",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Microsoft Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:25:51.225065",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Fiserv",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:40:29.736919",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Network as a Service",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:13:26.805581",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Leidos",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:52:09.876665",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Servinformación",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:43:43.376424",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Cibersegurança",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:43:43.378026",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Servinformacion",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:43:43.378026",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Microsoft Azure platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:16:02.069529",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "AgentForce",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:03:41.623111",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Service Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:35:21.908251",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud-based services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:44:37.015457",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "infrastructure and operational services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:30:58.820460",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "governance and assurance services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:30:58.821973",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "data security",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:19:15.631020",
+      "_occurrence_count": 6
+    },
+    {
+      "name": "Google Cl",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:58:17.722632",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Oracle EPM Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:58:26.091273",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "network security",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:39:24.418584",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "intelligent integration and automation platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:03:35.057791",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Trust Data Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:04:03.103313",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Betriebssysteme",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:04:18.797057",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SAS",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:16:45.314380",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Secure SD-WAN",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:09:39.526273",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Next-generation Managed Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:09:39.527266",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Meta Platforms, Inc.",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:12:43.364871",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Brighte",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:42:51.074492",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "enterprise data warehouse",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:14:26.163355",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "AI Studio",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:18:05.938554",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "AI Engines",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:18:44.192604",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Salesforce Data Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:16:03.254017",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Deel",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:33:47.554795",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Sia",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:08:47.678725",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Genpact",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:37:18.162800",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "user access controls",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:20:19.672659",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Rakuten Symphony",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:49:17.607810",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "it",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:55:32.036853",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "orchestrazione agentica",
+      "category": "DevOps",
+      "subcategory": "orchestration tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:26:39.916433",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "meccanismi di sicurezza",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:26:39.916433",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Dropbox",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:57:49.141783",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Customer Data Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:10:00.331889",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Lantern",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:46:19.498765",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SSP",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:12:40.414615",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Service Stream",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:19:46.550233",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Data Vault",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:20:43.208659",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Mirakl Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:44:47.726257",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Mirakl Nexus",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:44:47.726257",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "global platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:33:39.462302",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "MATLAB",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:49:11.459948",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Global Business Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:29:04.099960",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Fresha",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:42:39.912522",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "NET",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:45:04.308533",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "AWS services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:08:21.232049",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "warehouse",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:35:28.598073",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "performance monitoring",
+      "category": "DevOps",
+      "subcategory": "monitoring tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:02:25.372277",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "analytical frameworks",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:52:07.548352",
+      "_occurrence_count": 6
+    },
+    {
+      "name": "Recommendation Systems",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:03:50.563891",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Customer 360 platforms",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:56:05.467061",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Machine Learning Maestro",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:59:46.479165",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "adjoe",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:49:32.693762",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DKV Mobility",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:31:34.188809",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "IA générative",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:02:03.719193",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Architectures multi-agents",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:02:03.723179",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "ADP",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:11:21.090421",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "financial intelligence platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:00:52.779905",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "WPP Open",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:00:24.986405",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "monitoring systems",
+      "category": "DevOps",
+      "subcategory": "monitoring tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:19:29.321265",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "data visualization tools",
+      "category": "Data Visualization",
+      "subcategory": "data visualization tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:03:07.002511",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Sensorfact",
+      "category": "DevOps",
+      "subcategory": "monitoring tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:46:10.774551",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Investment Data Engineering",
+      "category": "Data Engineering",
+      "subcategory": "data engineering tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:08:38.800010",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Research and Data Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:08:38.801010",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CTR",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:09:38.132276",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CVR",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:09:38.132276",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "RoAS",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:09:38.133271",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Prudential",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:48:02.762639",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Service NSW",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:42:58.033424",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "HUB24",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:15:42.489835",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Reaxys",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:20:59.864023",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SMS",
+      "category": "Big Data",
+      "subcategory": "message queue",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:07:50.099280",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Ingles",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:27:58.503294",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Marina Bay Sands",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:36:28.604312",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "ICE Data Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:10:22.945658",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Python-based",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:24:51.967063",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Rakuten Viki",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:03:38.590340",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SAP BusinessObjects",
+      "category": "Database",
+      "subcategory": "data warehouse",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:32:13.859324",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "NATO SECRET",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:21:15.906983",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "C# .Net",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:45:00.849943",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "agent orchestration",
+      "category": "DevOps",
+      "subcategory": "orchestration tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:30:45.438815",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "LSTM",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:00:33.837363",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "TensorRT",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:31:22.438318",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Spotify",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:49:44.117237",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Global Data Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:30:39.506196",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Equinix",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:34:54.137501",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Samsara",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:56:48.339034",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "next-generation ecommerce search and discovery platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:43:19.035202",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Doctrine",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:00:36.288290",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "QEMI",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:47:00.919228",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "industry aligned programming languages",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:27:37.569319",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "GitOps",
+      "category": "DevOps",
+      "subcategory": "devops tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:36:27.792590",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Human OS",
+      "category": "Operating System",
+      "subcategory": "operating system",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:28:52.034357",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "model versioning",
+      "category": "Version Control",
+      "subcategory": "version control",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:06:11.748324",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "KnowBe4",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:00:29.940726",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "global investment platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:10:22.456846",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Transaction Monitoring",
+      "category": "DevOps",
+      "subcategory": "monitoring tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:03:39.870959",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "versioning",
+      "category": "Version Control",
+      "subcategory": "version control",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:02:25.371274",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Connected Operations™ Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:44:29.191909",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Large Language Model",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:11:12.494182",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Français",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:16:12.808116",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "shared services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:54:39.678894",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Gorgias",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:43:21.184828",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Recommender Systems",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:03:39.585490",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "multi-agent systems",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T23:03:46.757406",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "ML frameworks",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:04:36.700972",
+      "_occurrence_count": 7
+    },
+    {
+      "name": "Salesforce Platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:42:05.002618",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "airSlate",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:06:27.436658",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CKEditor",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:11:51.262411",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "OData services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:54:46.691245",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "Model Context Pro",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:12:09.126777",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "CONXAI",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:16:47.974888",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "JSON",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:39:02.470363",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "enterprise-grade platforms",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:59:24.829914",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Digital Identity Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:22:54.555048",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Okta",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:20:10.267146",
+      "_occurrence_count": 5
+    },
+    {
+      "name": "Cloud Imperium Games",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:48:45.774081",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Backbase",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:04:10.650040",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "event-driven services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:10:52.672239",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "SAP Commerce Cloud",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:42:19.246725",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "SPRING BATCH",
+      "category": "Web Framework",
+      "subcategory": "backend framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:50:54.580763",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "next-generation AI infrastructure platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:27:58.466203",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "LetsGrow.com",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:29:23.335148",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Kotlin/Java",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:44:18.376964",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "The Key to Life",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:59:25.445419",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Deep Learning algorithms",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:07:22.868403",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Custom API",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:40:32.802642",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "trading systems",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:40:32.802642",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "high-performance APIs",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:27:04.816223",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "cloud-native platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:27:20.148600",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "C#.Net",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:27:38.192449",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Materia AI",
+      "category": "Machine Learning",
+      "subcategory": "machine learning framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:00:05.731124",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Atolls",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T04:20:16.949110",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Veem",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T03:19:29.121013",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Luxury Presence",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:38:50.438853",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "unified API",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:52:09.904095",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "team backend",
+      "category": "Web Framework",
+      "subcategory": "backend framework",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:52:32.105073",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Force.com platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:08:41.876275",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "ABAP",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:54:46.690271",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Gynzy",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:54:06.949641",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "fintech platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:55:26.854344",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Azure Services",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:42:08.646163",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Secure Code Warrior",
+      "category": "Security",
+      "subcategory": "security tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T05:22:18.983414",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "BEKO",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:11:18.105023",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Improvado",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:18:48.416184",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Cloud DX",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:56:26.928430",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "database schemas",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:38:32.660326",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "big data platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:30:01.806228",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Elixir",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:59:42.261224",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "XML",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:30:49.336685",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "vuejs",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T01:16:01.150072",
+      "_occurrence_count": 4
+    },
+    {
+      "name": "TS",
+      "category": "Programming Language",
+      "subcategory": "programming language",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:20:18.033419",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "RESTful services",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:52:56.920248",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "ServiceNow-based",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T06:18:57.845724",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Standard Chartered nexus",
+      "category": "Cloud Platform",
+      "subcategory": "cloud service",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:07:34.157298",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "Storage",
+      "category": "Database",
+      "subcategory": "database",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:08:08.433147",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "High Touch",
+      "category": "Data Engineering",
+      "subcategory": "data engineering tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:48:07.875649",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "multi-cloud platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:26:07.564366",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "enterprise data platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-03T22:09:26.260370",
+      "_occurrence_count": 9
+    },
+    {
+      "name": "Container platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:30:02.317064",
+      "_occurrence_count": 3
+    },
+    {
+      "name": "DevSecOps Engineer",
+      "category": "DevOps",
+      "subcategory": "devops tool",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T02:15:56.175849",
+      "_occurrence_count": 6
+    },
+    {
+      "name": "API development",
+      "category": "API & Integration",
+      "subcategory": "api technology",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T00:57:35.344366",
+      "_occurrence_count": 5
+    },
+    {
+      "name": "GridOS® platform",
+      "category": "Cloud Platform",
+      "subcategory": "cloud platform",
+      "aliases": [],
+      "_discovered": true,
+      "_first_seen": "2026-07-04T06:35:27.285786",
+      "_occurrence_count": 3
     }
   ]
 }

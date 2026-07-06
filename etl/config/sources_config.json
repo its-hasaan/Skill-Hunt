@@ -49,12 +49,14 @@
       "delay_seconds": 2
     },
     "jooble": {
+      "_comment": "Requests per run = roles x locations x pages_per_query (worst case; a role/location pair that runs out of results stops early). With the 15 roles in extraction_config.json: 15 x 2 x 3 = 90 max requests per run. Free-plan cap is 500 requests total (per Jooble's signup confirmation) -- max_requests_per_run is a hard safety net so a config change (more roles/locations/pages) can't silently blow past the plan; the connector stops cleanly and logs when hit.",
       "enabled": true,
       "connector": "jooble",
       "requires_key": true,
       "env_key": "JOOBLE_API_KEY",
       "locations": ["Pakistan", "India"],
       "pages_per_query": 3,
+      "max_requests_per_run": 450,
       "delay_seconds": 2
     },
     "themuse": {
