@@ -13,19 +13,31 @@ from .config import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _session_pooler_url(url: str) -> str:
+    """Supabase's transaction pooler (port 6543) drops idle/long-lived
+    connections — fine for one-shot serverless queries, but this pool holds
+    persistent connections (min_size=2) for the life of the process, so an
+    idle one gets silently dropped and the next query on it fails. The
+    session pooler (port 5432, same host) keeps connections alive for the
+    whole session. Same fix as etl/refresh_all.py's session_pooler_url()."""
+    if url and ":6543/" in url:
+        return url.replace(":6543/", ":5432/")
+    return url
+
+
 class Database:
     """Async database connection manager."""
-    
+
     def __init__(self):
         self.pool: Optional[asyncpg.Pool] = None
         self.settings = get_settings()
-    
+
     async def connect(self):
         """Create connection pool."""
         if self.pool is None:
             try:
                 self.pool = await asyncpg.create_pool(
-                    self.settings.supabase_url,
+                    _session_pooler_url(self.settings.supabase_url),
                     min_size=2,
                     max_size=10,
                     ssl="require",

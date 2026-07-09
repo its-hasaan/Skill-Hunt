@@ -62,6 +62,9 @@ export default function AccountPage() {
       setSaveMsg('Saved!')
       setTimeout(() => setSaveMsg(''), 2500)
     },
+    onError: (err) => {
+      setSaveMsg(err.response?.data?.detail || 'Failed to save — please try again')
+    },
   })
   const deleteSearch = useMutation({
     mutationFn: (id) => userApi.deleteSavedSearch(id),
@@ -168,7 +171,11 @@ export default function AccountPage() {
                 {updateProfile.isPending ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
                 Save preferences
               </button>
-              {saveMsg && <span className="text-sm text-green-600 dark:text-green-400">{saveMsg}</span>}
+              {saveMsg && (
+                <span className={`text-sm ${updateProfile.isError ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                  {saveMsg}
+                </span>
+              )}
             </div>
             <p className="text-xs text-gray-400 dark:text-gray-500">
               Your default role and country are applied to the dashboard filters each time you visit.

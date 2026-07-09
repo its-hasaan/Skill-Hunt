@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Outlet, NavLink, Link } from 'react-router-dom'
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   Target, BarChart3, DollarSign, Building2,
   GitBranch, Globe, Menu, X, FileText, Sun, Moon,
-  Bookmark, BookmarkCheck, LogIn, UserCircle
+  Bookmark, BookmarkCheck, LogIn, UserCircle, LogOut
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -21,7 +21,6 @@ const navigation = [
   { name: 'Career Paths', href: '/career', icon: GitBranch },
   { name: 'Global', href: '/global', icon: Globe },
   { name: 'Resume Analyzer', href: '/resume', icon: FileText },
-  { name: 'My Account', href: '/account', icon: UserCircle },
 ]
 
 export default function Layout() {
@@ -30,8 +29,9 @@ export default function Layout() {
   const [selectedCountry, setSelectedCountry] = useState('')
   const [justSaved, setJustSaved] = useState(false)
   const { isDark, toggleTheme } = useTheme()
-  const { user, isAuthEnabled } = useAuth()
+  const { user, isAuthEnabled, signOut } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const { data: filters, isLoading: filtersLoading } = useFilterOptions()
 
@@ -71,6 +71,11 @@ export default function Layout() {
     } catch (e) {
       console.error('Failed to save search', e)
     }
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/')
   }
 
   return (
@@ -229,27 +234,48 @@ export default function Layout() {
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
 
-          {/* Auth: avatar -> account, or sign-in link */}
+          {/* Auth: avatar with hover menu, or sign-in link */}
           {isAuthEnabled && (
             user ? (
-              <Link
-                to="/account"
-                className="ml-2 flex items-center"
-                title={user.email}
-              >
-                {user.user_metadata?.avatar_url ? (
-                  <img
-                    src={user.user_metadata.avatar_url}
-                    alt="Account"
-                    referrerPolicy="no-referrer"
-                    className="h-8 w-8 rounded-full border border-gray-200 dark:border-gray-600 hover:ring-2 hover:ring-primary-400 transition-shadow"
-                  />
-                ) : (
-                  <span className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-sm font-semibold text-primary-700 dark:text-primary-300 hover:ring-2 hover:ring-primary-400 transition-shadow">
-                    {(user.email || '?')[0].toUpperCase()}
-                  </span>
-                )}
-              </Link>
+              <div className="relative ml-2 group">
+                <button className="flex items-center" title={user.email}>
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Account"
+                      referrerPolicy="no-referrer"
+                      className="h-8 w-8 rounded-full border border-gray-200 dark:border-gray-600 group-hover:ring-2 group-hover:ring-primary-400 transition-shadow"
+                    />
+                  ) : (
+                    <span className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-sm font-semibold text-primary-700 dark:text-primary-300 group-hover:ring-2 group-hover:ring-primary-400 transition-shadow">
+                      {(user.email || '?')[0].toUpperCase()}
+                    </span>
+                  )}
+                </button>
+
+                {/* Hover dropdown — pt-2 bridges the gap so hover doesn't drop */}
+                <div className="absolute right-0 top-full pt-2 w-52 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity z-50">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
+                    <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    <Link
+                      to="/account"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <UserCircle className="h-4 w-4" /> My Account
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign out
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <Link
                 to="/login"
