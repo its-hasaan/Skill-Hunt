@@ -1,5 +1,9 @@
 # Job Script - .gitignore
 
+# Browser extension lives here temporarily; it becomes its own public repo.
+# Ignored so it never lands in this repo's history.
+skillhunt-extension/
+
 # ================================
 # Environment & Secrets
 # ================================

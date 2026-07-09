@@ -21,7 +21,8 @@ from .routers import (
     companies_router,
     salary_router,
     career_router,
-    stats_router
+    stats_router,
+    extension_router
 )
 from .routers.resume import router as resume_router
 from .routers.user import router as user_router
@@ -122,6 +123,7 @@ app.include_router(career_router, prefix=settings.api_prefix)
 app.include_router(stats_router, prefix=settings.api_prefix)
 app.include_router(resume_router, prefix=settings.api_prefix)
 app.include_router(user_router, prefix=settings.api_prefix)
+app.include_router(extension_router, prefix=settings.api_prefix)
 
 
 # Root endpoints

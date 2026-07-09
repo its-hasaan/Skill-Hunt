@@ -369,6 +369,44 @@ class RoleMatchResult(BaseModel):
 
 
 # ============================================
+# Browser Extension Models
+# ============================================
+
+class ExtensionAnalyzeRequest(BaseModel):
+    """Job posting text scraped by the browser extension."""
+    title: str = Field(..., min_length=2, max_length=300)
+    description: str = Field(..., min_length=50, max_length=60000)
+    country: Optional[str] = Field(None, max_length=10, description="2-letter country code guessed by the extension")
+    source: Optional[str] = Field(None, max_length=30, description="Site the job was scraped from (linkedin/indeed)")
+    url: Optional[str] = Field(None, max_length=1000)
+
+
+class ExtensionSkill(BaseModel):
+    """One skill found in the posting, enriched with market data."""
+    skill_name: str
+    skill_category: Optional[str] = None
+    mention_count: int = 1
+    # Market enrichment (None when the skill isn't in the demand mart for the role)
+    job_count: Optional[int] = None
+    demand_percentage: Optional[float] = None
+    rank_in_role: Optional[int] = None
+    avg_salary_usd: Optional[float] = None
+    salary_premium_percentage: Optional[float] = None
+
+
+class ExtensionAnalyzeResponse(BaseModel):
+    """Market analysis of a scraped job posting."""
+    role: Optional[str] = None
+    role_source: Optional[str] = None  # 'title' | 'skills' | None
+    country: Optional[str] = None      # country actually used for market stats
+    country_tracked: bool = False
+    market_avg_salary_usd: Optional[float] = None
+    total_role_jobs: Optional[int] = None
+    extracted_count: int = 0
+    skills: List[ExtensionSkill] = []
+
+
+# ============================================
 # Generic Response Models
 # ============================================
 
