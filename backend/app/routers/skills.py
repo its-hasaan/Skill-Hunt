@@ -35,12 +35,24 @@ async def get_skill_demand(
     Get skill demand data for a specific role and optionally country.
     Returns top skills ranked by job count.
     """
+    # NOTE: salary figures always come from the USD-normalized columns
+    # (avg_salary_*_usd), even for a single country. Two reasons: (1) it's
+    # what makes the cross-country blended view (below) correct — averaging
+    # native-currency numbers across countries silently mixed units (e.g. an
+    # INR salary of ~3,000,000 averaged against a USD salary of ~130,000);
+    # (2) the frontend's "Avg Salary" columns render a hardcoded "$" prefix
+    # regardless of country, so using native currency there would just be a
+    # mislabeled number. Real per-country currency detail lives on the
+    # Salary Analysis page (/salary/by-skill), which keeps native currency.
     if country:
         query = """
-            SELECT 
+            SELECT
                 skill_name, skill_category, search_role, country_code,
-                job_count, demand_percentage, avg_salary_min, avg_salary_max,
-                avg_salary_midpoint, rank_in_role_country, rank_in_role_global
+                job_count, demand_percentage,
+                avg_salary_min_usd AS avg_salary_min,
+                avg_salary_max_usd AS avg_salary_max,
+                avg_salary_midpoint_usd AS avg_salary_midpoint,
+                rank_in_role_country, rank_in_role_global
             FROM staging_marts.mart_skill_demand
             WHERE search_role = $1 AND country_code = $2
             ORDER BY rank_in_role_country
@@ -50,13 +62,13 @@ async def get_skill_demand(
     else:
         # Aggregate across all countries for global view
         query = """
-            SELECT 
+            SELECT
                 skill_name, skill_category, search_role,
                 SUM(job_count) as job_count,
                 AVG(demand_percentage) as demand_percentage,
-                AVG(avg_salary_min) as avg_salary_min,
-                AVG(avg_salary_max) as avg_salary_max,
-                AVG(avg_salary_midpoint) as avg_salary_midpoint,
+                AVG(avg_salary_min_usd) as avg_salary_min,
+                AVG(avg_salary_max_usd) as avg_salary_max,
+                AVG(avg_salary_midpoint_usd) as avg_salary_midpoint,
                 MIN(rank_in_role_global) as rank_in_role_global
             FROM staging_marts.mart_skill_demand
             WHERE search_role = $1
@@ -83,10 +95,13 @@ async def get_all_skill_demand(
     Get all skill demand data (for client-side filtering).
     """
     query = """
-        SELECT 
+        SELECT
             skill_name, skill_category, search_role, country_code,
-            job_count, demand_percentage, avg_salary_min, avg_salary_max,
-            avg_salary_midpoint, rank_in_role_country, rank_in_role_global
+            job_count, demand_percentage,
+            avg_salary_min_usd AS avg_salary_min,
+            avg_salary_max_usd AS avg_salary_max,
+            avg_salary_midpoint_usd AS avg_salary_midpoint,
+            rank_in_role_country, rank_in_role_global
         FROM staging_marts.mart_skill_demand
         WHERE rank_in_role_country <= 30
         ORDER BY search_role, country_code, rank_in_role_country

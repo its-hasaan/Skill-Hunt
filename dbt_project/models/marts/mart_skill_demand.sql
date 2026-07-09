@@ -33,7 +33,12 @@ skill_counts AS (
         COUNT(DISTINCT job_id) AS job_count,
         AVG(salary_min) AS avg_salary_min,
         AVG(salary_max) AS avg_salary_max,
-        AVG(salary_midpoint) AS avg_salary_midpoint
+        AVG(salary_midpoint) AS avg_salary_midpoint,
+        -- USD-normalized: safe to average ACROSS this row's country too (the
+        -- API uses these, not the native fields above, when country=None)
+        AVG(salary_min_usd) AS avg_salary_min_usd,
+        AVG(salary_max_usd) AS avg_salary_max_usd,
+        AVG(salary_midpoint_usd) AS avg_salary_midpoint_usd
     FROM {{ ref('int_job_skills_enriched') }}
     GROUP BY skill_id, skill_name, skill_category, skill_subcategory, search_role, country_code
 ),
@@ -70,6 +75,9 @@ SELECT
     avg_salary_min,
     avg_salary_max,
     avg_salary_midpoint,
+    avg_salary_min_usd,
+    avg_salary_max_usd,
+    avg_salary_midpoint_usd,
     rank_in_role_country,
     rank_in_role_global,
     CURRENT_DATE - INTERVAL '30 days' AS period_start,

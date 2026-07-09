@@ -114,7 +114,12 @@ export default function Dashboard() {
                   <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Category</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Avg Salary</th>
+                  <th
+                    className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400 cursor-help"
+                    title="Converted to USD using live exchange rates, so figures are comparable across countries"
+                  >
+                    Avg Salary
+                  </th>
                 </tr>
               </thead>
               <tbody>

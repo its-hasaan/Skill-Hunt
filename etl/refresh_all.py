@@ -10,8 +10,17 @@ Sequence:
   1. EXTRACT   fresh Adzuna postings (last N days)            -> raw.jobs
   2. INGEST    multi-source connectors (Jooble, RemoteOK, ...) -> raw.jobs
   3. TRANSFORM new raw jobs -> staging.stg_jobs (+ skills)
-  4. DBT       rebuild marts (staging_marts.*) with --full-refresh
-  5. SNAPSHOT  again (captures the fresh state for the trend history)
+  4. FX RATES  fetch live currency -> USD rates (staging.currency_rates)
+  5. DBT       rebuild marts (staging_marts.*) with --full-refresh
+  6. SNAPSHOT  again (captures the fresh state for the trend history)
+
+Step 4 keeps salary comparisons correct: every mart groups salary by
+(role, country) so it's currency-safe within a row, but the API blends rows
+ACROSS countries for the "All Countries" view — without a fresh conversion
+table that blend would average raw numbers in different currencies (e.g. an
+INR salary of millions against a USD salary of thousands) and produce
+wildly inflated "average salaries". Rates are fetched live every run, not
+hardcoded, so they never go stale.
 
 Why this order: dbt's intermediate model keeps only jobs posted in the last
 60 days, so the marts MUST be rebuilt AFTER fresh data lands or they'd go
@@ -122,6 +131,7 @@ def main():
     parser.add_argument("--skip-adzuna", action="store_true", help="Skip the Adzuna extract step")
     parser.add_argument("--skip-ingest", action="store_true", help="Skip the multi-source ingest step")
     parser.add_argument("--skip-transform", action="store_true", help="Skip the transform step")
+    parser.add_argument("--skip-fx", action="store_true", help="Skip the currency-rate fetch step")
     parser.add_argument("--skip-dbt", action="store_true", help="Skip the dbt rebuild step")
     parser.add_argument("--dry-run", action="store_true", help="Print the plan; run nothing")
     args = parser.parse_args()
@@ -163,7 +173,15 @@ def main():
             cwd=ETL_DIR, env=transform_env, dry_run=args.dry_run,
         )
 
-    # 4. Rebuild marts. target=dev -> schema 'staging' + model 'marts' config
+    # 4. Fetch live currency->USD rates for salary normalization.
+    if ok and not args.skip_fx:
+        ok = run_step(
+            "Fetch currency rates",
+            [py, "fetch_currency_rates.py"],
+            cwd=ETL_DIR, dry_run=args.dry_run,
+        )
+
+    # 5. Rebuild marts. target=dev -> schema 'staging' + model 'marts' config
     #    => staging_marts.* (exactly what the API reads).
     if ok and not args.skip_dbt:
         ok = run_step(
@@ -172,7 +190,7 @@ def main():
             cwd=DBT_DIR, env=dbt_env(), dry_run=args.dry_run,
         )
 
-    # 5. Snapshot the fresh state too (starts the next trend point).
+    # 6. Snapshot the fresh state too (starts the next trend point).
     if ok:
         snapshot("post-refresh", args.dry_run)
 

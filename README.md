@@ -554,35 +554,42 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
   - **Slow Path (GLiNER)**: `urchade/gliner_medium-v2.1` NER model discovers skills not in the taxonomy. Runs locally, no API cost, sampled (~10%). **Disabled in CI** (`--fast-only`).
   - **Discovery Manager**: tracks unverified discoveries; auto-promotes a skill to the taxonomy JSON (and `dim_skills`) once it reaches ≥3 occurrences with ≥0.75 average confidence.
 
-#### 3. **Transform** (`dbt_project/`)
+#### 3. **Fetch Currency Rates** (`etl/fetch_currency_rates.py`)
+- Fetches live currency→USD exchange rates from [frankfurter.dev](https://frankfurter.dev) (ECB rates, free, no key) for whatever currencies are actually present in the data, and upserts into `staging.currency_rates`. Self-healing: an unreachable API or uncovered currency leaves the previous cached rate untouched rather than guessing.
+- ⚠️ **One-time setup**: run [`database/migrations/004_currency_rates.sql`](database/migrations/004_currency_rates.sql) once (Supabase SQL Editor) to create the table, then `python etl/fetch_currency_rates.py` to populate it. Without this, single-currency salary figures (native or USD) still work, but cross-country comparisons will fall back to whatever rates are already cached (or `NULL` before the first fetch).
+- **Why this exists**: every mart groups salary by `(role, country)` — currency-safe within a row — but the API blends rows *across* countries for the "All Countries" view. Without conversion, that blend averaged raw native-currency numbers as if they were the same unit (e.g. an Indian salary in the millions of INR averaged against a US salary in the tens of thousands of USD), inflating some skills' reported average salary into the hundreds of thousands of dollars. See IMPLEMENTATION.md §6.7 for the full root-cause writeup.
+
+#### 4. **Transform** (`dbt_project/`)
 - **Intermediate** (`models/intermediate/`, materialized as a `view` in `staging`):
-  - `int_job_skills_enriched.sql` — joins skills × jobs × skill dimension, computes salary midpoint, filters to jobs posted in the last 60 days.
+  - `int_job_skills_enriched.sql` — joins skills × jobs × skill dimension, computes salary midpoint (native + USD-normalized via `currency_rates`), filters to jobs posted in the last 60 days.
 - **Marts** (`models/marts/`, materialized as `table` in `marts`):
-  - `mart_skill_demand.sql` — top skills per role/country with demand % and ranks
-  - `mart_salary_by_skill.sql` — salary stats & premium vs. market (min 5 jobs)
+  - `mart_skill_demand.sql` — top skills per role/country with demand % and ranks, native + USD salary averages
+  - `mart_salary_by_skill.sql` — salary stats & premium vs. market (min 5 jobs), native + USD
   - `mart_skills_by_country.sql` — skill demand compared across countries
   - `mart_skill_cooccurrence.sql` — skill pairs with Jaccard + conditional probabilities
-  - `mart_company_leaderboard.sql` — top hiring companies with contract breakdown
+  - `mart_company_leaderboard.sql` — top hiring companies with contract breakdown, native + USD salary averages
   - `mart_role_similarity.sql` — role skill overlap (Jaccard, overlap, dice)
 
-#### 4. **Archive & Notify**
+#### 5. **Archive & Notify**
 - `archive` job (scheduled runs only) calls the `archive_skill_demand()` Postgres function to snapshot demand into `archive.skill_demand_history`.
-- ⚠️ **One-time fix required**: this function originally read from an always-empty placeholder table, so the archive was silently never populated. Run [`database/migrations/003_fix_archive_snapshots.sql`](database/migrations/003_fix_archive_snapshots.sql) once (Supabase SQL Editor) to repoint it at the real mart and take the first snapshot — it's idempotent and safe alongside migrations 001/002 if you're setting those up too. Not required for the `/skills/trend` chart, which reads live posting data instead; it only matters if you want the historical archive itself to start accumulating.
+- ⚠️ **One-time fix required**: this function originally read from an always-empty placeholder table, so the archive was silently never populated. Run [`database/migrations/003_fix_archive_snapshots.sql`](database/migrations/003_fix_archive_snapshots.sql) once (Supabase SQL Editor) to repoint it at the real mart and take the first snapshot — it's idempotent and safe alongside migrations 001/002/004 if you're setting those up too. Not required for the `/skills/trend` chart, which reads live posting data instead; it only matters if you want the historical archive itself to start accumulating.
 - `notify` job reports the status of all jobs.
 
-#### 5. **Serve**
+#### 6. **Serve**
 - FastAPI queries the marts (and the staging tables for the resume feature). Marts are pre-computed by dbt, so responses are served directly. (`CACHE_TTL_SECONDS` is configured for future response caching but is not yet applied.)
 
 ### Running ETL Manually
 
-**One-command full refresh** (snapshot → Adzuna extract → multi-source ingest → transform → dbt rebuild → snapshot). This is the recommended way to bring the dashboard fully up to date across all sources:
+**One-command full refresh** (snapshot → Adzuna extract → multi-source ingest → transform → fetch currency rates → dbt rebuild → snapshot). This is the recommended way to bring the dashboard fully up to date across all sources:
 
 ```bash
 cd etl
 python refresh_all.py                 # full refresh (derives dbt creds from SUPABASE_URL)
 python refresh_all.py --dry-run       # print the plan, run nothing
-python refresh_all.py --skip-adzuna   # only multi-source + transform + dbt
+python refresh_all.py --skip-adzuna   # only multi-source + transform + fx + dbt
 ```
+
+This runs the same *stages*, in the same order, as the scheduled CI pipeline (`.github/workflows/etl_pipeline.yml`) — but it is a separate script, not a wrapper around it. CI runs each stage as its own GitHub Actions job with its own checkout/secrets; keep both in sync by hand if the pipeline shape changes.
 
 Or run the individual stages:
 
@@ -591,14 +598,18 @@ cd etl
 python extractor.py --days 60 --pages 3 --delay 1.5   # extract (Adzuna)
 python ingest_sources.py                                # extract (multi-source bots)
 python transformer.py --batch-size 500 --fast-only     # extract skills (taxonomy only)
+python fetch_currency_rates.py                          # live FX rates for salary normalization
 cd ../dbt_project && dbt run --profiles-dir . --target dev --full-refresh   # rebuild staging_marts.*
 
 # Test / preview modes
 python extractor.py --test
 python ingest_sources.py --test --dry-run               # fetch samples, write nothing
+python fetch_currency_rates.py --dry-run                # fetch + print, no DB write
 ```
 
-> **Note:** the marts the API reads are `staging_marts.*`, produced by dbt's **`dev`** target (schema `staging` + the models' `marts` config → `staging_marts`). `refresh_all.py` handles this — and routes the long-running transform through Supabase's **session** pooler (port 5432) so the connection isn't dropped mid-run. Order matters: fresh data must land *before* the dbt rebuild, because the marts only keep postings from the last 60 days.
+> **Note:** the marts the API reads are `staging_marts.*`, produced by dbt's **`dev`** target (schema `staging` + the models' `marts` config → `staging_marts`). `refresh_all.py` handles this — and routes the long-running transform through Supabase's **session** pooler (port 5432) so the connection isn't dropped mid-run. Order matters: fresh data must land *before* the dbt rebuild (marts only keep postings from the last 60 days), and fresh FX rates must land before the rebuild too (salary conversion happens at dbt build time).
+
+> **Re-verifying a fix and the numbers look stale?** Check for an orphaned `uvicorn`/`vite` process from an earlier session still bound to the port — Python doesn't hot-reload without `--reload`, so an old process keeps serving old query logic forever, even after the code and database are both correct. `Get-NetTCPConnection -LocalPort 8000 -State Listen` (PowerShell) or `lsof -i :8000` (Unix) to check.
 
 ---
 
@@ -666,6 +677,8 @@ Released under the **MIT License**. (No `LICENSE` file is currently committed �
 - [x] Resume skill gap analysis & role matching ✅
 - [x] Skill demand trend over time (`/skills/trend`, multi-series line chart) ✅
 - [x] CVD-validated, theme-aware chart palette with fixed category colors across the app ✅
+- [x] Cross-country currency normalization for salary comparisons (live FX rates, dynamic — see IMPLEMENTATION.md §6.7) ✅
+- [ ] Native-currency salary display per country (today all figures are shown in USD everywhere, by design — see §6.7)
 - [ ] Email alerts for saved searches (the `saved_searches` table is the subscription list)
 - [ ] API rate limiting (per-user, using the verified identity)
 - [ ] Response-level caching (`CACHE_TTL_SECONDS` is already wired for it)

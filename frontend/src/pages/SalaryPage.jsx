@@ -54,7 +54,7 @@ export default function SalaryPage() {
         {/* Average Salary */}
         <Card title="📈 Highest Paying Skills">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Skills with the highest average salaries
+            Skills with the highest average salaries · figures in USD (live exchange rates)
           </p>
           {topPayingLoading ? (
             <ChartLoading height={450} />
@@ -82,7 +82,12 @@ export default function SalaryPage() {
                   <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Skill</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Category</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Avg Salary</th>
+                  <th
+                    className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400 cursor-help"
+                    title="Converted to USD using live exchange rates, so figures are comparable across countries"
+                  >
+                    Avg Salary
+                  </th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Market Avg</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Premium</th>
                 </tr>

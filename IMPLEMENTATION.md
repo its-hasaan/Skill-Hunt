@@ -259,18 +259,21 @@ ON CONFLICT (job_platform_id, country_code) DO NOTHING
 
 ### 3.1a Full Refresh Orchestrator (`etl/refresh_all.py`)
 
-Runs the whole pipeline end-to-end so the dashboard reflects the LATEST data across ALL sources, then rebuilds the marts — the one-command version of the CI pipeline for local/manual runs:
+Runs the whole pipeline end-to-end so the dashboard reflects the LATEST data across ALL sources, then rebuilds the marts — a convenience script for local/manual runs that mirrors the same stages the CI pipeline runs on its bi-weekly schedule:
 
 1. **Snapshot** current marts → `archive.skill_demand_history` (preserves the current insights *before* anything changes — the trend history is never lost to a rebuild).
 2. **Extract** fresh Adzuna postings (`--days`/`--pages`).
 3. **Ingest** the multi-source connectors.
 4. **Transform** new raw jobs → staging + skills.
-5. **dbt** `run --profiles-dir . --target dev --full-refresh` → rebuilds `staging_marts.*`.
-6. **Snapshot** again (starts the next trend point from the fresh state).
+5. **Fetch currency rates** (`fetch_currency_rates.py`) — live currency→USD rates for salary normalization (§6.7).
+6. **dbt** `run --profiles-dir . --target dev --full-refresh` → rebuilds `staging_marts.*`.
+7. **Snapshot** again (starts the next trend point from the fresh state).
 
-**Why the order matters:** dbt's intermediate model keeps only jobs posted in the last 60 days, so the marts must be rebuilt *after* fresh data lands or they'd rebuild empty (e.g. when the newest existing postings are already >60 days old). Flags: `--skip-adzuna`, `--skip-ingest`, `--skip-transform`, `--skip-dbt`, `--days`, `--dry-run`.
+**Why the order matters:** dbt's intermediate model keeps only jobs posted in the last 60 days, so the marts must be rebuilt *after* fresh data lands or they'd rebuild empty (e.g. when the newest existing postings are already >60 days old); fresh FX rates must land before the dbt rebuild too, since the salary conversion is computed at build time. Flags: `--skip-adzuna`, `--skip-ingest`, `--skip-transform`, `--skip-fx`, `--skip-dbt`, `--days`, `--dry-run`.
 
-> **Gotcha — Supabase pooler mode.** `SUPABASE_URL` points at the **transaction** pooler (port `6543`), which drops long-lived connections; the multi-minute transform dies with `connection already closed`. `refresh_all.py` rewrites the transform's connection to the **session** pooler (port `5432`, same host) via `session_pooler_url()` so the long run survives. dbt derives its `DB_*` env from `SUPABASE_URL` automatically. (The transform commits per batch and is idempotent, so a dropped run can simply be re-run — but the session pooler avoids the drop entirely.)
+> **Is this the same as the scheduled CI run?** Conceptually yes — same stages, same order — but **not literally the same code path**. `.github/workflows/etl_pipeline.yml` runs each stage as its own GitHub Actions job (`extract` → `transform` → `fx_rates` → `dbt` → `archive`) with its own checkout/install/secrets, rather than invoking this script. Keep both in sync by hand if you change the pipeline shape; there is currently no shared entry point between them.
+
+> **Gotcha — Supabase pooler mode.** `SUPABASE_URL` points at the **transaction** pooler (port `6543`), which drops long-lived connections; the multi-minute transform dies with `connection already closed`. Both `refresh_all.py` (via `session_pooler_url()`) and the CI `transform` job rewrite the transform's connection to the **session** pooler (port `5432`, same host) so the long run survives. dbt derives its `DB_*` env from `SUPABASE_URL` automatically. (The transform commits per batch and is idempotent, so a dropped run can simply be re-run — but the session pooler avoids the drop entirely.) This was discovered and fixed in both places after the first production full-refresh (Jul 2026) died mid-transform on the transaction pooler.
 
 ### 3.1b Multi-Source Ingestion (`etl/ingest_sources.py` + `etl/connectors/`)
 
@@ -669,16 +672,22 @@ Both read `DB_HOST`, `DB_PORT` (default `6543`, the Supabase pooler), `DB_USER`,
 
 SELECT
     js.job_id, js.skill_id, js.skill_name, js.mention_count,
-    s.skill_category, s.skill_subcategory,
+    ds.skill_category, ds.skill_subcategory,
     j.search_role, j.country_code, j.company_name,
-    j.salary_min, j.salary_max,
+    j.salary_min, j.salary_max, j.salary_currency,
     (j.salary_min + j.salary_max) / 2.0 AS salary_midpoint,
+    -- USD-normalized (§6.7) — cr.rate_to_usd is units of currency per $1
+    j.salary_min / cr.rate_to_usd AS salary_min_usd,
+    j.salary_max / cr.rate_to_usd AS salary_max_usd,
+    ((j.salary_min + j.salary_max) / 2.0) / cr.rate_to_usd AS salary_midpoint_usd,
     j.contract_type, j.contract_time,
     j.job_posted_at::date AS job_posted_date
 FROM {{ source('staging', 'stg_job_skills') }} js
-INNER JOIN {{ source('staging', 'dim_skills') }} s ON js.skill_id = s.skill_id
-INNER JOIN {{ source('staging', 'stg_jobs') }} j   ON js.job_id = j.job_id
-WHERE j.job_posted_at >= CURRENT_DATE - INTERVAL '60 days'
+LEFT JOIN {{ source('staging', 'dim_skills') }} ds ON js.skill_id = ds.skill_id
+LEFT JOIN {{ source('staging', 'stg_jobs') }} j    ON js.job_id = j.job_id
+LEFT JOIN {{ source('staging', 'currency_rates') }} cr ON j.salary_currency = cr.currency_code
+WHERE j.job_id IS NOT NULL
+  AND j.job_posted_at >= CURRENT_DATE - INTERVAL '60 days'
 ```
 > The join key is `skill_id`, the freshness filter is a 60-day posting window, and the model is a **view in the `staging` schema**. There is no `confidence_score` column in the source table, so no confidence filter is applied.
 
@@ -686,18 +695,33 @@ WHERE j.job_posted_at >= CURRENT_DATE - INTERVAL '60 days'
 
 | Model | Purpose | Notable logic |
 |-------|---------|---------------|
-| `mart_skill_demand` | Top skills per role+country | `job_count`, `demand_percentage`, ranks; top 50 per role/country |
-| `mart_salary_by_skill` | Salary vs. market per skill | premium absolute/%, requires ≥5 jobs |
+| `mart_skill_demand` | Top skills per role+country | `job_count`, `demand_percentage`, ranks; native + `_usd` salary averages; top 50 per role/country |
+| `mart_salary_by_skill` | Salary vs. market per skill | premium absolute/%/USD, requires ≥5 jobs |
 | `mart_skills_by_country` | Skill demand across countries | `rank_by_country`, `top_country_for_skill`; min 3 jobs |
 | `mart_skill_cooccurrence` | Skill pairs in the same job | `jaccard_similarity`, conditional probabilities; min 5 co-occurrences |
-| `mart_company_leaderboard` | Top hiring companies | contract breakdown, `roles_hiring`; top 100 per role/country |
+| `mart_company_leaderboard` | Top hiring companies | contract breakdown, `roles_hiring`, native + `_usd` salary averages; top 100 per role/country |
 | `mart_role_similarity` | Role skill overlap | Jaccard, overlap & dice coefficients, top 10 shared skills |
 
-All marts are materialized as `table` in the `marts` schema.
+All marts are materialized as `table` in the `marts` schema (physically landing in `staging_marts` per the dbt target — see §2.2 "Marts tables").
 
 ### 6.6 Tests (`schema.yml`)
 
 Data tests are intentionally minimal: `not_null` on `int_job_skills_enriched.job_id`, and on `mart_skill_demand.skill_name` / `search_role`. `dbt test` runs these in CI after `dbt run`.
+
+### 6.7 Currency Normalization (salary comparisons across countries)
+
+**The bug this fixes:** every mart groups salary by `(search_role, country_code)`, which is currency-safe *within* a row — one country maps to one currency. But the API's "All Countries" view blends rows *across* countries with a plain `AVG()`, which silently averaged native-currency numbers as if they were the same unit. An Indian salary of `INR 2,500,000–3,600,000` (a normal ~$30–43k USD role) got averaged directly against a US salary of `USD 130,000`, inflating reported averages for some skills to **~$700–800k** (real example: "ETL" and "Claude" before the fix — see the migration comment for the full before/after).
+
+**The fix — a dynamic conversion table, not hardcoded rates:**
+- **`staging.currency_rates`** (`database/migrations/004_currency_rates.sql`): `currency_code` (PK), `rate_to_usd` (units of that currency per $1 USD), `fetched_at`, `source`.
+- **`etl/fetch_currency_rates.py`**: fetches LIVE rates from [frankfurter.dev](https://frankfurter.dev) (ECB reference rates, free, no key) for whatever currencies are *actually present* in `staging.stg_jobs.salary_currency` right now — not a fixed list, so a new source's currency is picked up automatically — and upserts them. **Self-healing, never hardcoded**: if the API is unreachable or a currency isn't covered, the previous cached rate is left untouched (logged, not fatal) rather than falling back to any made-up number. Runs as its own step in both `refresh_all.py` and the CI workflow (`fx_rates` job), right before the dbt rebuild.
+- **`int_job_skills_enriched.sql`** LEFT JOINs `currency_rates` and computes `salary_min_usd`/`salary_max_usd`/`salary_midpoint_usd` (`usd_amount = native_amount / rate_to_usd`) alongside the untouched native-currency fields.
+- **Marts** (`mart_skill_demand`, `mart_salary_by_skill`, `mart_company_leaderboard`) carry both native and `_usd` aggregates. `salary_premium_percentage` is left alone everywhere — it's a ratio relative to that row's own same-currency market average, so it's already currency-invariant and safe to blend directly.
+- **Backend** (`skills.py` `/demand`, `/demand/all`; `salary.py` all four endpoints; `companies.py` `/leaderboard`): every absolute salary figure is selected from the `_usd` columns — **even for a single-country query**, not just the blended one. Reason: the frontend renders every salary value through `formatCurrency()` with no currency argument (always labeled "$"), so returning native currency there would just be a correctly-computed number under the wrong label. `salary_currency: 'USD'` is returned as a literal in the blended branches. Genuine native-currency display (e.g. literal £ for a UK-only view) would be a good separate enhancement if ever wanted — it isn't implemented today, so USD-everywhere is the consistent, honest choice given the current frontend.
+
+**Verified** (Jul 2026): "Machine Learning" under AI Engineer dropped from a corrupted blended figure to **$61,129** (matches a direct, job-count-weighted recomputation); "Claude" from ~$765k to **$98,311**; "ETL" from ~$784k to **$65,224**. Confirmed live via the running dashboard (Salary Analysis page), not just the API response — see the debugging note below about stale dev-server processes if you're re-verifying this.
+
+> **Debugging note:** while verifying this fix, a screenshot briefly showed stale inflated figures again — root cause was an *orphaned uvicorn process from an earlier session*, still bound to port 8000, started before the code fix and never restarted with `--reload`. Python doesn't hot-reload without that flag, so an old process keeps serving old query logic indefinitely even after the files change and the database is correct. If a fix looks like it "isn't taking effect," check for stale listeners on the port before suspecting the database or the code: `Get-NetTCPConnection -LocalPort 8000 -State Listen` (PowerShell) or `lsof -i :8000` (Unix).
 
 ---
 

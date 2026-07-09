@@ -115,6 +115,8 @@ Key design decisions:
 
 ⭐ **Jooble is the single most important key to get** for your Pakistan/India goal. It legally aggregates postings from hundreds of local boards (including inventory that originates on LinkedIn/Indeed/Rozee) and hands it to you through a clean, permitted API.
 
+> **Live-tested coverage note** (key activated 2026-07-06): India returns strong results — e.g. 137 total matches for "Data Engineer" alone, 71 normalized jobs from a small 2-role test run. Pakistan currently returns few or zero results for the same tech-role keywords tried so far (e.g. "developer" in Pakistan: 0). This looks like a coverage gap in Jooble's Pakistan index rather than a connector bug — the request succeeds (HTTP 200) and returns `{"jobs": []}` legitimately. Worth periodically re-testing with `python ingest_sources.py --source jooble --dry-run` as Jooble's Pakistan coverage may grow over time, and worth trying additional keyword phrasings/city-level locations (e.g. `"Karachi"`, `"Lahore"`) in `sources_config.json`'s `jooble.locations`.
+
 ---
 
 ## 4. Legal & Compliance — Read This

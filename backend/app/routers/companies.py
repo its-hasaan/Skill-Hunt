@@ -24,11 +24,17 @@ async def get_company_leaderboard(
     """
     Get top hiring companies for a specific role.
     """
+    # Salary figures use the USD-normalized columns even for a single country
+    # — see the matching comment in skills.py's /demand for why (keeps the
+    # cross-country branch below correct, and matches the frontend's
+    # hardcoded "$" label on this table).
     if country:
         query = """
-            SELECT 
+            SELECT
                 company_name, search_role, country_code, job_count,
-                avg_salary_min, avg_salary_max, avg_salary_midpoint,
+                avg_salary_min_usd AS avg_salary_min,
+                avg_salary_max_usd AS avg_salary_max,
+                avg_salary_midpoint_usd AS avg_salary_midpoint,
                 full_time_count, part_time_count, contract_count,
                 rank_in_role_country
             FROM staging_marts.mart_company_leaderboard
@@ -40,12 +46,12 @@ async def get_company_leaderboard(
     else:
         # Aggregate across countries
         query = """
-            SELECT 
+            SELECT
                 company_name, search_role,
                 SUM(job_count) as job_count,
-                AVG(avg_salary_min) as avg_salary_min,
-                AVG(avg_salary_max) as avg_salary_max,
-                AVG(avg_salary_midpoint) as avg_salary_midpoint,
+                AVG(avg_salary_min_usd) as avg_salary_min,
+                AVG(avg_salary_max_usd) as avg_salary_max,
+                AVG(avg_salary_midpoint_usd) as avg_salary_midpoint,
                 SUM(full_time_count) as full_time_count,
                 SUM(part_time_count) as part_time_count,
                 SUM(contract_count) as contract_count

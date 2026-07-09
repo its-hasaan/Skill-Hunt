@@ -116,7 +116,12 @@ export default function CompaniesPage() {
                   <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Company</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Total Jobs</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Full-Time</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Avg Salary</th>
+                  <th
+                    className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400 cursor-help"
+                    title="Converted to USD using live exchange rates, so figures are comparable across countries"
+                  >
+                    Avg Salary
+                  </th>
                 </tr>
               </thead>
               <tbody>

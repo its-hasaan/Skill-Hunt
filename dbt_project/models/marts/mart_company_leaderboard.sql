@@ -12,7 +12,7 @@
 */
 
 WITH company_jobs AS (
-    SELECT 
+    SELECT
         j.company_name,
         j.search_role,
         j.country_code,
@@ -21,26 +21,40 @@ WITH company_jobs AS (
         j.contract_time,
         j.salary_min,
         j.salary_max,
-        (COALESCE(j.salary_min, 0) + COALESCE(j.salary_max, 0)) / 
-            NULLIF((CASE WHEN j.salary_min IS NOT NULL THEN 1 ELSE 0 END + 
-                    CASE WHEN j.salary_max IS NOT NULL THEN 1 ELSE 0 END), 0) AS salary_midpoint
+        (COALESCE(j.salary_min, 0) + COALESCE(j.salary_max, 0)) /
+            NULLIF((CASE WHEN j.salary_min IS NOT NULL THEN 1 ELSE 0 END +
+                    CASE WHEN j.salary_max IS NOT NULL THEN 1 ELSE 0 END), 0) AS salary_midpoint,
+        -- USD-normalized (see int_job_skills_enriched.sql for the rationale) —
+        -- required for the cross-country aggregate branch in companies.py
+        j.salary_min / cr.rate_to_usd AS salary_min_usd,
+        j.salary_max / cr.rate_to_usd AS salary_max_usd,
+        (COALESCE(j.salary_min, 0) + COALESCE(j.salary_max, 0)) /
+            NULLIF((CASE WHEN j.salary_min IS NOT NULL THEN 1 ELSE 0 END +
+                    CASE WHEN j.salary_max IS NOT NULL THEN 1 ELSE 0 END), 0)
+            / cr.rate_to_usd AS salary_midpoint_usd
     FROM {{ source('staging', 'stg_jobs') }} j
-    WHERE j.company_name IS NOT NULL 
+    LEFT JOIN {{ source('staging', 'currency_rates') }} cr
+        ON j.salary_currency = cr.currency_code
+    WHERE j.company_name IS NOT NULL
       AND j.company_name != ''
 ),
 
 company_aggregates AS (
-    SELECT 
+    SELECT
         company_name,
         search_role,
         country_code,
         COUNT(DISTINCT job_id) AS job_count,
-        
-        -- Salary stats
+
+        -- Salary stats (native currency — correct for single-country views)
         AVG(salary_min) AS avg_salary_min,
         AVG(salary_max) AS avg_salary_max,
         AVG(salary_midpoint) AS avg_salary_midpoint,
-        
+        -- USD-normalized — use these when blending ACROSS countries
+        AVG(salary_min_usd) AS avg_salary_min_usd,
+        AVG(salary_max_usd) AS avg_salary_max_usd,
+        AVG(salary_midpoint_usd) AS avg_salary_midpoint_usd,
+
         -- Contract type breakdown
         COUNT(DISTINCT CASE WHEN contract_time = 'full_time' THEN job_id END) AS full_time_count,
         COUNT(DISTINCT CASE WHEN contract_time = 'part_time' THEN job_id END) AS part_time_count,
@@ -86,6 +100,9 @@ SELECT
     rc.avg_salary_min,
     rc.avg_salary_max,
     rc.avg_salary_midpoint,
+    rc.avg_salary_min_usd,
+    rc.avg_salary_max_usd,
+    rc.avg_salary_midpoint_usd,
     rc.full_time_count,
     rc.part_time_count,
     rc.contract_count,
