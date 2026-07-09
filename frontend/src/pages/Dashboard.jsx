@@ -32,6 +32,7 @@ export default function Dashboard() {
         <StatCard
           title="Total Jobs"
           value={statsLoading ? '...' : formatNumber(stats?.total_jobs || 0)}
+          subtitle={statsLoading ? undefined : `${formatNumber(stats?.current_jobs || 0)} current (last 60d)`}
           icon={Briefcase}
           color="primary"
           loading={statsLoading}
@@ -60,6 +61,7 @@ export default function Dashboard() {
         <StatCard
           title="Companies"
           value={statsLoading ? '...' : formatNumber(stats?.total_companies || 0)}
+          subtitle={statsLoading ? undefined : `${formatNumber(stats?.current_companies || 0)} current (last 60d)`}
           icon={Building2}
           color="red"
           loading={statsLoading}

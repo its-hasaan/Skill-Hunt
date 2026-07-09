@@ -1,22 +1,145 @@
 # Taxonomy Cleanup Changelog
 
-- Before: 336 skills
-- After:  333 skills
-- Removed: 3 | Merged: 0 | Renamed: 0 | Exact-deduped: 0
+- Before: 608 skills
+- After:  487 skills
+- Removed: 103 | Merged: 17 | Renamed: 1 | Exact-deduped: 1
 
 ## skill_type distribution
-- Tool/Platform: 110
-- Framework/Library: 53
-- Cloud/Infra: 47
-- Language: 41
-- Database: 38
-- Concept/Domain: 37
+- Tool/Platform: 127
+- Cloud/Infra: 123
+- Concept/Domain: 71
+- Framework/Library: 60
+- Language: 54
+- Database: 45
 - Soft Skill: 4
 - Human Language: 3
 
 ## Removed (non-skills)
+- AWS services
+- Adyen
+- After Effects
+- AgentForce
+- Airservices Australia
+- Airwallex
+- Amazon
+- Amazon Music
+- Amazon Prime Air
+- Analytics Platform
+- B2B SaaS
+- Betriebssysteme
+- Boam AI
+- CDAI
 - Cibersegurança
+- CloudFormation Automate
+- Cloudflight
+- Community Services Cluster
+- Connected Operations™ Cloud
+- Construction Cloud
+- Culture Amp
+- DEUNA
+- Data & AI Platform
+- Data Analysis & Decision Support Frame
+- DeepL
+- DevOps Toolchains
+- DiDi Global Inc.
+- Digital Experience Platform
+- Epistemix
+- Fan Experience Platform
+- Fiserv
+- Flowserve
+- Français
+- Google Cl
+- GridOS® platform
+- HUB International Canada
+- IA générative
+- IQVIA
 - Inglês
+- Kavak
+- Klaxoon
+- Lattice OS
+- Leidos
+- MCP services
+- Managed Services
+- MetBrains
+- Meta
+- Mindrift
+- NET
+- Network as a Service
+- OS
+- OmniPoint SaaS platform
+- Operating system
+- Oracle EPM Cloud
+- PC
+- Paysafe
+- Procurify
+- Professional Services
+- Public Cloud Platform
+- Quiet-Oceans
+- Replica
+- SAP Business Technology Platform
+- SAP Commerce Cloud
+- SaaS environment
+- SaaS platform
+- Search API
+- Service Cloud
+- Servinformacion
 - Servinformación
+- Swap
+- Toutiao
+- TripleTen
+- Trust Data Platform
+- Tucows
+- UPS
+- Web Services
+- WindowsAbout
+- Workflow Data Fabric
+- Xero
+- cloud architecture
+- cloud environments
+- cloud services
+- cloud solutions
+- cloud-native architectures
+- core platform
+- dashboards
+- data platform
+- digital transformation services
+- enterprise data platforms
+- event-driven services
+- global digital asset platform
+- governance and assurance services
+- high-performance platform
+- hybrid cloud platforms
+- infrastructure and operational services
+- intelligent integration and automation platform
+- it
+- multi-product platform
+- operating systems
+- payments platform
+- public cloud
+- security
+- single-page admin platform
 
 ## Merged into canonical
+- AWS Cloud  ->  AWS
+- Amazon Web Services  ->  AWS
+- Azure Platform  ->  Azure
+- GCP  ->  Google Cloud
+- Gen AI  ->  Generative AI
+- GenAI  ->  Generative AI
+- GenAI platform  ->  Generative AI
+- Google Cloud Platform  ->  Google Cloud
+- Microsoft Azure  ->  Azure
+- Microsoft Azure platform  ->  Azure
+- Microsoft Cloud  ->  Azure
+- Microsoft Fabric platform  ->  Microsoft Fabric
+- OCI  ->  Oracle Cloud Infrastructure
+- Power Platform  ->  Microsoft Power Platform
+- REST APIs  ->  REST
+- RESTful APIs  ->  REST
+- RESTful services  ->  REST
+
+## Renamed
+- Databricks platform  ->  Databricks
+
+## Exact duplicates removed
+- Databricks

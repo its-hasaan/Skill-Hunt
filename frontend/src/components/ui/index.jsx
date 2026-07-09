@@ -94,7 +94,7 @@ export function EmptyState({
 /**
  * Stat card component
  */
-export function StatCard({ title, value, icon: Icon, color = 'primary', loading = false }) {
+export function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', loading = false }) {
   const colorClasses = {
     primary: 'from-primary-500 to-primary-600',
     accent: 'from-accent-500 to-accent-600',
@@ -119,6 +119,7 @@ export function StatCard({ title, value, icon: Icon, color = 'primary', loading 
         {Icon && <Icon className="h-5 w-5 text-white/60" />}
       </div>
       <p className="text-2xl font-bold mt-1">{value}</p>
+      {subtitle && <p className="text-xs text-white/70 mt-0.5">{subtitle}</p>}
     </div>
   )
 }

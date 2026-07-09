@@ -50,18 +50,37 @@ async def get_summary_stats(
     
     # Companies
     companies_query = """
-        SELECT COUNT(DISTINCT company_name) as count 
-        FROM staging.stg_jobs 
+        SELECT COUNT(DISTINCT company_name) as count
+        FROM staging.stg_jobs
         WHERE company_name IS NOT NULL
     """
     companies_result = await db.fetch_one(companies_query)
-    
+
+    # "Current" = posted (falling back to when we extracted it, for sources
+    # without a reliable post date) within the last 60 days — the same
+    # freshness window the dbt marts already use (int_job_skills_enriched.sql).
+    current_jobs_query = """
+        SELECT COUNT(*) as count FROM staging.stg_jobs
+        WHERE COALESCE(job_posted_at, extracted_at) >= CURRENT_DATE - INTERVAL '60 days'
+    """
+    current_jobs_result = await db.fetch_one(current_jobs_query)
+
+    current_companies_query = """
+        SELECT COUNT(DISTINCT company_name) as count
+        FROM staging.stg_jobs
+        WHERE company_name IS NOT NULL
+          AND COALESCE(job_posted_at, extracted_at) >= CURRENT_DATE - INTERVAL '60 days'
+    """
+    current_companies_result = await db.fetch_one(current_companies_query)
+
     return DashboardStats(
         total_jobs=jobs_result['count'] if jobs_result else 0,
         total_skills=skills_result['count'] if skills_result else 0,
         total_countries=countries_result['count'] if countries_result else 0,
         total_roles=roles_result['count'] if roles_result else 0,
-        total_companies=companies_result['count'] if companies_result else 0
+        total_companies=companies_result['count'] if companies_result else 0,
+        current_jobs=current_jobs_result['count'] if current_jobs_result else 0,
+        current_companies=current_companies_result['count'] if current_companies_result else 0,
     )
 
 

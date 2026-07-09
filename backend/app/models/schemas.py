@@ -281,6 +281,8 @@ class DashboardStats(BaseModel):
     total_countries: int
     total_roles: int
     total_companies: int
+    current_jobs: int          # posted (or seen) in the last 60 days
+    current_companies: int     # distinct companies hiring in that window
     last_updated: Optional[datetime] = None
 
 
