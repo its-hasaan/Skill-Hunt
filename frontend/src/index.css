@@ -10,22 +10,34 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #213547;
+  color: #1f2933;
   background-color: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Inter tuning for a crisp, premium feel: single-story 'a'/'g' (cv11) and
+     a hair of negative tracking so headings and numerals read tight. */
+  font-feature-settings: 'cv11', 'ss01';
+  letter-spacing: -0.006em;
 }
 
 .dark {
   color-scheme: dark;
+  color: #ededf0;
+  background-color: #0a0a0c;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+}
+
+/* Tabular, tightly-tracked numerals for data (KPIs, tables, axes). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 /* Custom scrollbar — light */
@@ -50,47 +62,43 @@ body {
 
 /* Custom scrollbar — dark */
 .dark ::-webkit-scrollbar-track {
-  background: #161b22;
+  background: transparent;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: #26262b;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: #3a3a42;
 }
 
 /* Utility classes */
 @layer components {
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+    @apply bg-white rounded-xl shadow-sm border border-gray-200/70 p-6;
   }
 
   .card-header {
-    @apply text-lg font-semibold text-gray-900 mb-4;
+    @apply text-base font-semibold text-gray-900 mb-4 tracking-tight;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg font-medium 
-           hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 
-           focus:ring-primary-500 focus:ring-offset-2;
+    @apply bg-primary-600 text-white px-4 py-2 rounded-lg font-medium
+           hover:bg-primary-500 transition-colors focus:outline-none focus:ring-2
+           focus:ring-primary-500/60 focus:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium 
-           hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 
-           focus:ring-gray-500 focus:ring-offset-2;
+    @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium
+           hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2
+           focus:ring-gray-400/60 focus:ring-offset-2;
   }
 
   .select-input {
-    @apply w-full px-3 py-2 bg-white border border-gray-200 rounded-lg 
-           text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 
-           focus:border-transparent;
-  }
-
-  .stat-card {
-    @apply bg-gradient-to-br from-primary-500 to-accent-600 rounded-xl p-4 text-white;
+    @apply w-full px-3 py-2 bg-white border border-gray-200 rounded-lg
+           text-gray-700 transition-colors focus:outline-none focus:ring-2
+           focus:ring-primary-500/50 focus:border-primary-500/50;
   }
 
   .tab-active {
@@ -102,29 +110,53 @@ body {
   }
 }
 
-/* Dark mode overrides for utility classes */
+/* ------------------------------------------------------------------
+   Dark-mode overrides — premium near-black surfaces with 1px
+   translucent-white hairlines (no hard solid borders).
+   ------------------------------------------------------------------ */
 .dark .select-input {
-  background-color: #30363d;         /* gray-700 */
-  border-color: rgb(75 85 99);       /* gray-600 */
-  color: rgb(209 213 219);           /* gray-300 */
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgb(237 237 240);
+}
+
+.dark .select-input:hover {
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .dark .btn-secondary {
-  background-color: #30363d;
-  color: rgb(209 213 219);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: rgb(237 237 240);
 }
 
 .dark .btn-secondary:hover {
-  background-color: rgb(75 85 99);
+  background-color: rgba(255, 255, 255, 0.09);
 }
 
 .dark .card {
-  background-color: #161b22;         /* gray-800 */
-  border-color: #30363d;             /* gray-700 */
+  background-color: #141417;         /* gray-800 */
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .dark .card-header {
-  color: rgb(243 244 246);           /* gray-100 */
+  color: #ffffff;
+}
+
+.dark .tab-active {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.dark .tab-inactive {
+  background-color: transparent;
+  color: rgb(156 163 175);           /* gray-400 */
+}
+
+.dark .tab-inactive:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
 }
 
 /* Chart container styles */

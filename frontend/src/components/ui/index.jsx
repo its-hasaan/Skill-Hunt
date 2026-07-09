@@ -94,32 +94,42 @@ export function EmptyState({
 /**
  * Stat card component
  */
-export function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', loading = false }) {
-  const colorClasses = {
-    primary: 'from-primary-500 to-primary-600',
-    accent: 'from-accent-500 to-accent-600',
-    green: 'from-green-500 to-green-600',
-    yellow: 'from-yellow-500 to-yellow-600',
-    red: 'from-red-500 to-red-600',
-  }
+export function StatCard({ title, value, subtitle, icon: Icon, loading = false }) {
+  // Monochromatic surface card: muted uppercase label, bright-white datum,
+  // and the single electric-blue accent isolated to the icon chip. The
+  // former per-card `color` prop is intentionally dropped — the premium
+  // look is a uniform system, not five saturated hues.
+  const base =
+    'rounded-xl border border-gray-200/70 dark:border-white/[0.08] ' +
+    'bg-white dark:bg-gray-800 p-4 transition-colors'
 
   if (loading) {
     return (
-      <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-lg p-3`}>
-        <Skeleton className="h-3.5 w-16 bg-white/30 mb-1.5" />
-        <Skeleton className="h-6 w-20 bg-white/30" />
+      <div className={base}>
+        <Skeleton className="h-3 w-16 mb-3" />
+        <Skeleton className="h-7 w-24" />
       </div>
     )
   }
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-lg p-3 text-white`}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-white/80">{title}</span>
-        {Icon && <Icon className="h-4 w-4 text-white/60" />}
+    <div className={clsx(base, 'hover:border-gray-300 dark:hover:border-white/[0.16]')}>
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          {title}
+        </span>
+        {Icon && (
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 ring-1 ring-inset ring-primary-500/20">
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
       </div>
-      <p className="text-xl font-bold mt-0.5">{value}</p>
-      {subtitle && <p className="text-[11px] text-white/70 mt-0.5">{subtitle}</p>}
+      <p className="mt-2.5 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white tabular-nums">
+        {value}
+      </p>
+      {subtitle && (
+        <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{subtitle}</p>
+      )}
     </div>
   )
 }
@@ -129,10 +139,10 @@ export function StatCard({ title, value, subtitle, icon: Icon, color = 'primary'
  */
 export function Card({ title, children, className, headerAction }) {
   return (
-    <div className={clsx('bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700', className)}>
+    <div className={clsx('bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-none border border-gray-200/70 dark:border-white/[0.08]', className)}>
       {title && (
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/[0.06]">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">{title}</h3>
           {headerAction}
         </div>
       )}
@@ -146,7 +156,7 @@ export function Card({ title, children, className, headerAction }) {
  */
 export function Tabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700/60 rounded-lg">
+    <div className="flex gap-1 p-1 bg-gray-100 dark:bg-white/[0.04] rounded-lg">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -154,8 +164,8 @@ export function Tabs({ tabs, activeTab, onChange }) {
           className={clsx(
             'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors',
             activeTab === tab.id
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+              ? 'bg-white dark:bg-white/[0.08] text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
           )}
         >
           {tab.icon && <tab.icon className="h-4 w-4" />}

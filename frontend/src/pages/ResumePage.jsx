@@ -281,12 +281,14 @@ export default function ResumePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-accent-600 rounded-2xl p-8 text-white">
-        <div className="flex items-center gap-3 mb-2">
-          <Target className="h-8 w-8" />
-          <h1 className="text-3xl font-bold">Resume Analyzer</h1>
+      <div className="rounded-2xl border border-gray-200/70 dark:border-white/[0.08] bg-white dark:bg-gray-800 p-6">
+        <div className="flex items-center gap-3 mb-1.5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400 ring-1 ring-inset ring-primary-500/20">
+            <Target className="h-5 w-5" />
+          </span>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Resume Analyzer</h1>
         </div>
-        <p className="text-white/80 text-lg">
+        <p className="text-gray-500 dark:text-gray-400">
           Upload your resume to discover your skill match with market demand and find your best-fit roles
         </p>
       </div>

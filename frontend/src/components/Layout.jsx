@@ -90,17 +90,17 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={clsx(
-        'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-200 lg:translate-x-0 flex flex-col',
+        'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-white/[0.08] transform transition-transform duration-200 lg:translate-x-0 flex flex-col',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         {/* Logo */}
-        <div className="flex items-center gap-3 h-14 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex items-center gap-2.5 h-14 px-5 border-b border-gray-200 dark:border-white/[0.08] flex-shrink-0">
           <img src="/logo.png" alt="Job Script" className="h-8 w-8 flex-shrink-0" />
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Job Script</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">Job Script</span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {navigation.map((item) => (
             <NavLink
               key={item.name}
@@ -108,19 +108,19 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => clsx(
                 'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                isActive 
-                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                isActive
+                  ? 'bg-primary-50 dark:bg-white/[0.06] text-primary-700 dark:text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-white'
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-[18px] w-[18px]" />
               {item.name}
             </NavLink>
           ))}
         </nav>
 
         {/* Filters */}
-        <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="px-4 py-4 border-t border-gray-200 dark:border-white/[0.08] flex-shrink-0">
           <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Filters
           </h3>
@@ -174,7 +174,7 @@ export default function Layout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 lg:px-6 transition-colors duration-200">
+        <header className="sticky top-0 z-30 h-14 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl border-b border-gray-200 dark:border-white/[0.08] flex items-center px-4 lg:px-6 transition-colors duration-200">
           {/* Mobile menu button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -185,10 +185,10 @@ export default function Layout() {
 
           {/* Breadcrumb / Title */}
           <div className="flex-1 ml-2 lg:ml-0">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h1 className="text-[15px] font-semibold text-gray-900 dark:text-white tracking-tight leading-tight">
               Tech Job Market Analysis
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
+            <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
               Skill demand insights from job postings
             </p>
           </div>
@@ -255,7 +255,7 @@ export default function Layout() {
 
                 {/* Hover dropdown — pt-2 bridges the gap so hover doesn't drop */}
                 <div className="absolute right-0 top-full pt-2 w-52 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity z-50">
-                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/[0.10] rounded-lg shadow-lg dark:shadow-2xl py-1">
                     <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {user.email}

@@ -8,17 +8,22 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Neutral near-black scale (premium SaaS dark, à la Linear/Vercel).
+        // Only 700/800/900 are overridden; 50–600 keep Tailwind's cool-gray
+        // for muted labels. Kept close to true-neutral so the electric-blue
+        // accent reads as the only chromatic element in the UI.
         gray: {
-          700: '#30363d',
-          800: '#161b22',
-          900: '#0d1117',
+          700: '#26262b',   // solid hairlines, hover fills, badges, inputs
+          800: '#141417',   // elevated surface (cards, sidebar, header)
+          900: '#0a0a0c',   // app background (near-black)
         },
+        // Electric-blue accent — the single vibrant color in the system.
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',
           300: '#93c5fd',
-          400: '#60a5fa',
+          400: '#58a6ff',
           500: '#3b82f6',
           600: '#2563eb',
           700: '#1d4ed8',

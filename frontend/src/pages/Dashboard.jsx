@@ -34,28 +34,24 @@ export default function Dashboard() {
           value={statsLoading ? '...' : formatNumber(stats?.total_jobs || 0)}
           subtitle={statsLoading ? undefined : `${formatNumber(stats?.current_jobs || 0)} current (last 60d)`}
           icon={Briefcase}
-          color="primary"
           loading={statsLoading}
         />
         <StatCard
           title="Skills Tracked"
           value={statsLoading ? '...' : formatNumber(stats?.total_skills || 0)}
           icon={Code}
-          color="accent"
           loading={statsLoading}
         />
         <StatCard
           title="Countries"
           value={statsLoading ? '...' : formatNumber(stats?.total_countries || 0)}
           icon={Globe}
-          color="green"
           loading={statsLoading}
         />
         <StatCard
           title="Job Roles"
           value={statsLoading ? '...' : formatNumber(stats?.total_roles || 0)}
           icon={TrendingUp}
-          color="yellow"
           loading={statsLoading}
         />
         <StatCard
@@ -63,7 +59,6 @@ export default function Dashboard() {
           value={statsLoading ? '...' : formatNumber(stats?.total_companies || 0)}
           subtitle={statsLoading ? undefined : `${formatNumber(stats?.current_companies || 0)} current (last 60d)`}
           icon={Building2}
-          color="red"
           loading={statsLoading}
         />
       </div>
@@ -111,13 +106,13 @@ export default function Dashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Skill</th>
-                  <th className="text-left py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Category</th>
-                  <th className="text-right py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
-                  <th className="text-right py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
+                <tr className="border-b border-gray-200 dark:border-white/[0.08]">
+                  <th className="text-left py-2 px-3 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">Skill</th>
+                  <th className="text-left py-2 px-3 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">Category</th>
+                  <th className="text-right py-2 px-3 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">Jobs</th>
+                  <th className="text-right py-2 px-3 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">Demand %</th>
                   <th
-                    className="text-right py-2 px-3 font-medium text-gray-600 dark:text-gray-400 cursor-help"
+                    className="text-right py-2 px-3 text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 cursor-help"
                     title="Converted to USD using live exchange rates, so figures are comparable across countries"
                   >
                     Avg Salary
@@ -130,15 +125,15 @@ export default function Dashboard() {
                     key={index}
                     onClick={() => openJobs(skill.skill_name)}
                     title={`View jobs mentioning ${skill.skill_name}`}
-                    className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                    className="border-b border-gray-100 dark:border-white/[0.05] hover:bg-gray-50 dark:hover:bg-white/[0.03] cursor-pointer transition-colors"
                   >
                     <td className="py-2 px-3 font-medium text-primary-600 dark:text-primary-400 hover:underline">{skill.skill_name}</td>
                     <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
-                    <td className="py-2 px-3 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
-                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
+                    <td className="py-2 px-3 text-right font-medium text-gray-900 dark:text-white tabular-nums">{formatNumber(skill.job_count)}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                       {skill.demand_percentage ? `${skill.demand_percentage.toFixed(1)}%` : '-'}
                     </td>
-                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                       {skill.avg_salary_midpoint ? `$${formatNumber(Math.round(skill.avg_salary_midpoint))}` : '-'}
                     </td>
                   </tr>
