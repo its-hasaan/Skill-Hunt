@@ -148,12 +148,6 @@ export default function Dashboard() {
           <EmptyState description="No data available" />
         )}
       </Card>
-
-      {/* Footer */}
-      <div className="text-center text-sm text-gray-500 dark:text-gray-500 py-4">
-        <p>🎯 Job Script | Data refreshed weekly from job postings</p>
-        <p className="mt-1">Built with React + FastAPI • Data Engineering Portfolio Project</p>
-      </div>
     </div>
   )
 }

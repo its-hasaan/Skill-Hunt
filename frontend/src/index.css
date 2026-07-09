@@ -46,15 +46,15 @@ body {
 
 /* Custom scrollbar — dark */
 .dark ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #161b22;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #30363d;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #484f58;
 }
 
 /* Utility classes */
@@ -100,13 +100,13 @@ body {
 
 /* Dark mode overrides for utility classes */
 .dark .select-input {
-  background-color: rgb(55 65 81);   /* gray-700 */
+  background-color: #30363d;         /* gray-700 */
   border-color: rgb(75 85 99);       /* gray-600 */
   color: rgb(209 213 219);           /* gray-300 */
 }
 
 .dark .btn-secondary {
-  background-color: rgb(55 65 81);
+  background-color: #30363d;
   color: rgb(209 213 219);
 }
 
@@ -115,8 +115,8 @@ body {
 }
 
 .dark .card {
-  background-color: rgb(31 41 55);   /* gray-800 */
-  border-color: rgb(55 65 81);       /* gray-700 */
+  background-color: #161b22;         /* gray-800 */
+  border-color: #30363d;             /* gray-700 */
 }
 
 .dark .card-header {

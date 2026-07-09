@@ -27,7 +27,7 @@ export function useChartColors() {
   return {
     isDark,
     series: (i) => getSeriesColor(i, isDark),
-    gridColor: isDark ? '#374151' : '#e5e7eb',        // hairline, one shade off surface
+    gridColor: isDark ? '#30363d' : '#e5e7eb',        // hairline, one shade off surface
     axisColor: isDark ? '#4b5563' : '#d1d5db',
     tickStyle: { fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 },
     positive: isDark ? '#3987e5' : '#2a78d6',          // diverging pair: blue…
@@ -53,8 +53,8 @@ function ChartTooltip({ active, payload, label, isDark, title, rows }) {
     <div
       className="rounded-lg border shadow-lg px-3 py-2 text-xs"
       style={{
-        backgroundColor: isDark ? '#1f2937' : '#ffffff',
-        borderColor: isDark ? '#374151' : '#e5e7eb',
+        backgroundColor: isDark ? '#161b22' : '#ffffff',
+        borderColor: isDark ? '#30363d' : '#e5e7eb',
         color: isDark ? '#f3f4f6' : '#111827',
       }}
     >
@@ -601,7 +601,7 @@ export function SkillTrendChart({ periods, series, colorMap = {}, height = 360 }
             stroke={colorFor(s.skill_name)}
             strokeWidth={2}
             dot={{ r: 3, fill: colorFor(s.skill_name), strokeWidth: 0 }}
-            activeDot={{ r: 5, strokeWidth: 2, stroke: c.isDark ? '#1f2937' : '#ffffff' }}
+            activeDot={{ r: 5, strokeWidth: 2, stroke: c.isDark ? '#161b22' : '#ffffff' }}
             isAnimationActive={false}
           />
         ))}

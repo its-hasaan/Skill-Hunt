@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { 
-  Upload, FileText, Target, CheckCircle2, XCircle, 
-  AlertCircle, TrendingUp, ArrowRight, Briefcase, Star
+import {
+  Upload, FileText, Target, CheckCircle2, XCircle,
+  AlertCircle, TrendingUp
 } from 'lucide-react'
 import { Card, ChartLoading, EmptyState, Spinner } from '../components/ui'
 import { resumeApi } from '../api'
@@ -506,49 +506,29 @@ export default function ResumePage() {
         <Card title="How It Works">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-3">
-                <Target className="h-5 w-5 text-primary-600" />
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
                 Gap Analysis
               </h4>
               <p className="text-gray-600 dark:text-gray-400 mb-3">
                 Compare your skills against market demand for a specific role.
               </p>
-              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  See which of your skills are in high demand
-                </li>
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="h-4 w-4 text-primary-500 mt-0.5" />
-                  Discover skill gaps to fill for your target role
-                </li>
-                <li className="flex items-start gap-2">
-                  <Star className="h-4 w-4 text-yellow-500 mt-0.5" />
-                  Get a match score based on real job market data
-                </li>
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400 list-disc list-inside">
+                <li>See which of your skills are in high demand</li>
+                <li>Discover skill gaps to fill for your target role</li>
+                <li>Get a match score based on real job market data</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-3">
-                <Briefcase className="h-5 w-5 text-accent-600" />
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
                 Role Match
               </h4>
               <p className="text-gray-600 dark:text-gray-400 mb-3">
                 Find which job roles best match your current skillset.
               </p>
-              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  Automatically match against all tracked roles
-                </li>
-                <li className="flex items-start gap-2">
-                  <ArrowRight className="h-4 w-4 text-primary-500 mt-0.5" />
-                  Weighted scoring based on skill importance
-                </li>
-                <li className="flex items-start gap-2">
-                  <Star className="h-4 w-4 text-yellow-500 mt-0.5" />
-                  Discover career paths you hadn't considered
-                </li>
+              <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400 list-disc list-inside">
+                <li>Automatically match against all tracked roles</li>
+                <li>Weighted scoring based on skill importance</li>
+                <li>Discover career paths you hadn't considered</li>
               </ul>
             </div>
           </div>
