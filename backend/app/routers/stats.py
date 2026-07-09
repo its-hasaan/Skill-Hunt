@@ -82,21 +82,24 @@ async def get_filter_options(
     roles_result = await db.fetch_all(roles_query)
     roles = [r['search_role'] for r in roles_result]
     
-    # Get countries
+    # Get countries — fully dynamic: every country_code present in the data,
+    # resolved to a display name and sorted alphabetically by name.
     countries_query = """
-        SELECT DISTINCT country_code 
-        FROM staging.stg_jobs 
+        SELECT DISTINCT country_code
+        FROM staging.stg_jobs
         WHERE country_code IS NOT NULL
-        ORDER BY country_code
     """
     countries_result = await db.fetch_all(countries_query)
-    countries = [
-        CountryInfo(
-            country_code=r['country_code'],
-            country_name=COUNTRY_NAMES.get(r['country_code'], r['country_code'].upper())
-        )
-        for r in countries_result
-    ]
+    countries = sorted(
+        (
+            CountryInfo(
+                country_code=r['country_code'],
+                country_name=COUNTRY_NAMES.get(r['country_code'], r['country_code'].upper())
+            )
+            for r in countries_result
+        ),
+        key=lambda c: c.country_name,
+    )
     
     # Get skill categories
     categories_query = """
@@ -144,15 +147,17 @@ async def get_available_countries(
         FROM staging.stg_jobs j
         LEFT JOIN staging.dim_countries c ON j.country_code = c.country_code
         WHERE j.country_code IS NOT NULL
-        ORDER BY c.country_name
     """
     rows = await db.fetch_all(query)
-    
-    # Add fallback names
-    return [
-        {
-            "country_code": r['country_code'],
-            "country_name": r['country_name'] or COUNTRY_NAMES.get(r['country_code'], r['country_code'].upper())
-        }
-        for r in rows
-    ]
+
+    # Resolve names (DB name -> hardcoded fallback -> uppercased code) and sort by name
+    return sorted(
+        (
+            {
+                "country_code": r['country_code'],
+                "country_name": r['country_name'] or COUNTRY_NAMES.get(r['country_code'], r['country_code'].upper())
+            }
+            for r in rows
+        ),
+        key=lambda c: c["country_name"],
+    )

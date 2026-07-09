@@ -150,8 +150,14 @@ jobs:
       - name: Setup dbt profile
         run: |
           mkdir -p ~/.dbt
+          # Profile name MUST match dbt_project.yml's `profile: job_script`.
+          # schema MUST be `staging`: the mart models set config(schema='marts'),
+          # and dbt's default schema-name macro prefixes it -> `staging_marts.*`,
+          # which is exactly the schema the FastAPI backend reads. Using
+          # schema `marts` here would build `marts_marts.*` and the API would
+          # see stale/empty data.
           cat > ~/.dbt/profiles.yml << EOF
-          skill_hunt:
+          job_script:
             outputs:
               prod:
                 type: postgres
@@ -160,9 +166,10 @@ jobs:
                 user: ${{ secrets.SUPABASE_USER }}
                 password: ${{ secrets.SUPABASE_PASSWORD }}
                 dbname: ${{ secrets.SUPABASE_DB }}
-                schema: marts
+                schema: staging
                 threads: 4
                 connect_timeout: 30
+                sslmode: require
             target: prod
           EOF
       

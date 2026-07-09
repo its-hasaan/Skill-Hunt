@@ -66,6 +66,11 @@ REMOVE = {
     "operating systems", "CloudFormation Automate", "DevOps Toolchains",
     # Job titles / ambiguous acronyms
     "CISO", "SAM",
+    # Noise: common words the fast-path matches everywhere (auto-discovered by
+    # GLiNER and wrongly promoted). "it" matched the pronoun in ~every posting;
+    # "security" the generic word (specific security skills like SIEM/VPN/WAF
+    # stay); "NET" the bare token (the real skill ".NET" is kept separately).
+    "it", "IT", "security", "NET",
 }
 
 
@@ -74,9 +79,11 @@ REMOVE = {
 # --------------------------------------------------------------------------
 MERGE = {
     "Generative AI": ["Gen AI", "GenAI", "GenAI platform"],
-    "Amazon Web Services": ["Amazon Web Service", "AWS Cloud", "AWS"],
-    "Microsoft Azure": ["Azure Cloud platform", "Azure Platform",
-                         "Microsoft Azure platform", "Microsoft Cloud", "Azure"],
+    # Canonical = the short, conventional label (better chart/table labels);
+    # the long variants fold in as aliases so extraction still catches them.
+    "AWS": ["Amazon Web Services", "Amazon Web Service", "AWS Cloud"],
+    "Azure": ["Microsoft Azure", "Azure Cloud platform", "Azure Platform",
+              "Microsoft Azure platform", "Microsoft Cloud"],
     "Google Cloud": ["GCP", "Google Cloud Platform"],
     "Oracle Cloud Infrastructure": ["OCI", "Oracle cloud"],
     "Microsoft Power Platform": ["Power Platform", "MS Power Platform"],

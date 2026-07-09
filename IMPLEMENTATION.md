@@ -244,6 +244,8 @@ url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
 ```
 Credentials come from `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`; the DB connection from `SUPABASE_URL`.
 
+> **Known limitation — description length.** Adzuna's Search API truncates the `description` field to **500 characters** (mid-word, with an ellipsis) and offers no parameter to lift it and no job-detail endpoint (`/jobs/{country}/{id}` returns 404). Full text lives only on the `redirect_url` landing page. So Adzuna descriptions are inherently partial; the multi-source connectors (§3.1b) return full/fuller text, and skill extraction is minimally affected because skills are typically listed early in a posting.
+
 **Batch, idempotent insert** (via `psycopg2.extras.execute_values`):
 ```sql
 INSERT INTO raw.jobs (job_platform_id, search_role, country_code, raw_data, extraction_batch_id)
@@ -254,6 +256,21 @@ ON CONFLICT (job_platform_id, country_code) DO NOTHING
 **CLI flags:** `--role`, `--country`, `--pages`, `--delay`, `--days`, `--months`, `--test`. Each run is tagged with a UUID `batch_id`. The scheduled CI job invokes `python extractor.py --days 60 --pages 3 --delay 1.5`.
 
 `etl/check_progress.py` prints row counts across `raw.jobs`, `staging.stg_jobs`, and `staging.stg_job_skills`. `etl/truncate_old.sql` truncates staging/marts tables for a clean rebuild.
+
+### 3.1a Full Refresh Orchestrator (`etl/refresh_all.py`)
+
+Runs the whole pipeline end-to-end so the dashboard reflects the LATEST data across ALL sources, then rebuilds the marts — the one-command version of the CI pipeline for local/manual runs:
+
+1. **Snapshot** current marts → `archive.skill_demand_history` (preserves the current insights *before* anything changes — the trend history is never lost to a rebuild).
+2. **Extract** fresh Adzuna postings (`--days`/`--pages`).
+3. **Ingest** the multi-source connectors.
+4. **Transform** new raw jobs → staging + skills.
+5. **dbt** `run --profiles-dir . --target dev --full-refresh` → rebuilds `staging_marts.*`.
+6. **Snapshot** again (starts the next trend point from the fresh state).
+
+**Why the order matters:** dbt's intermediate model keeps only jobs posted in the last 60 days, so the marts must be rebuilt *after* fresh data lands or they'd rebuild empty (e.g. when the newest existing postings are already >60 days old). Flags: `--skip-adzuna`, `--skip-ingest`, `--skip-transform`, `--skip-dbt`, `--days`, `--dry-run`.
+
+> **Gotcha — Supabase pooler mode.** `SUPABASE_URL` points at the **transaction** pooler (port `6543`), which drops long-lived connections; the multi-minute transform dies with `connection already closed`. `refresh_all.py` rewrites the transform's connection to the **session** pooler (port `5432`, same host) via `session_pooler_url()` so the long run survives. dbt derives its `DB_*` env from `SUPABASE_URL` automatically. (The transform commits per batch and is idempotent, so a dropped run can simply be re-run — but the session pooler avoids the drop entirely.)
 
 ### 3.1b Multi-Source Ingestion (`etl/ingest_sources.py` + `etl/connectors/`)
 
@@ -342,6 +359,16 @@ Tracks unverified discoveries with occurrence counts and average confidence, and
 2. It is recorded as an unverified discovery (count = 1).
 3. Subsequent sightings increment the count and update average confidence.
 4. Once ≥3 occurrences at ≥0.75 confidence, it is promoted into the taxonomy JSON + `dim_skills`, so the fast path picks it up on future runs.
+
+> **Trade-off:** auto-promotion inevitably admits some noise (common words GLiNER over-tags, e.g. "it"/"security") and near-duplicates (variants like "Microsoft Azure" promoted alongside "Azure"). These are cleaned up periodically — see below.
+
+#### Taxonomy cleanup (`etl/tools/`)
+Two companion tools keep the discovered taxonomy tidy; they share one set of rule dicts (`REMOVE` / `MERGE` / `RENAME`) so JSON and DB never drift:
+
+- **`clean_taxonomy.py`** — rewrites `skills_taxonomy.json`: drops non-skills (company names, garbled/foreign tokens, generic phrases, noise words like `it`/`security`/`NET`), folds variant clusters into a canonical (`Amazon Web Services`/`AWS Cloud` → **AWS**; `Microsoft Azure`/… → **Azure**; `GCP`/`Google Cloud Platform` → **Google Cloud**; `GenAI`/`Gen AI` → **Generative AI**; `REST APIs`/… → **REST**) with the variants kept as aliases, assigns a `type`, backs up the original, and writes `taxonomy_cleanup_changelog.md`. Idempotent.
+- **`apply_taxonomy_cleanup_to_db.py`** — imports those same rules and applies them to the ALREADY-extracted data (`staging.dim_skills` + `staging.stg_job_skills`): deletes removed skills, repoints each variant's job-skill rows to the canonical skill (deduping per job so a job that mentioned both "Azure" and "Microsoft Azure" counts once), and deletes the emptied variant rows. Run it, then rebuild marts (`dbt run --profiles-dir . --target dev --full-refresh`) so the dashboard reflects the merge without a full re-extraction. `--dry-run` previews every change. `raw.jobs` is never touched, so a fresh transform can always regenerate staging from scratch.
+
+The first full cleanup (Jul 2026) took the taxonomy 608 → 487 skills (95 removed, 17 merged in the DB) and deleted ~35k noise/duplicate job-skill rows — e.g. `it` (8,567 rows, matched the pronoun in nearly every posting) and the split Azure/AWS cloud counts.
 
 ---
 

@@ -292,39 +292,67 @@ def get_db_connection():
     return psycopg2.connect(DB_URL)
 
 
+# In-memory cache of skill_name -> skill_id. dim_skills is small (hundreds of
+# rows) and effectively append-only during a run, so caching it eliminates the
+# per-skill SELECT round-trip that otherwise dominates transform time (each job
+# mentions ~5-10 skills, so this is the difference between ~15 DB round-trips
+# per job and ~1). Pre-warmed by warm_skill_cache() at the start of a run.
+_SKILL_CACHE: Dict[str, int] = {}
+
+
+def warm_skill_cache(cursor) -> int:
+    """Load all existing skills into the in-memory cache in one query."""
+    cursor.execute("SELECT skill_name, skill_id FROM staging.dim_skills")
+    _SKILL_CACHE.clear()
+    for name, sid in cursor.fetchall():
+        _SKILL_CACHE[name] = sid
+    return len(_SKILL_CACHE)
+
+
 def get_or_create_skill(cursor, skill_name: str, category: str, subcategory: str) -> int:
     """
     Get skill_id from dim_skills, or create if not exists.
-    
+
+    Uses a read-through in-memory cache (`_SKILL_CACHE`) so known skills cost
+    zero DB round-trips; only genuinely new skills hit the database.
+
     Args:
         cursor: Database cursor
         skill_name: Canonical skill name
         category: Skill category
         subcategory: Skill subcategory
-    
+
     Returns:
         skill_id (int)
     """
-    # Try to get existing skill
+    cached = _SKILL_CACHE.get(skill_name)
+    if cached is not None:
+        return cached
+
+    # Cache miss — look it up (covers rows created before the cache warmed).
     cursor.execute(
         "SELECT skill_id FROM staging.dim_skills WHERE skill_name = %s",
         (skill_name,)
     )
     result = cursor.fetchone()
-    
+
     if result:
+        _SKILL_CACHE[skill_name] = result[0]
         return result[0]
-    
+
     # Create new skill
     cursor.execute(
         """
         INSERT INTO staging.dim_skills (skill_name, skill_category, skill_subcategory)
         VALUES (%s, %s, %s)
+        ON CONFLICT (skill_name) DO UPDATE SET skill_name = EXCLUDED.skill_name
         RETURNING skill_id
         """,
         (skill_name, category, subcategory)
     )
-    return cursor.fetchone()[0]
+    skill_id = cursor.fetchone()[0]
+    _SKILL_CACHE[skill_name] = skill_id
+    return skill_id
 
 
 def _parse_datetime(value):
@@ -506,7 +534,12 @@ def transform_and_load(
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
+    # Pre-warm the skill_id cache in one query so per-job skill lookups don't
+    # each round-trip to the DB (the main transform bottleneck).
+    cached_skills = warm_skill_cache(cursor)
+    logger.info(f"Warmed skill cache: {cached_skills} skills")
+
     # Initialize HYBRID skill extractor
     skill_extractor = create_skill_extractor(
         discovery_mode=discovery_mode,

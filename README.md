@@ -575,17 +575,30 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
 
 ### Running ETL Manually
 
+**One-command full refresh** (snapshot → Adzuna extract → multi-source ingest → transform → dbt rebuild → snapshot). This is the recommended way to bring the dashboard fully up to date across all sources:
+
+```bash
+cd etl
+python refresh_all.py                 # full refresh (derives dbt creds from SUPABASE_URL)
+python refresh_all.py --dry-run       # print the plan, run nothing
+python refresh_all.py --skip-adzuna   # only multi-source + transform + dbt
+```
+
+Or run the individual stages:
+
 ```bash
 cd etl
 python extractor.py --days 60 --pages 3 --delay 1.5   # extract (Adzuna)
 python ingest_sources.py                                # extract (multi-source bots)
 python transformer.py --batch-size 500 --fast-only     # extract skills (taxonomy only)
-cd ../dbt_project && dbt run --full-refresh             # rebuild marts
+cd ../dbt_project && dbt run --profiles-dir . --target dev --full-refresh   # rebuild staging_marts.*
 
 # Test / preview modes
 python extractor.py --test
 python ingest_sources.py --test --dry-run               # fetch samples, write nothing
 ```
+
+> **Note:** the marts the API reads are `staging_marts.*`, produced by dbt's **`dev`** target (schema `staging` + the models' `marts` config → `staging_marts`). `refresh_all.py` handles this — and routes the long-running transform through Supabase's **session** pooler (port 5432) so the connection isn't dropped mid-run. Order matters: fresh data must land *before* the dbt rebuild, because the marts only keep postings from the last 60 days.
 
 ---
 

@@ -11,6 +11,7 @@ import { useFilterOptions } from '../hooks/useData'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { userApi } from '../api'
+import { getCountryFlag } from '../utils/helpers'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
@@ -140,10 +141,13 @@ export default function Layout() {
             </select>
           </div>
 
-          {/* Country selector */}
+          {/* Country selector — fully dynamic: every country we have data for */}
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-3">
               Country
+              {filters?.countries?.length ? (
+                <span className="text-gray-400 dark:text-gray-500 font-normal"> ({filters.countries.length})</span>
+              ) : null}
             </label>
             <select
               value={selectedCountry}
@@ -154,7 +158,7 @@ export default function Layout() {
               <option value="">All Countries</option>
               {filters?.countries?.map((country) => (
                 <option key={country.country_code} value={country.country_code}>
-                  {country.country_name}
+                  {getCountryFlag(country.country_code)} {country.country_name}
                 </option>
               ))}
             </select>
