@@ -92,14 +92,18 @@ async def get_filter_options(
     Get all available filter options for the dashboard.
     Useful for populating dropdowns.
     """
-    # Get roles
+    # Get roles + how many jobs we have tracked for each (all countries), so
+    # the UI can show the data volume behind the selected role.
     roles_query = """
-        SELECT DISTINCT search_role 
-        FROM staging.stg_jobs 
+        SELECT search_role, COUNT(*) AS job_count
+        FROM staging.stg_jobs
+        WHERE search_role IS NOT NULL
+        GROUP BY search_role
         ORDER BY search_role
     """
     roles_result = await db.fetch_all(roles_query)
     roles = [r['search_role'] for r in roles_result]
+    role_job_counts = {r['search_role']: r['job_count'] for r in roles_result}
     
     # Get countries — fully dynamic: every country_code present in the data,
     # resolved to a display name and sorted alphabetically by name.
@@ -133,7 +137,8 @@ async def get_filter_options(
     return FilterOptions(
         roles=roles,
         countries=countries,
-        skill_categories=categories
+        skill_categories=categories,
+        role_job_counts=role_job_counts,
     )
 
 

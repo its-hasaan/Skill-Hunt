@@ -189,6 +189,16 @@ body {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Onboarding filter hint bubble entrance */
+@keyframes hintIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-hint-in {
+  animation: hintIn 0.28s ease-out;
+}
+
 /* Network graph styles */
 .network-node {
   cursor: pointer;

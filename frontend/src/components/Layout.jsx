@@ -11,7 +11,7 @@ import { useFilterOptions } from '../hooks/useData'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { userApi } from '../api'
-import { getCountryFlag } from '../utils/helpers'
+import { getCountryFlag, formatNumber } from '../utils/helpers'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
@@ -28,6 +28,7 @@ export default function Layout() {
   const [selectedRole, setSelectedRole] = useState('')
   const [selectedCountry, setSelectedCountry] = useState('')
   const [justSaved, setJustSaved] = useState(false)
+  const [showFilterHint, setShowFilterHint] = useState(false)
   const { isDark, toggleTheme } = useTheme()
   const { user, isAuthEnabled, signOut } = useAuth()
   const queryClient = useQueryClient()
@@ -57,6 +58,26 @@ export default function Layout() {
   // Set default role once filters load
   if (filters?.roles?.length && !selectedRole) {
     setSelectedRole(filters.roles[0])
+  }
+
+  // First-visit onboarding: once a role is set, briefly spotlight the filters
+  // so new users notice they can change the role/country. Shown until they
+  // actually use a filter once (then remembered), and auto-dismissed after a
+  // few seconds so it never lingers.
+  const hintTriggered = useRef(false)
+  useEffect(() => {
+    if (hintTriggered.current || !selectedRole) return
+    if (localStorage.getItem('jobscript-filter-used')) return
+    hintTriggered.current = true
+    setShowFilterHint(true)
+    const t = setTimeout(() => setShowFilterHint(false), 6000)
+    return () => clearTimeout(t)
+  }, [selectedRole])
+
+  const dismissHint = () => {
+    setShowFilterHint(false)
+    hintTriggered.current = true
+    localStorage.setItem('jobscript-filter-used', '1')
   }
 
   const handleSaveSearch = async () => {
@@ -121,10 +142,22 @@ export default function Layout() {
 
         {/* Filters */}
         <div className="px-4 py-4 border-t border-gray-200 dark:border-white/[0.08] flex-shrink-0">
+          {/* First-visit onboarding bubble pointing at the filters */}
+          {showFilterHint && (
+            <div className="relative mb-3 animate-hint-in">
+              <div className="rounded-lg bg-primary-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg">
+                Currently showing skills for{' '}
+                <span className="font-semibold">{selectedRole || 'this role'}</span>. Change the
+                role or country here to explore other markets.
+              </div>
+              <div className="absolute left-6 -bottom-1 h-2.5 w-2.5 rotate-45 bg-primary-600" />
+            </div>
+          )}
+
           <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Filters
           </h3>
-          
+
           {/* Role selector */}
           <div className="mb-3">
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-3">
@@ -132,8 +165,11 @@ export default function Layout() {
             </label>
             <select
               value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="select-input text-sm"
+              onChange={(e) => { setSelectedRole(e.target.value); dismissHint() }}
+              className={clsx(
+                'select-input text-sm transition-shadow',
+                showFilterHint && 'ring-2 ring-primary-500/70'
+              )}
               disabled={filtersLoading}
             >
               {filtersLoading ? (
@@ -144,6 +180,11 @@ export default function Layout() {
                 ))
               )}
             </select>
+            {selectedRole && filters?.role_job_counts?.[selectedRole] != null && (
+              <p className="mt-1 px-3 text-[11px] text-gray-500 dark:text-gray-500 tabular-nums">
+                {formatNumber(filters.role_job_counts[selectedRole])} jobs tracked for this role
+              </p>
+            )}
           </div>
 
           {/* Country selector — fully dynamic: every country we have data for */}
@@ -156,8 +197,11 @@ export default function Layout() {
             </label>
             <select
               value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              className="select-input text-sm"
+              onChange={(e) => { setSelectedCountry(e.target.value); dismissHint() }}
+              className={clsx(
+                'select-input text-sm transition-shadow',
+                showFilterHint && 'ring-2 ring-primary-500/70'
+              )}
               disabled={filtersLoading}
             >
               <option value="">All Countries</option>

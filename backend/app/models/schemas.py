@@ -4,7 +4,7 @@ Designed for extensibility - easy to add new fields for future features.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 
 
@@ -295,6 +295,7 @@ class FilterOptions(BaseModel):
     roles: List[str]
     countries: List[CountryInfo]
     skill_categories: List[str]
+    role_job_counts: Dict[str, int] = {}   # search_role -> total jobs tracked
 
 
 # ============================================
