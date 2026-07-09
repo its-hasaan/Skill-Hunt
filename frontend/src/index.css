@@ -114,14 +114,23 @@ body {
    Dark-mode overrides — premium near-black surfaces with 1px
    translucent-white hairlines (no hard solid borders).
    ------------------------------------------------------------------ */
+/* Solid (not translucent) background: the native <option> popup can't render
+   translucency and would fall back to a white popup, making the near-white
+   option text unreadable. Keep it a solid dark surface + explicit option
+   colors so the dropdown list is legible. */
 .dark .select-input {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: #141417;
   border-color: rgba(255, 255, 255, 0.10);
   color: rgb(237 237 240);
 }
 
 .dark .select-input:hover {
   border-color: rgba(255, 255, 255, 0.16);
+}
+
+.dark .select-input option {
+  background-color: #141417;
+  color: rgb(237 237 240);
 }
 
 .dark .btn-secondary {
