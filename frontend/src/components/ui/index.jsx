@@ -71,21 +71,21 @@ export function ErrorState({ message = 'Something went wrong', onRetry }) {
 /**
  * Empty state component
  */
-export function EmptyState({ 
-  title = 'No data', 
+export function EmptyState({
+  title = 'No data',
   description = 'No data available for the selected filters.',
-  icon = null 
+  icon = null
 }) {
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
+    <div className="flex flex-col items-center justify-center p-6 text-center">
       {icon || (
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+          <svg className="w-7 h-7 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
         </div>
       )}
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{title}</h3>
+      <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-1">{title}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
     </div>
   )
@@ -105,21 +105,21 @@ export function StatCard({ title, value, subtitle, icon: Icon, color = 'primary'
 
   if (loading) {
     return (
-      <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl p-4`}>
-        <Skeleton className="h-4 w-20 bg-white/30 mb-2" />
-        <Skeleton className="h-8 w-24 bg-white/30" />
+      <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-lg p-3`}>
+        <Skeleton className="h-3.5 w-16 bg-white/30 mb-1.5" />
+        <Skeleton className="h-6 w-20 bg-white/30" />
       </div>
     )
   }
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl p-4 text-white`}>
+    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-lg p-3 text-white`}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-white/80">{title}</span>
-        {Icon && <Icon className="h-5 w-5 text-white/60" />}
+        <span className="text-xs font-medium text-white/80">{title}</span>
+        {Icon && <Icon className="h-4 w-4 text-white/60" />}
       </div>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-      {subtitle && <p className="text-xs text-white/70 mt-0.5">{subtitle}</p>}
+      <p className="text-xl font-bold mt-0.5">{value}</p>
+      {subtitle && <p className="text-[11px] text-white/70 mt-0.5">{subtitle}</p>}
     </div>
   )
 }
@@ -131,12 +131,12 @@ export function Card({ title, children, className, headerAction }) {
   return (
     <div className={clsx('bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700', className)}>
       {title && (
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           {headerAction}
         </div>
       )}
-      <div className="p-6">{children}</div>
+      <div className="p-5">{children}</div>
     </div>
   )
 }

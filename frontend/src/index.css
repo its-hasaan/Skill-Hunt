@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 :root {
+  /* Scales every rem-based Tailwind utility (spacing, text, icon sizing) down
+     ~10% so the app is dense at native 100% zoom instead of needing the user
+     to zoom the browser out to see a full screen comfortably. */
+  font-size: 90%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;

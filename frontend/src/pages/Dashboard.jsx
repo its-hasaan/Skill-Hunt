@@ -26,9 +26,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Hero Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard
           title="Total Jobs"
           value={statsLoading ? '...' : formatNumber(stats?.total_jobs || 0)}
@@ -69,16 +69,16 @@ export default function Dashboard() {
       </div>
 
       {/* Main Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Top Skills */}
-        <Card 
+        <Card
           title={`Top Skills for ${selectedRole || 'All Roles'}`}
           className="lg:col-span-2"
         >
           {skillsLoading ? (
-            <ChartLoading height={400} />
+            <ChartLoading height={340} />
           ) : skillDemand?.data?.length > 0 ? (
-            <SkillBarChart data={skillDemand.data} height={400} />
+            <SkillBarChart data={skillDemand.data} height={340} />
           ) : (
             <EmptyState description="No skill data available for this selection" />
           )}
@@ -87,9 +87,9 @@ export default function Dashboard() {
         {/* Category Distribution */}
         <Card title="Skills by Category">
           {skillsLoading ? (
-            <ChartLoading height={300} />
+            <ChartLoading height={260} />
           ) : skillDemand?.data?.length > 0 ? (
-            <CategoryPieChart data={skillDemand.data} height={300} />
+            <CategoryPieChart data={skillDemand.data} height={260} />
           ) : (
             <EmptyState description="No category data available" />
           )}
@@ -102,9 +102,9 @@ export default function Dashboard() {
         headerAction={<span className="text-xs text-gray-500 dark:text-gray-400">Click a skill to see the jobs →</span>}
       >
         {skillsLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              <div key={i} className="h-8 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
             ))}
           </div>
         ) : skillDemand?.data?.length > 0 ? (
@@ -112,12 +112,12 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Skill</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Category</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Skill</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Category</th>
+                  <th className="text-right py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Jobs</th>
+                  <th className="text-right py-2 px-3 font-medium text-gray-600 dark:text-gray-400">Demand %</th>
                   <th
-                    className="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400 cursor-help"
+                    className="text-right py-2 px-3 font-medium text-gray-600 dark:text-gray-400 cursor-help"
                     title="Converted to USD using live exchange rates, so figures are comparable across countries"
                   >
                     Avg Salary
@@ -132,13 +132,13 @@ export default function Dashboard() {
                     title={`View jobs mentioning ${skill.skill_name}`}
                     className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
                   >
-                    <td className="py-3 px-4 font-medium text-primary-600 dark:text-primary-400 hover:underline">{skill.skill_name}</td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
-                    <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
-                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
+                    <td className="py-2 px-3 font-medium text-primary-600 dark:text-primary-400 hover:underline">{skill.skill_name}</td>
+                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{skill.skill_category || '-'}</td>
+                    <td className="py-2 px-3 text-right text-gray-900 dark:text-gray-100">{formatNumber(skill.job_count)}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
                       {skill.demand_percentage ? `${skill.demand_percentage.toFixed(1)}%` : '-'}
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
                       {skill.avg_salary_midpoint ? `$${formatNumber(Math.round(skill.avg_salary_midpoint))}` : '-'}
                     </td>
                   </tr>

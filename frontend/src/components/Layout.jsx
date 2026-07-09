@@ -94,20 +94,20 @@ export default function Layout() {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         {/* Logo */}
-        <div className="flex items-center gap-3 h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <img src="/logo.png" alt="Job Script" className="h-9 w-9 flex-shrink-0" />
-          <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Job Script</span>
+        <div className="flex items-center gap-3 h-14 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <img src="/logo.png" alt="Job Script" className="h-8 w-8 flex-shrink-0" />
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Job Script</span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
           {navigation.map((item) => (
             <NavLink
               key={item.name}
               to={item.href}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                 isActive 
                   ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' 
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
@@ -174,7 +174,7 @@ export default function Layout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 lg:px-6 transition-colors duration-200">
+        <header className="sticky top-0 z-30 h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center px-4 lg:px-6 transition-colors duration-200">
           {/* Mobile menu button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -289,7 +289,7 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-3 lg:p-5">
           <Outlet context={{ 
             selectedRole, 
             selectedCountry, 
