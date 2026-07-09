@@ -90,6 +90,7 @@ export function SkillBarChart({ data, dataKey = 'job_count', nameKey = 'skill_na
         <YAxis
           dataKey={nameKey}
           type="category"
+          interval={0}
           tick={c.tickStyle}
           tickFormatter={truncate(16)}
           width={112}
@@ -137,6 +138,7 @@ export function CategoryBarChart({
           <YAxis
             dataKey={nameKey}
             type="category"
+            interval={0}
             tick={c.tickStyle}
             tickFormatter={truncate(16)}
             width={112}
@@ -280,6 +282,7 @@ export function SalaryPremiumChart({ data, height = 400 }) {
         <YAxis
           dataKey="skill_name"
           type="category"
+          interval={0}
           tick={c.tickStyle}
           tickFormatter={truncate(16)}
           width={112}
@@ -339,6 +342,7 @@ export function SalaryComparisonChart({ data, height = 400 }) {
         <YAxis
           dataKey="skill_name"
           type="category"
+          interval={0}
           tick={c.tickStyle}
           tickFormatter={truncate(16)}
           width={112}
@@ -392,6 +396,7 @@ export function CompanyBarChart({ data, height = 500 }) {
         <YAxis
           dataKey="company_name"
           type="category"
+          interval={0}
           tick={{ ...c.tickStyle, fontSize: 11 }}
           tickFormatter={truncate(18)}
           width={124}
@@ -488,6 +493,7 @@ export function CountryComparisonChart({ data, valueKey = 'demand_percentage', h
         <YAxis
           dataKey="display_name"
           type="category"
+          interval={0}
           tick={c.tickStyle}
           tickFormatter={truncate(16)}
           width={112}
