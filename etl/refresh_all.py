@@ -113,11 +113,17 @@ def snapshot(label: str, dry_run: bool = False) -> None:
 
 
 def dbt_env() -> dict:
-    """Build the environment dbt needs, deriving DB_* from SUPABASE_URL."""
+    """Build the environment dbt needs, deriving DB_* from SUPABASE_URL.
+
+    Uses the SESSION pooler port (5432) regardless of what the URL says:
+    --full-refresh runs long CREATE TABLE AS statements, and the transaction
+    pooler (6543) drops long-lived connections mid-build (same failure mode
+    as the transform step — see session_pooler_url). CI already builds dbt
+    on 5432 for this reason."""
     env = dict(os.environ)
-    u = urlparse.urlparse(DB_URL)
+    u = urlparse.urlparse(session_pooler_url(DB_URL))
     env["DB_HOST"] = u.hostname or ""
-    env["DB_PORT"] = str(u.port or 6543)
+    env["DB_PORT"] = str(u.port or 5432)
     env["DB_USER"] = u.username or ""
     env["DB_PASSWORD"] = urlparse.unquote(u.password or "")
     env["DB_NAME"] = (u.path or "/postgres").lstrip("/")
@@ -191,6 +197,11 @@ def main():
         )
 
     # 6. Snapshot the fresh state too (starts the next trend point).
+    #    archive_skill_demand() REPLACES any same-day snapshot (migration 005),
+    #    so this post-refresh call supersedes the pre-refresh one taken in
+    #    step 0 and today's archived trend point reflects the FRESH marts.
+    #    (Before 005 the function was once-per-day, which silently made this
+    #    call a no-op and archived stale pre-refresh data instead.)
     if ok:
         snapshot("post-refresh", args.dry_run)
 

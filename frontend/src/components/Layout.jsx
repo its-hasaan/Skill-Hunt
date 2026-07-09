@@ -34,7 +34,7 @@ export default function Layout() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  const { data: filters, isLoading: filtersLoading } = useFilterOptions()
+  const { data: filters, isLoading: filtersLoading, isError: filtersError, refetch: refetchFilters } = useFilterOptions()
 
   // Signed-in users get their saved dashboard defaults applied once per visit.
   const { data: profile } = useQuery({
@@ -44,6 +44,11 @@ export default function Layout() {
     retry: 1,
   })
   const defaultsApplied = useRef(false)
+  // A different account signing in should get ITS defaults applied, so the
+  // once-per-visit latch resets whenever the user identity changes.
+  useEffect(() => {
+    defaultsApplied.current = false
+  }, [user?.id])
   useEffect(() => {
     if (defaultsApplied.current || !profile || !filters?.roles?.length) return
     if (profile.default_role && filters.roles.includes(profile.default_role)) {
@@ -55,10 +60,14 @@ export default function Layout() {
     defaultsApplied.current = true
   }, [profile, filters])
 
-  // Set default role once filters load
-  if (filters?.roles?.length && !selectedRole) {
-    setSelectedRole(filters.roles[0])
-  }
+  // Set default role once filters load (in an effect — calling setState
+  // during render forces an extra render pass and is fragile under
+  // concurrent rendering).
+  useEffect(() => {
+    if (filters?.roles?.length && !selectedRole) {
+      setSelectedRole(filters.roles[0])
+    }
+  }, [filters, selectedRole])
 
   // First-visit onboarding: once a role is set, briefly spotlight the filters
   // so new users notice they can change the role/country. Shown until they
@@ -80,6 +89,7 @@ export default function Layout() {
     localStorage.setItem('jobscript-filter-used', '1')
   }
 
+  const [saveFailed, setSaveFailed] = useState(false)
   const handleSaveSearch = async () => {
     if (!user || !selectedRole) return
     const countryName = filters?.countries?.find(c => c.country_code === selectedCountry)?.country_name
@@ -91,6 +101,9 @@ export default function Layout() {
       setTimeout(() => setJustSaved(false), 2000)
     } catch (e) {
       console.error('Failed to save search', e)
+      // Surface the failure — before, the button just silently did nothing.
+      setSaveFailed(true)
+      setTimeout(() => setSaveFailed(false), 3000)
     }
   }
 
@@ -157,6 +170,17 @@ export default function Layout() {
           <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Filters
           </h3>
+
+          {/* Filters failing means EVERY page silently shows empty states —
+              make the outage visible and recoverable right where it hurts. */}
+          {filtersError && (
+            <div className="mx-3 mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-600 dark:text-red-400">
+              Could not reach the API — filters unavailable.
+              <button onClick={() => refetchFilters()} className="ml-1 underline hover:no-underline">
+                Retry
+              </button>
+            </div>
+          )}
 
           {/* Role selector */}
           <div className="mb-3">
@@ -261,11 +285,11 @@ export default function Layout() {
               onClick={handleSaveSearch}
               disabled={!selectedRole}
               className="ml-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-40"
-              title={justSaved ? 'Saved!' : 'Save current search to your account'}
+              title={saveFailed ? 'Save failed — try again' : justSaved ? 'Saved!' : 'Save current search to your account'}
             >
               {justSaved
                 ? <BookmarkCheck className="h-5 w-5 text-green-500" />
-                : <Bookmark className="h-5 w-5" />}
+                : <Bookmark className={clsx('h-5 w-5', saveFailed && 'text-red-500')} />}
             </button>
           )}
 

@@ -460,7 +460,9 @@ def parse_raw_job(raw_data: dict, raw_job_id: int, search_role: str, country_cod
     # Parse salary
     salary_min = raw_data.get('salary_min')
     salary_max = raw_data.get('salary_max')
-    salary_is_predicted = raw_data.get('salary_is_predicted', '0') == '1'
+    # Adzuna sends "1"/"0" as strings, but coerce via str() so an int 1/0
+    # (or future API change) is still interpreted correctly.
+    salary_is_predicted = str(raw_data.get('salary_is_predicted', '0')) in ('1', 'True', 'true')
     
     return {
         'job_platform_id': str(raw_data.get('id', '')),
@@ -556,20 +558,30 @@ def transform_and_load(
     # Statistics
     total_processed = 0
     total_skills_extracted = 0
+    total_failed = 0
     start_time = datetime.now()
-    
+
     while True:
         # Get batch of unprocessed jobs
         raw_jobs = get_unprocessed_jobs(cursor, batch_size)
-        
+
         if not raw_jobs:
             logger.info("No more unprocessed jobs found.")
             break
-        
+
         logger.info(f"Processing batch of {len(raw_jobs)} jobs...")
-        
+        batch_succeeded = 0
+
         for raw_job in raw_jobs:
             try:
+                # Per-job savepoint: without it, ONE failing job aborts the
+                # whole Postgres transaction — every later job in the batch
+                # then errors with InFailedSqlTransaction, the batch commit
+                # persists nothing, and get_unprocessed_jobs() returns the
+                # exact same batch on the next loop iteration => the run
+                # spins forever making zero progress. A savepoint confines
+                # each failure to its own job.
+                cursor.execute("SAVEPOINT job_sp")
                 raw_data = raw_job['raw_data']
                 if isinstance(raw_data, str):
                     raw_data = json.loads(raw_data)
@@ -640,17 +652,39 @@ def transform_and_load(
                         (job_id, skill_id, skill['skill_name'], mention_count)
                     )
                     total_skills_extracted += 1
-                
+
+                cursor.execute("RELEASE SAVEPOINT job_sp")
                 total_processed += 1
-                
+                batch_succeeded += 1
+
             except Exception as e:
                 logger.error(f"Error processing job {raw_job['id']}: {e}")
+                total_failed += 1
+                try:
+                    # Undo only this job's statements; the rest of the batch
+                    # keeps its work and the transaction stays healthy.
+                    cursor.execute("ROLLBACK TO SAVEPOINT job_sp")
+                except Exception:
+                    # Savepoint itself is gone (e.g. connection died) —
+                    # reset the transaction so the run can continue.
+                    conn.rollback()
                 continue
-        
+
         # Commit after each batch
         conn.commit()
         logger.info(f"Batch complete. Total processed: {total_processed}")
-    
+
+        # Progress guard: if an entire batch failed, the same jobs would be
+        # re-fetched forever (they never land in stg_jobs, so the anti-join
+        # keeps returning them). Stop instead and surface the failure.
+        if batch_succeeded == 0:
+            logger.error(
+                "Entire batch of %d jobs failed — aborting to avoid an "
+                "infinite retry loop. Failing raw job ids (first 10): %s",
+                len(raw_jobs), [j['id'] for j in raw_jobs[:10]],
+            )
+            break
+
     # Final commit
     conn.commit()
     
@@ -666,6 +700,7 @@ def transform_and_load(
     logger.info(f"TRANSFORMATION COMPLETE")
     logger.info(f"{'='*60}")
     logger.info(f"Jobs processed: {total_processed}")
+    logger.info(f"Jobs failed: {total_failed}")
     logger.info(f"Skills extracted: {total_skills_extracted}")
     logger.info(f"Time elapsed: {elapsed:.2f} seconds")
     
@@ -694,6 +729,7 @@ def transform_and_load(
     
     return {
         "jobs_processed": total_processed,
+        "jobs_failed": total_failed,
         "skills_extracted": total_skills_extracted,
         "elapsed_seconds": elapsed,
         "extractor_stats": extractor_stats
@@ -730,12 +766,17 @@ def main():
             logger.info("Aborted.")
             return
     
-    transform_and_load(
+    result = transform_and_load(
         batch_size=args.batch_size,
         reprocess=args.reprocess,
         discovery_mode=args.discovery_mode,
         fast_only=args.fast_only
     )
+
+    # Surface hard failure to orchestrators (refresh_all.py / CI): failures
+    # with zero successes means the run made no progress at all.
+    if result["jobs_failed"] > 0 and result["jobs_processed"] == 0:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

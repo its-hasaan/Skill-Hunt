@@ -2,6 +2,8 @@
 
 > **Technical Documentation**  
 > A deep dive into the architecture and implementation details behind Job Script, kept in sync with the actual codebase.
+>
+> See [PIPELINE_REVIEW.md](PIPELINE_REVIEW.md) for the July 2026 end-to-end pipeline review: every bug found & fixed (with why), and the proposed technique-level improvements awaiting sign-off.
 
 ---
 
@@ -235,7 +237,9 @@ The extractor queries the **Adzuna Job Search API** and stores raw responses in 
 }
 ```
 
-**Key functions:** `load_config()`, `validate_credentials()`, `get_jobs()` (fetch a page, handling HTTP 429 with a 60s backoff and timeouts), `save_to_database()` (batch insert), `extract_all()`, `main()`.
+**Key functions:** `load_config()`, `validate_credentials()`, `get_jobs()` (fetch a page; HTTP 429 gets a 60s backoff with **bounded retries that preserve all original filters** including `max_days_old`), `save_to_database()` (batch insert over a **single shared connection per run**, with `page_size` sized to the batch so `rowcount` reports accurate insert counts), `extract_all()`, `main()`.
+
+**Failure signaling:** the run exits `2` when zero jobs were *fetched* across every role/country (dead credentials or an Adzuna outage — distinct from zero *inserted*, which just means everything was already in the DB), so `refresh_all.py` and CI can stop the pipeline instead of building marts on nothing new.
 
 **Endpoint & auth:**
 ```python
@@ -269,11 +273,13 @@ Runs the whole pipeline end-to-end so the dashboard reflects the LATEST data acr
 6. **dbt** `run --profiles-dir . --target dev --full-refresh` → rebuilds `staging_marts.*`.
 7. **Snapshot** again (starts the next trend point from the fresh state).
 
+> **Snapshot semantics (migration 005):** `archive_skill_demand()` **replaces** any snapshot already taken the same day. The pre-refresh snapshot (step 1) is a safety net if the run dies; the post-refresh snapshot (step 7) supersedes it so the archived trend point for the day reflects the *fresh* marts. (Migration 003's once-per-day guard silently made step 7 a no-op — history was always one refresh stale.)
+
 **Why the order matters:** dbt's intermediate model keeps only jobs posted in the last 60 days, so the marts must be rebuilt *after* fresh data lands or they'd rebuild empty (e.g. when the newest existing postings are already >60 days old); fresh FX rates must land before the dbt rebuild too, since the salary conversion is computed at build time. Flags: `--skip-adzuna`, `--skip-ingest`, `--skip-transform`, `--skip-fx`, `--skip-dbt`, `--days`, `--dry-run`.
 
 > **Is this the same as the scheduled CI run?** Conceptually yes — same stages, same order — but **not literally the same code path**. `.github/workflows/etl_pipeline.yml` runs each stage as its own GitHub Actions job (`extract` → `transform` → `fx_rates` → `dbt` → `archive`) with its own checkout/install/secrets, rather than invoking this script. Keep both in sync by hand if you change the pipeline shape; there is currently no shared entry point between them.
 
-> **Gotcha — Supabase pooler mode.** `SUPABASE_URL` points at the **transaction** pooler (port `6543`), which drops long-lived connections; the multi-minute transform dies with `connection already closed`. Both `refresh_all.py` (via `session_pooler_url()`) and the CI `transform` job rewrite the transform's connection to the **session** pooler (port `5432`, same host) so the long run survives. dbt derives its `DB_*` env from `SUPABASE_URL` automatically. (The transform commits per batch and is idempotent, so a dropped run can simply be re-run — but the session pooler avoids the drop entirely.) This was discovered and fixed in both places after the first production full-refresh (Jul 2026) died mid-transform on the transaction pooler.
+> **Gotcha — Supabase pooler mode.** `SUPABASE_URL` points at the **transaction** pooler (port `6543`), which drops long-lived connections; the multi-minute transform dies with `connection already closed`. Both `refresh_all.py` (via `session_pooler_url()`) and the CI `transform` job rewrite the transform's connection to the **session** pooler (port `5432`, same host) so the long run survives. dbt derives its `DB_*` env from `SUPABASE_URL` automatically — **also rewritten to port 5432**, since `--full-refresh` runs long `CREATE TABLE AS` statements that the transaction pooler can drop mid-build (CI already built dbt on 5432). (The transform commits per batch and is idempotent, so a dropped run can simply be re-run — but the session pooler avoids the drop entirely.) This was discovered and fixed in both places after the first production full-refresh (Jul 2026) died mid-transform on the transaction pooler.
 
 ### 3.1b Multi-Source Ingestion (`etl/ingest_sources.py` + `etl/connectors/`)
 
@@ -312,6 +318,8 @@ Transforms `raw.jobs` → `staging.stg_jobs` (+ `staging.stg_job_skills`):
 - `parse_raw_job()` — dispatches by source: connector-ingested rows carry a `_normalized` envelope and pass straight through (`parse_normalized_job()`); Adzuna rows are flattened as before (title, company, description, location display + areas, category tag/label, salary min/max/predicted, contract type/time, redirect URL, `job_posted_at`) with country → currency mapping (now incl. `pk`→PKR, `remote`→USD). Both paths carry `source` into `stg_jobs`.
 - Upserts into `stg_jobs` (`ON CONFLICT ... DO UPDATE SET processed_at = NOW()`), then runs the hybrid extractor on `title + description`.
 - `get_or_create_skill()` — looks up/creates a `dim_skills` row, then upserts into `stg_job_skills` (`ON CONFLICT (job_id, skill_id)`).
+
+**Fault isolation (per-job savepoints):** each job is wrapped in a `SAVEPOINT` — a failing job rolls back only its own statements instead of aborting the whole Postgres transaction. Without this, one malformed job poisoned the rest of its batch (every subsequent insert failed), the batch commit persisted nothing, and the `while True` loop refetched the *same* batch forever. A zero-progress guard additionally aborts the run (exit 1) if an entire batch fails, logging the offending raw-job ids. The `SkillDiscoveryManager` uses the same pattern: it shares the transformer's connection, so it uses a savepoint and never calls `commit()`/`rollback()` itself (a mid-batch rollback used to silently discard already-processed jobs in hybrid mode).
 
 **CLI flags:** `--batch-size`, `--reprocess`, `--discovery-mode` (force GLiNER for all jobs), `--fast-only` (disable GLiNER). Env overrides: `ENABLE_GLINER`, `GLINER_MODEL`, `DISCOVERY_SAMPLE_RATE`. The scheduled CI job runs `--fast-only`.
 
@@ -699,8 +707,8 @@ WHERE j.job_id IS NOT NULL
 | `mart_salary_by_skill` | Salary vs. market per skill | premium absolute/%/USD, requires ≥5 jobs |
 | `mart_skills_by_country` | Skill demand across countries | `rank_by_country`, `top_country_for_skill`; min 3 jobs |
 | `mart_skill_cooccurrence` | Skill pairs in the same job | `jaccard_similarity`, conditional probabilities; min 5 co-occurrences |
-| `mart_company_leaderboard` | Top hiring companies | contract breakdown, `roles_hiring`, native + `_usd` salary averages; top 100 per role/country |
-| `mart_role_similarity` | Role skill overlap | Jaccard, overlap & dice coefficients, top 10 shared skills |
+| `mart_company_leaderboard` | Top hiring companies | contract breakdown, `roles_hiring` (all roles the company hires for in that country, computed across role groups), native + `_usd` salary averages; **same 60-day freshness window as the other marts**; top 100 per role/country |
+| `mart_role_similarity` | Role skill overlap | Jaccard, overlap & dice coefficients, top 10 shared skills **ranked by combined demand in both roles** (was alphabetical) |
 
 All marts are materialized as `table` in the `marts` schema (physically landing in `staging_marts` per the dbt target — see §2.2 "Marts tables").
 
@@ -714,10 +722,10 @@ Data tests are intentionally minimal: `not_null` on `int_job_skills_enriched.job
 
 **The fix — a dynamic conversion table, not hardcoded rates:**
 - **`staging.currency_rates`** (`database/migrations/004_currency_rates.sql`): `currency_code` (PK), `rate_to_usd` (units of that currency per $1 USD), `fetched_at`, `source`.
-- **`etl/fetch_currency_rates.py`**: fetches LIVE rates from [frankfurter.dev](https://frankfurter.dev) (ECB reference rates, free, no key) for whatever currencies are *actually present* in `staging.stg_jobs.salary_currency` right now — not a fixed list, so a new source's currency is picked up automatically — and upserts them. **Self-healing, never hardcoded**: if the API is unreachable or a currency isn't covered, the previous cached rate is left untouched (logged, not fatal) rather than falling back to any made-up number. Runs as its own step in both `refresh_all.py` and the CI workflow (`fx_rates` job), right before the dbt rebuild.
+- **`etl/fetch_currency_rates.py`**: fetches LIVE rates from [frankfurter.dev](https://frankfurter.dev) (ECB reference rates, free, no key) for whatever currencies are *actually present* in `staging.stg_jobs.salary_currency` right now — not a fixed list, so a new source's currency is picked up automatically — and upserts them. Currencies the ECB set doesn't publish (notably **PKR**, critical for the Pakistan sources) are filled from a keyless fallback API ([open.er-api.com](https://open.er-api.com)); the `source` column records which API each rate came from. **Self-healing, never hardcoded**: if neither source covers a currency, the previous cached rate is left untouched (logged, not fatal) rather than falling back to any made-up number. Runs as its own step in both `refresh_all.py` and the CI workflow (`fx_rates` job), right before the dbt rebuild.
 - **`int_job_skills_enriched.sql`** LEFT JOINs `currency_rates` and computes `salary_min_usd`/`salary_max_usd`/`salary_midpoint_usd` (`usd_amount = native_amount / rate_to_usd`) alongside the untouched native-currency fields.
 - **Marts** (`mart_skill_demand`, `mart_salary_by_skill`, `mart_company_leaderboard`) carry both native and `_usd` aggregates. `salary_premium_percentage` is left alone everywhere — it's a ratio relative to that row's own same-currency market average, so it's already currency-invariant and safe to blend directly.
-- **Backend** (`skills.py` `/demand`, `/demand/all`; `salary.py` all four endpoints; `companies.py` `/leaderboard`): every absolute salary figure is selected from the `_usd` columns — **even for a single-country query**, not just the blended one. Reason: the frontend renders every salary value through `formatCurrency()` with no currency argument (always labeled "$"), so returning native currency there would just be a correctly-computed number under the wrong label. `salary_currency: 'USD'` is returned as a literal in the blended branches. Genuine native-currency display (e.g. literal £ for a UK-only view) would be a good separate enhancement if ever wanted — it isn't implemented today, so USD-everywhere is the consistent, honest choice given the current frontend.
+- **Backend** (`skills.py` `/demand`, `/demand/all`; `salary.py` all four endpoints; `companies.py` `/leaderboard`; `resume.py` `/analyze` gap analysis; `extension.py` `/analyze`): every absolute salary figure is selected from the `_usd` columns — **even for a single-country query**, not just the blended one. Reason: the frontend renders every salary value through `formatCurrency()` with no currency argument (always labeled "$"), so returning native currency there would just be a correctly-computed number under the wrong label. `salary_currency: 'USD'` is returned as a literal in the blended branches. Genuine native-currency display (e.g. literal £ for a UK-only view) would be a good separate enhancement if ever wanted — it isn't implemented today, so USD-everywhere is the consistent, honest choice given the current frontend.
 
 **Verified** (Jul 2026): "Machine Learning" under AI Engineer dropped from a corrupted blended figure to **$61,129** (matches a direct, job-count-weighted recomputation); "Claude" from ~$765k to **$98,311**; "ETL" from ~$784k to **$65,224**. Confirmed live via the running dashboard (Salary Analysis page), not just the API response — see the debugging note below about stale dev-server processes if you're re-verifying this.
 

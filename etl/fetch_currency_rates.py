@@ -46,6 +46,10 @@ logger = logging.getLogger("fx")
 load_dotenv(Path(__file__).parent / ".env")
 DB_URL = os.getenv("SUPABASE_URL")
 FX_API_URL = "https://api.frankfurter.dev/v1/latest"
+# Fallback for currencies the ECB reference set does not publish (notably
+# PKR — critical for the Pakistan job sources). open.er-api.com is free,
+# keyless, and returns USD -> every ISO currency in one call.
+FX_FALLBACK_URL = "https://open.er-api.com/v6/latest/USD"
 
 
 def get_currencies_in_use(cur) -> set:
@@ -59,43 +63,88 @@ def get_currencies_in_use(cur) -> set:
     return currencies
 
 
-def fetch_live_rates(currencies: set) -> dict:
-    """Query Frankfurter for USD -> each currency, then invert to get
-    'units of currency per 1 USD' (rate_to_usd), matching this project's
-    convention. Returns {} on any failure (caller keeps old cached rates)."""
+def fetch_live_rates(currencies: set) -> tuple:
+    """Query Frankfurter for USD -> each currency ('units of currency per
+    1 USD', matching this project's convention). Currencies the ECB set
+    doesn't publish (e.g. PKR) are filled from the fallback API.
+
+    Returns (rates, sources): {currency: rate}, {currency: source_name}.
+    ({}, {}) on total failure — caller keeps old cached rates."""
     wanted = currencies - {"USD"}
     if not wanted:
-        return {"USD": 1.0}
+        return {"USD": 1.0}, {}
     try:
         resp = requests.get(FX_API_URL, params={"base": "USD", "to": ",".join(sorted(wanted))}, timeout=15)
         if resp.status_code != 200:
-            logger.warning("FX API returned HTTP %s — keeping cached rates", resp.status_code)
-            return {}
+            logger.warning("FX API returned HTTP %s — trying fallback source", resp.status_code)
+            fallback = _fetch_fallback_rates(wanted)
+            if not fallback:
+                return {}, {}
+            fallback["USD"] = 1.0
+            return fallback, {c: "open.er-api.com" for c in fallback}
         data = resp.json()
         rates = data.get("rates", {})
         rates["USD"] = 1.0
+        sources = {}
         missing = wanted - set(rates.keys())
         if missing:
-            logger.warning("FX API did not return rates for: %s (keeping cached values for these)", sorted(missing))
-        return rates
+            # Primary source (ECB) doesn't publish every currency — e.g. PKR.
+            # Try the fallback API for just the missing ones so those
+            # countries' salaries still get USD-normalized.
+            fallback = _fetch_fallback_rates(missing)
+            rates.update(fallback)
+            sources = {c: "open.er-api.com" for c in fallback}
+            still_missing = missing - set(fallback.keys())
+            if still_missing:
+                logger.warning(
+                    "No source returned rates for: %s (keeping cached values for these)",
+                    sorted(still_missing),
+                )
+        return rates, sources
     except (requests.exceptions.RequestException, ValueError) as e:
-        logger.warning("FX fetch failed (%s) — keeping cached rates", e)
+        logger.warning("FX fetch failed (%s) — trying fallback source", e)
+        fallback = _fetch_fallback_rates(wanted)
+        if not fallback:
+            return {}, {}
+        fallback["USD"] = 1.0
+        return fallback, {c: "open.er-api.com" for c in fallback}
+
+
+def _fetch_fallback_rates(currencies: set) -> dict:
+    """Fetch USD -> currency rates for `currencies` from the fallback API.
+    Returns only the requested currencies; {} on any failure."""
+    if not currencies:
+        return {}
+    try:
+        resp = requests.get(FX_FALLBACK_URL, timeout=15)
+        if resp.status_code != 200:
+            logger.warning("Fallback FX API returned HTTP %s", resp.status_code)
+            return {}
+        data = resp.json()
+        all_rates = data.get("rates", {})
+        found = {c: float(all_rates[c]) for c in currencies if c in all_rates}
+        if found:
+            logger.info("Fallback FX source covered: %s", sorted(found.keys()))
+        return found
+    except (requests.exceptions.RequestException, ValueError, TypeError) as e:
+        logger.warning("Fallback FX fetch failed (%s)", e)
         return {}
 
 
-def upsert_rates(cur, rates: dict) -> int:
+def upsert_rates(cur, rates: dict, sources: dict = None) -> int:
+    sources = sources or {}
     n = 0
     for currency, rate in rates.items():
         cur.execute(
             """
             INSERT INTO staging.currency_rates (currency_code, rate_to_usd, fetched_at, source)
-            VALUES (%s, %s, NOW(), 'frankfurter.dev')
+            VALUES (%s, %s, NOW(), %s)
             ON CONFLICT (currency_code) DO UPDATE SET
                 rate_to_usd = EXCLUDED.rate_to_usd,
                 fetched_at = EXCLUDED.fetched_at,
                 source = EXCLUDED.source
             """,
-            (currency, rate),
+            (currency, rate, sources.get(currency, "frankfurter.dev")),
         )
         n += 1
     return n
@@ -116,7 +165,7 @@ def main():
         currencies = get_currencies_in_use(cur)
         logger.info("Currencies in use: %s", sorted(currencies))
 
-        rates = fetch_live_rates(currencies)
+        rates, sources = fetch_live_rates(currencies)
         if not rates:
             logger.warning("No fresh rates fetched this run — existing cached rates remain in effect")
             return
@@ -127,7 +176,7 @@ def main():
             logger.info("[dry-run] not writing to DB")
             return
 
-        n = upsert_rates(cur, rates)
+        n = upsert_rates(cur, rates, sources)
         conn.commit()
         logger.info("Upserted %d currency rates into staging.currency_rates", n)
     finally:

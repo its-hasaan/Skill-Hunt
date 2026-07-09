@@ -97,7 +97,10 @@ def save_to_database(records: list, source: str, batch_id: str) -> int:
             VALUES %s
             ON CONFLICT (job_platform_id, country_code) DO NOTHING
         """
-        execute_values(cursor, query, rows)
+        # page_size must cover the whole list: cursor.rowcount only reflects
+        # the LAST page execute_values ran, so the default page_size=100
+        # under-reports inserts for batches larger than 100.
+        execute_values(cursor, query, rows, page_size=max(1, len(rows)))
         inserted = cursor.rowcount
         conn.commit()
         cursor.close()

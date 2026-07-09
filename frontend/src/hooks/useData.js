@@ -1,7 +1,7 @@
 /**
  * Custom hooks for data fetching with React Query
  */
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { statsApi, skillsApi, companiesApi, salaryApi, careerApi } from '../api'
 
 // ============================================
@@ -83,7 +83,9 @@ export function useSkillJobs(skill, role, country = null, limit = 20, offset = 0
     queryKey: ['skills', 'jobs', skill, role, country, limit, offset],
     queryFn: () => skillsApi.getJobs(skill, role, country, limit, offset),
     enabled: !!skill && !!role,
-    keepPreviousData: true,
+    // v5 spelling — the old `keepPreviousData: true` option was removed in
+    // React Query v5 and silently did nothing, so pagination flashed empty.
+    placeholderData: keepPreviousData,
   })
 }
 

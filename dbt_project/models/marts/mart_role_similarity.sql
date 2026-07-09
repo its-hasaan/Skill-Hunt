@@ -61,8 +61,33 @@ shared_skills AS (
         AND rs1.search_role < rs2.search_role
 ),
 
+-- Rank each pair's shared skills by how in-demand they are in BOTH roles,
+-- so "top shared skills" really means top — the previous alphabetical
+-- ARRAY_AGG made ['Agile','Airflow',...] the "top" for every pair.
+shared_skills_ranked AS (
+    SELECT
+        role_1,
+        role_2,
+        skill_name,
+        ROW_NUMBER() OVER (
+            PARTITION BY role_1, role_2
+            ORDER BY role_1_job_count + role_2_job_count DESC, skill_name
+        ) AS demand_rank
+    FROM shared_skills
+),
+
+top_shared AS (
+    SELECT
+        role_1,
+        role_2,
+        ARRAY_AGG(skill_name ORDER BY demand_rank) AS top_shared_skills
+    FROM shared_skills_ranked
+    WHERE demand_rank <= 10
+    GROUP BY role_1, role_2
+),
+
 similarity_metrics AS (
-    SELECT 
+    SELECT
         rp.role_1,
         rp.role_2,
         rp.role_1_total,
@@ -70,12 +95,14 @@ similarity_metrics AS (
         COUNT(DISTINCT ss.skill_name) AS shared_skills_count,
         rp.role_1_total - COUNT(DISTINCT ss.skill_name) AS role_1_unique_skills,
         rp.role_2_total - COUNT(DISTINCT ss.skill_name) AS role_2_unique_skills,
-        -- Top shared skills
-        ARRAY_AGG(DISTINCT ss.skill_name ORDER BY ss.skill_name) FILTER (WHERE ss.skill_name IS NOT NULL) AS top_shared_skills
+        MAX(ts.top_shared_skills) AS top_shared_skills
     FROM role_pairs rp
-    LEFT JOIN shared_skills ss 
-        ON rp.role_1 = ss.role_1 
+    LEFT JOIN shared_skills ss
+        ON rp.role_1 = ss.role_1
         AND rp.role_2 = ss.role_2
+    LEFT JOIN top_shared ts
+        ON rp.role_1 = ts.role_1
+        AND rp.role_2 = ts.role_2
     GROUP BY rp.role_1, rp.role_2, rp.role_1_total, rp.role_2_total
 )
 

@@ -1,13 +1,13 @@
 import { useOutletContext } from 'react-router-dom'
 import { useCompanyLeaderboard, useContractTypes } from '../hooks/useData'
-import { Card, ChartLoading, EmptyState } from '../components/ui'
+import { Card, ChartLoading, EmptyState, ErrorState } from '../components/ui'
 import { CompanyBarChart, ContractTypePieChart } from '../components/charts/Charts'
 import { formatNumber, formatCurrency } from '../utils/helpers'
 
 export default function CompaniesPage() {
   const { selectedRole, selectedCountry } = useOutletContext()
 
-  const { data: companies, isLoading: companiesLoading } = useCompanyLeaderboard(
+  const { data: companies, isLoading: companiesLoading, isError: companiesError, refetch: refetchCompanies } = useCompanyLeaderboard(
     selectedRole,
     selectedCountry || null,
     50
@@ -34,6 +34,8 @@ export default function CompaniesPage() {
         <Card title="Top 20 Hiring Companies" className="lg:col-span-2">
           {companiesLoading ? (
             <ChartLoading height={550} />
+          ) : companiesError ? (
+            <ErrorState message="Could not reach the API — this is a connection problem, not missing data." onRetry={refetchCompanies} />
           ) : companies?.data?.length > 0 ? (
             <CompanyBarChart data={companies.data} height={550} />
           ) : (

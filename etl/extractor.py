@@ -74,16 +74,18 @@ def validate_credentials():
         sys.exit(1)
 
 
-def get_jobs(role: str, country: str = "gb", page: int = 1, max_days_old: int = None) -> list:
+def get_jobs(role: str, country: str = "gb", page: int = 1, max_days_old: int = None,
+             _retries_left: int = 2) -> list:
     """
     Fetches jobs from Adzuna API.
-    
+
     Args:
         role: Job role to search for (e.g., "Data Engineer")
         country: Country code (e.g., "gb", "us", "in")
         page: Page number for pagination
         max_days_old: Filter for jobs posted within the last N days (optional)
-    
+        _retries_left: Internal — remaining retries on rate limiting
+
     Returns:
         List of job dictionaries from API response
     """
@@ -95,31 +97,37 @@ def get_jobs(role: str, country: str = "gb", page: int = 1, max_days_old: int = 
         "results_per_page": 50,
         "content-type": "application/json"
     }
-    
+
     # Add time filter if specified
     if max_days_old:
         params["max_days_old"] = max_days_old
-    
+
     try:
         response = requests.get(url, params=params, timeout=30)
-        
+
         if response.status_code == 200:
             data = response.json()
             results = data.get('results', [])
             total_count = data.get('count', 0)
-            
+
             logger.info(f"[{country.upper()}] {role}: Page {page} returned {len(results)} jobs (Total available: {total_count})")
             return results
-            
+
         elif response.status_code == 429:
-            logger.warning(f"Rate limited. Waiting 60 seconds...")
+            # Retry with ALL original filters (the old retry dropped
+            # max_days_old, silently widening the freshness window) and a
+            # bounded retry count (the old one could recurse forever).
+            if _retries_left <= 0:
+                logger.error(f"Rate limited and out of retries for {role} in {country} — skipping page")
+                return []
+            logger.warning("Rate limited. Waiting 60 seconds...")
             time.sleep(60)
-            return get_jobs(role, country, page)  # Retry
-            
+            return get_jobs(role, country, page, max_days_old, _retries_left - 1)
+
         else:
             logger.error(f"API Error ({response.status_code}): {response.text[:200]}")
             return []
-            
+
     except requests.exceptions.Timeout:
         logger.error(f"Request timeout for {role} in {country}")
         return []
@@ -128,25 +136,29 @@ def get_jobs(role: str, country: str = "gb", page: int = 1, max_days_old: int = 
         return []
 
 
-def save_to_database(jobs: list, role: str, country: str, batch_id: str):
+def save_to_database(jobs: list, role: str, country: str, batch_id: str, conn=None):
     """
     Saves raw job data to Supabase raw.jobs table.
     Uses batch insert for efficiency. Skips duplicates.
-    
+
     Args:
         jobs: List of job dictionaries from API
         role: Search role used
         country: Country code
         batch_id: UUID for this extraction batch
+        conn: Optional shared psycopg2 connection (one per run instead of one
+              per page — hundreds fewer TLS handshakes against the pooler)
     """
     if not jobs:
         logger.warning(f"No jobs to save for {role} in {country}")
         return 0
-    
+
+    own_conn = conn is None
     try:
-        conn = psycopg2.connect(DB_URL)
+        if own_conn:
+            conn = psycopg2.connect(DB_URL)
         cursor = conn.cursor()
-        
+
         # Prepare data for batch insert
         insert_data = []
         for job in jobs:
@@ -159,33 +171,42 @@ def save_to_database(jobs: list, role: str, country: str, batch_id: str):
                 json.dumps(job),
                 batch_id
             ))
-        
+
         if not insert_data:
             logger.warning(f"No valid jobs to insert for {role} in {country}")
             return 0
-        
-        # Batch insert with ON CONFLICT DO NOTHING
+
+        # Batch insert with ON CONFLICT DO NOTHING.
+        # page_size must cover the whole list: cursor.rowcount only reflects
+        # the LAST page execute_values ran, so the default page_size=100
+        # under-reports inserts for larger batches.
         query = """
             INSERT INTO raw.jobs (job_platform_id, search_role, country_code, raw_data, extraction_batch_id)
             VALUES %s
             ON CONFLICT (job_platform_id, country_code) DO NOTHING
         """
-        
-        execute_values(cursor, query, insert_data)
+
+        execute_values(cursor, query, insert_data, page_size=max(1, len(insert_data)))
         inserted_count = cursor.rowcount
-        
+
         conn.commit()
         cursor.close()
-        conn.close()
-        
+
         skipped = len(insert_data) - inserted_count
         logger.info(f"[{country.upper()}] {role}: Inserted {inserted_count} new jobs, skipped {skipped} duplicates")
-        
+
         return inserted_count
-        
+
     except Exception as e:
         logger.error(f"Database Error: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         return 0
+    finally:
+        if own_conn and conn is not None:
+            conn.close()
 
 
 def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, delay: float = 1.0, test_mode: bool = False, max_days_old: int = None):
@@ -224,25 +245,37 @@ def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, 
     total_jobs = 0
     total_inserted = 0
     start_time = datetime.now()
-    
-    for role in roles:
-        for country_code, country_name in countries.items():
-            logger.info(f"\n--- Extracting: {role} in {country_name} ({country_code}) ---")
-            
-            for page in range(1, max_pages + 1):
-                jobs = get_jobs(role, country_code, page, max_days_old)
-                total_jobs += len(jobs)
-                
-                if jobs:
-                    inserted = save_to_database(jobs, role, country_code, batch_id)
-                    total_inserted += inserted
-                
-                # If we got fewer results than expected, no more pages
-                if len(jobs) < 50:
-                    break
-                
-                # Rate limiting delay
-                time.sleep(delay)
+
+    # One connection for the whole run (was: one per page).
+    conn = None
+    try:
+        conn = psycopg2.connect(DB_URL)
+    except Exception as e:
+        logger.error(f"Could not connect to database: {e}")
+        sys.exit(1)
+
+    try:
+        for role in roles:
+            for country_code, country_name in countries.items():
+                logger.info(f"\n--- Extracting: {role} in {country_name} ({country_code}) ---")
+
+                for page in range(1, max_pages + 1):
+                    jobs = get_jobs(role, country_code, page, max_days_old)
+                    total_jobs += len(jobs)
+
+                    if jobs:
+                        inserted = save_to_database(jobs, role, country_code, batch_id, conn=conn)
+                        total_inserted += inserted
+
+                    # If we got fewer results than expected, no more pages
+                    if len(jobs) < 50:
+                        break
+
+                    # Rate limiting delay
+                    time.sleep(delay)
+    finally:
+        if conn is not None:
+            conn.close()
     
     # Summary
     elapsed = (datetime.now() - start_time).total_seconds()
@@ -311,7 +344,15 @@ def main():
         test_mode=args.test,
         max_days_old=max_days_old
     )
-    
+
+    # Zero jobs fetched across every role/country means the API calls are
+    # failing (bad credentials, outage) — surface that to orchestrators
+    # instead of exiting 0 as if the run succeeded. (Zero INSERTED is normal:
+    # it just means everything fetched was already in the DB.)
+    if result["total_fetched"] == 0:
+        logger.error("Extraction fetched 0 jobs — treating as failure.")
+        sys.exit(2)
+
     return result
 
 

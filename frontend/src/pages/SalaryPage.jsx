@@ -1,13 +1,13 @@
 import { useOutletContext } from 'react-router-dom'
 import { useSalaryBySkill, useTopPayingSkills, usePremiumSkills } from '../hooks/useData'
-import { Card, ChartLoading, EmptyState } from '../components/ui'
+import { Card, ChartLoading, EmptyState, ErrorState } from '../components/ui'
 import { SalaryPremiumChart, SalaryComparisonChart } from '../components/charts/Charts'
 import { formatNumber, formatCurrency, formatPercent } from '../utils/helpers'
 
 export default function SalaryPage() {
   const { selectedRole, selectedCountry } = useOutletContext()
 
-  const { data: salaryData, isLoading: salaryLoading } = useSalaryBySkill(
+  const { data: salaryData, isLoading: salaryLoading, isError: salaryError, refetch: refetchSalary } = useSalaryBySkill(
     selectedRole,
     selectedCountry || null,
     5
@@ -74,6 +74,8 @@ export default function SalaryPage() {
               <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
             ))}
           </div>
+        ) : salaryError ? (
+          <ErrorState message="Could not reach the API — this is a connection problem, not missing data." onRetry={refetchSalary} />
         ) : salaryData?.data?.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

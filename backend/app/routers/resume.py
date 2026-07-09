@@ -388,12 +388,18 @@ async def analyze_resume(
     resume_skills = skill_extractor.extract_skills(text)
     resume_skill_names = {s['skill_name'].lower() for s in resume_skills}
     
-    # Get market demand for target role
+    # Get market demand for target role.
+    # Salary uses the USD-normalized column (avg_salary_midpoint_usd) in BOTH
+    # branches — same rationale as skills.py /demand: the cross-country blend
+    # below would otherwise average raw INR against raw USD (the currency-
+    # mixing bug fixed everywhere else), and the frontend renders these
+    # numbers with a hardcoded "$" anyway.
     if country:
         query = """
-            SELECT 
+            SELECT
                 skill_name, skill_category, job_count, demand_percentage,
-                avg_salary_midpoint, rank_in_role_country as rank
+                avg_salary_midpoint_usd AS avg_salary_midpoint,
+                rank_in_role_country as rank
             FROM staging_marts.mart_skill_demand
             WHERE search_role = $1 AND country_code = $2
             ORDER BY rank_in_role_country
@@ -402,11 +408,11 @@ async def analyze_resume(
         market_skills = await db.fetch_all(query, target_role, country)
     else:
         query = """
-            SELECT 
+            SELECT
                 skill_name, skill_category,
                 SUM(job_count) as job_count,
                 AVG(demand_percentage) as demand_percentage,
-                AVG(avg_salary_midpoint) as avg_salary_midpoint,
+                AVG(avg_salary_midpoint_usd) as avg_salary_midpoint,
                 MIN(rank_in_role_global) as rank
             FROM staging_marts.mart_skill_demand
             WHERE search_role = $1

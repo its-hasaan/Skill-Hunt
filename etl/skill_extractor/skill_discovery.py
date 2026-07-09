@@ -252,12 +252,20 @@ class SkillDiscoveryManager:
             logger.error(f"Failed to update taxonomy file: {e}")
     
     def _add_to_database(self, skill: DiscoveredSkill):
-        """Add a skill to the dim_skills table in database."""
+        """Add a skill to the dim_skills table in database.
+
+        IMPORTANT: this runs on a connection SHARED with the transformer's
+        batch loop, so it must never commit() or rollback() — either would
+        break the caller's batch atomicity (a rollback here used to silently
+        discard every job processed so far in the batch). A savepoint keeps
+        the insert isolated; the caller's own commit persists it.
+        """
         if not self.db_conn:
             return
-        
+
         try:
             cursor = self.db_conn.cursor()
+            cursor.execute("SAVEPOINT discovery_sp")
             cursor.execute(
                 """
                 INSERT INTO staging.dim_skills (skill_name, skill_category, skill_subcategory)
@@ -267,11 +275,15 @@ class SkillDiscoveryManager:
                 """,
                 (skill.name, skill.category, skill.subcategory)
             )
-            self.db_conn.commit()
+            cursor.execute("RELEASE SAVEPOINT discovery_sp")
             cursor.close()
         except Exception as e:
             logger.error(f"Failed to insert skill into database: {e}")
-            self.db_conn.rollback()
+            try:
+                cursor.execute("ROLLBACK TO SAVEPOINT discovery_sp")
+                cursor.close()
+            except Exception:
+                pass
     
     def _load_from_database(self):
         """Load existing discovered skills from database."""

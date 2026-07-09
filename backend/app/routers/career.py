@@ -162,12 +162,16 @@ async def get_skill_gap(
     if not row:
         return {"error": "Role combination not found"}
     
-    # Get top skills for target role
+    # Get top skills for target role (aggregated across countries).
+    # NOTE: job_count must be SUM-aggregated — selecting it bare alongside
+    # this GROUP BY is invalid SQL and made this endpoint 500 in production.
     skills_query = """
-        SELECT skill_name, skill_category, job_count
+        SELECT skill_name,
+               MAX(skill_category) AS skill_category,
+               SUM(job_count) AS job_count
         FROM staging_marts.mart_skill_demand
         WHERE search_role = $1
-        GROUP BY skill_name, skill_category
+        GROUP BY skill_name
         ORDER BY SUM(job_count) DESC
         LIMIT 20
     """

@@ -75,5 +75,8 @@ LEFT JOIN {{ source('staging', 'stg_jobs') }} j
 LEFT JOIN {{ source('staging', 'currency_rates') }} cr
     ON j.salary_currency = cr.currency_code
 WHERE j.job_id IS NOT NULL
-  -- Filter to only include jobs from the last 2 months (60 days)
-  AND j.job_posted_at >= CURRENT_DATE - INTERVAL '60 days'
+  -- Filter to only include jobs from the last 2 months (60 days).
+  -- COALESCE to extracted_at so a job whose source omitted a posting date is
+  -- counted from when we ingested it rather than silently dropped (the
+  -- /stats endpoints already use this same COALESCE convention).
+  AND COALESCE(j.job_posted_at, j.extracted_at) >= CURRENT_DATE - INTERVAL '60 days'

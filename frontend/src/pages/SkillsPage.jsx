@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import { X, Plus, TrendingUp } from 'lucide-react'
 import { useSkillDemand, useSkillCooccurrence, useSkillTrend } from '../hooks/useData'
-import { Card, ChartLoading, EmptyState, Tabs } from '../components/ui'
+import { Card, ChartLoading, EmptyState, ErrorState, Tabs } from '../components/ui'
 import { CategoryBarChart, CategoryPieChart, SkillTrendChart, useChartColors } from '../components/charts/Charts'
 import { formatNumber } from '../utils/helpers'
 
@@ -49,7 +49,7 @@ export default function SkillsPage() {
     navigate(`/jobs?${params.toString()}`)
   }
 
-  const { data: skillDemand, isLoading: demandLoading } = useSkillDemand(
+  const { data: skillDemand, isLoading: demandLoading, isError: demandError, refetch: refetchDemand } = useSkillDemand(
     selectedRole, 
     selectedCountry || null, 
     30
@@ -197,6 +197,8 @@ export default function SkillsPage() {
           <Card title="Top 15 Skills by Job Count" className="lg:col-span-2">
             {demandLoading ? (
               <ChartLoading height={500} />
+            ) : demandError ? (
+              <ErrorState message="Could not reach the API — this is a connection problem, not missing data." onRetry={refetchDemand} />
             ) : skillDemand?.data?.length > 0 ? (
               <CategoryBarChart 
                 data={skillDemand.data} 

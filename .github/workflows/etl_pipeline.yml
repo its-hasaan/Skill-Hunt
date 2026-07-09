@@ -1,4 +1,4 @@
-name: l ETL Pipeline
+name: ETL Pipeline
 
 on:
   # Run every 2 weeks (1st and 15th of each month at 3 AM UTC)
@@ -137,7 +137,9 @@ jobs:
     name: Fetch Currency Rates
     runs-on: ubuntu-latest
     needs: transform
-    if: ${{ always() && needs.transform.result == 'success' && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
+    # Runs when transform succeeded OR was deliberately skipped (manual
+    # dispatch) — only a transform FAILURE blocks it.
+    if: ${{ always() && needs.transform.result != 'failure' && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
 
     steps:
       - name: Checkout repository
@@ -173,8 +175,16 @@ jobs:
   dbt:
     name: Run dbt Models
     runs-on: ubuntu-latest
-    needs: fx_rates
-    if: ${{ always() && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
+    needs: [transform, fx_rates]
+    # always() lets this run when upstream jobs were SKIPPED (manual dispatch
+    # with extraction/transform toggled off), but a FAILED transform must
+    # block the mart rebuild: rebuilding on a half-transformed staging layer
+    # publishes inconsistent numbers to the dashboard. fx_rates failing is
+    # non-fatal (cached rates stay in effect).
+    if: >-
+      ${{ always()
+          && needs.transform.result != 'failure'
+          && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
     
     steps:
       - name: Checkout repository
@@ -249,7 +259,10 @@ jobs:
     name: Archive Historical Data
     runs-on: ubuntu-latest
     needs: dbt
-    if: ${{ always() && github.event_name == 'schedule' }}
+    # Only archive marts that were just rebuilt successfully — archiving
+    # after a failed dbt run would snapshot (and, since migration 005,
+    # overwrite today's snapshot with) stale data.
+    if: ${{ github.event_name == 'schedule' && needs.dbt.result == 'success' }}
     
     steps:
       - name: Checkout repository

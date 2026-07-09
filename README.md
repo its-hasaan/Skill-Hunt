@@ -13,7 +13,7 @@
 
 [Live Frontend](https://jobscript.vercel.app) • [Backend API](https://skill-hunt.onrender.com) • [API Docs](https://skill-hunt.onrender.com/docs)
 
-📖 Deep dives: [Implementation Guide](IMPLEMENTATION.md) • [Scraping Bots / Multi-Source Ingestion](SCRAPING_BOTS.md) • [Auth Setup](AUTH_SETUP.md)
+📖 Deep dives: [Implementation Guide](IMPLEMENTATION.md) • [Scraping Bots / Multi-Source Ingestion](SCRAPING_BOTS.md) • [Auth Setup](AUTH_SETUP.md) • [Pipeline Review — fixes & proposals](PIPELINE_REVIEW.md)
 
 </div>
 
@@ -555,7 +555,7 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
   - **Discovery Manager**: tracks unverified discoveries; auto-promotes a skill to the taxonomy JSON (and `dim_skills`) once it reaches ≥3 occurrences with ≥0.75 average confidence.
 
 #### 3. **Fetch Currency Rates** (`etl/fetch_currency_rates.py`)
-- Fetches live currency→USD exchange rates from [frankfurter.dev](https://frankfurter.dev) (ECB rates, free, no key) for whatever currencies are actually present in the data, and upserts into `staging.currency_rates`. Self-healing: an unreachable API or uncovered currency leaves the previous cached rate untouched rather than guessing.
+- Fetches live currency→USD exchange rates from [frankfurter.dev](https://frankfurter.dev) (ECB rates, free, no key) for whatever currencies are actually present in the data, and upserts into `staging.currency_rates`. Currencies the ECB doesn't publish (e.g. **PKR**) are filled from a keyless fallback API ([open.er-api.com](https://open.er-api.com)). Self-healing: if neither source covers a currency, the previous cached rate is left untouched rather than guessing.
 - ⚠️ **One-time setup**: run [`database/migrations/004_currency_rates.sql`](database/migrations/004_currency_rates.sql) once (Supabase SQL Editor) to create the table, then `python etl/fetch_currency_rates.py` to populate it. Without this, single-currency salary figures (native or USD) still work, but cross-country comparisons will fall back to whatever rates are already cached (or `NULL` before the first fetch).
 - **Why this exists**: every mart groups salary by `(role, country)` — currency-safe within a row — but the API blends rows *across* countries for the "All Countries" view. Without conversion, that blend averaged raw native-currency numbers as if they were the same unit (e.g. an Indian salary in the millions of INR averaged against a US salary in the tens of thousands of USD), inflating some skills' reported average salary into the hundreds of thousands of dollars. See IMPLEMENTATION.md §6.7 for the full root-cause writeup.
 
@@ -567,12 +567,13 @@ The ETL pipeline runs automatically via GitHub Actions (`.github/workflows/etl_p
   - `mart_salary_by_skill.sql` — salary stats & premium vs. market (min 5 jobs), native + USD
   - `mart_skills_by_country.sql` — skill demand compared across countries
   - `mart_skill_cooccurrence.sql` — skill pairs with Jaccard + conditional probabilities
-  - `mart_company_leaderboard.sql` — top hiring companies with contract breakdown, native + USD salary averages
-  - `mart_role_similarity.sql` — role skill overlap (Jaccard, overlap, dice)
+  - `mart_company_leaderboard.sql` — top hiring companies with contract breakdown, native + USD salary averages (same 60-day freshness window as the other marts)
+  - `mart_role_similarity.sql` — role skill overlap (Jaccard, overlap, dice); top shared skills ranked by combined demand
 
 #### 5. **Archive & Notify**
 - `archive` job (scheduled runs only) calls the `archive_skill_demand()` Postgres function to snapshot demand into `archive.skill_demand_history`.
 - ⚠️ **One-time fix required**: this function originally read from an always-empty placeholder table, so the archive was silently never populated. Run [`database/migrations/003_fix_archive_snapshots.sql`](database/migrations/003_fix_archive_snapshots.sql) once (Supabase SQL Editor) to repoint it at the real mart and take the first snapshot — it's idempotent and safe alongside migrations 001/002/004 if you're setting those up too. Not required for the `/skills/trend` chart, which reads live posting data instead; it only matters if you want the historical archive itself to start accumulating.
+- ⚠️ **Follow-up fix**: also run [`database/migrations/005_archive_same_day_replace.sql`](database/migrations/005_archive_same_day_replace.sql). Migration 003's once-per-day guard made `refresh_all.py`'s post-refresh snapshot a silent no-op, so each day's archived trend point described the marts *before* that day's refresh. With 005, a same-day re-run replaces the snapshot, so history keeps the fresh post-refresh state.
 - `notify` job reports the status of all jobs.
 
 #### 6. **Serve**

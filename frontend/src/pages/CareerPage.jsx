@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useRoleSimilarity, useCareerTransitions, useSkillGap } from '../hooks/useData'
-import { Card, ChartLoading, EmptyState, Badge } from '../components/ui'
+import { Card, ChartLoading, EmptyState, ErrorState, Badge } from '../components/ui'
 import { getDifficultyEmoji, getDifficultyColor } from '../utils/helpers'
 
 export default function CareerPage() {
   const [selectedRole, setSelectedRole] = useState('')
   const [targetRole, setTargetRole] = useState('')
 
-  const { data: roleSimilarity, isLoading: simLoading } = useRoleSimilarity()
+  const { data: roleSimilarity, isLoading: simLoading, isError: simError, refetch: refetchSim } = useRoleSimilarity()
   const { data: transitions, isLoading: transLoading } = useCareerTransitions(selectedRole)
   const { data: skillGap, isLoading: gapLoading } = useSkillGap(selectedRole, targetRole)
 
@@ -171,6 +171,8 @@ export default function CareerPage() {
       <Card title="🔗 All Role Similarities">
         {simLoading ? (
           <ChartLoading height={400} />
+        ) : simError ? (
+          <ErrorState message="Could not reach the API — this is a connection problem, not missing data." onRetry={refetchSim} />
         ) : roleSimilarity?.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

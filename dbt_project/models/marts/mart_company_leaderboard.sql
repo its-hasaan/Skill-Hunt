@@ -37,6 +37,10 @@ WITH company_jobs AS (
         ON j.salary_currency = cr.currency_code
     WHERE j.company_name IS NOT NULL
       AND j.company_name != ''
+      -- Same 60-day freshness window as int_job_skills_enriched: without it
+      -- this mart showed ALL-TIME hiring counts while every other mart (and
+      -- the dashboard KPIs) shows the last 60 days — silently inconsistent.
+      AND COALESCE(j.job_posted_at, j.extracted_at) >= CURRENT_DATE - INTERVAL '60 days'
 ),
 
 company_aggregates AS (
@@ -59,12 +63,23 @@ company_aggregates AS (
         COUNT(DISTINCT CASE WHEN contract_time = 'full_time' THEN job_id END) AS full_time_count,
         COUNT(DISTINCT CASE WHEN contract_time = 'part_time' THEN job_id END) AS part_time_count,
         COUNT(DISTINCT CASE WHEN contract_type = 'contract' THEN job_id END) AS contract_count,
-        COUNT(DISTINCT CASE WHEN contract_type = 'permanent' THEN job_id END) AS permanent_count,
-        
-        -- Roles this company is hiring for
-        ARRAY_AGG(DISTINCT search_role) AS roles_hiring
+        COUNT(DISTINCT CASE WHEN contract_type = 'permanent' THEN job_id END) AS permanent_count
     FROM company_jobs
     GROUP BY company_name, search_role, country_code
+),
+
+-- All roles a company is hiring for in a country (across role groups).
+-- Computed separately: inside company_aggregates the group is one
+-- (company, role, country), so ARRAY_AGG(DISTINCT search_role) there was
+-- always a single-element array — its own group's role, never the list the
+-- column promises.
+company_roles AS (
+    SELECT
+        company_name,
+        country_code,
+        ARRAY_AGG(DISTINCT search_role) AS roles_hiring
+    FROM company_jobs
+    GROUP BY company_name, country_code
 ),
 
 -- Rank by role and country
@@ -107,7 +122,7 @@ SELECT
     rc.part_time_count,
     rc.contract_count,
     rc.permanent_count,
-    rc.roles_hiring,
+    cr.roles_hiring,
     rc.rank_in_role_country,
     rbc.rank_in_country,
     rbc.total_jobs_in_country AS company_total_jobs_in_country,
@@ -115,8 +130,11 @@ SELECT
     CURRENT_DATE AS period_end,
     NOW() AS updated_at
 FROM ranked_by_role_country rc
-LEFT JOIN ranked_by_country rbc 
-    ON rc.company_name = rbc.company_name 
+LEFT JOIN ranked_by_country rbc
+    ON rc.company_name = rbc.company_name
     AND rc.country_code = rbc.country_code
+LEFT JOIN company_roles cr
+    ON rc.company_name = cr.company_name
+    AND rc.country_code = cr.country_code
 WHERE rc.rank_in_role_country <= 100  -- Top 100 companies per role/country
 ORDER BY rc.search_role, rc.country_code, rc.rank_in_role_country

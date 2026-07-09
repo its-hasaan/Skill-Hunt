@@ -66,13 +66,23 @@ export default function AccountPage() {
       setSaveMsg(err.response?.data?.detail || 'Failed to save — please try again')
     },
   })
+  // Deletes surface failures via saveMsg — without onError a failed delete
+  // silently left the item in place with no feedback at all.
   const deleteSearch = useMutation({
     mutationFn: (id) => userApi.deleteSavedSearch(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user', 'saved-searches'] }),
+    onError: (err) => {
+      setSaveMsg(err.response?.data?.detail || 'Failed to delete saved search — please try again')
+      setTimeout(() => setSaveMsg(''), 4000)
+    },
   })
   const deleteAnalysis = useMutation({
     mutationFn: (id) => userApi.deleteResumeAnalysis(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user', 'resume-history'] }),
+    onError: (err) => {
+      setSaveMsg(err.response?.data?.detail || 'Failed to delete analysis — please try again')
+      setTimeout(() => setSaveMsg(''), 4000)
+    },
   })
 
   if (loading) {

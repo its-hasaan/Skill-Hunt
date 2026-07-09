@@ -1,26 +1,34 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { useSkillByCountry, useFilterOptions } from '../hooks/useData'
-import { Card, ChartLoading, EmptyState } from '../components/ui'
+import { useSkillByCountry, useFilterOptions, useSkillDemand } from '../hooks/useData'
+import { Card, ChartLoading, EmptyState, ErrorState } from '../components/ui'
 import { CountryComparisonChart } from '../components/charts/Charts'
 import { getCountryDisplay, formatNumber } from '../utils/helpers'
+
+// Fallback while the demand query loads (or no role is selected yet).
+const FALLBACK_SKILLS = [
+  'Python', 'SQL', 'JavaScript', 'AWS', 'Docker', 'Kubernetes',
+  'React', 'TypeScript', 'Java', 'Git', 'Linux', 'PostgreSQL',
+  'Machine Learning', 'TensorFlow', 'Spark', 'Tableau'
+]
 
 export default function GlobalPage() {
   const { selectedRole } = useOutletContext()
   const [selectedSkill, setSelectedSkill] = useState('')
 
   const { data: filters } = useFilterOptions()
-  const { data: countryData, isLoading: countryLoading } = useSkillByCountry(
+  const { data: countryData, isLoading: countryLoading, isError: countryError } = useSkillByCountry(
     selectedSkill,
     selectedRole
   )
 
-  // Common skills to select from (you can populate this from API)
-  const commonSkills = [
-    'Python', 'SQL', 'JavaScript', 'AWS', 'Docker', 'Kubernetes',
-    'React', 'TypeScript', 'Java', 'Git', 'Linux', 'PostgreSQL',
-    'Machine Learning', 'TensorFlow', 'Spark', 'Tableau'
-  ]
+  // Skill options come from the LIVE top-demand list for the selected role,
+  // so the dropdown always matches what actually exists in the data —
+  // the old hardcoded list silently broke whenever taxonomy naming changed.
+  const { data: demandData } = useSkillDemand(selectedRole, null, 30)
+  const commonSkills = demandData?.data?.length
+    ? demandData.data.map((s) => s.skill_name)
+    : FALLBACK_SKILLS
 
   return (
     <div className="space-y-6">
@@ -76,6 +84,8 @@ export default function GlobalPage() {
           <Card title={`${selectedSkill} Demand by Country (%)`}>
             {countryLoading ? (
               <ChartLoading height={400} />
+            ) : countryError ? (
+              <ErrorState message="Could not load country data — the API may be unavailable." />
             ) : countryData?.data?.length > 0 ? (
               <CountryComparisonChart 
                 data={countryData.data} 
@@ -118,7 +128,8 @@ export default function GlobalPage() {
                 </tr>
               </thead>
               <tbody>
-                {countryData.data
+                {/* Copy before sorting — .sort() in place mutates React Query's cached array */}
+                {[...countryData.data]
                   .sort((a, b) => b.demand_percentage - a.demand_percentage)
                   .map((row, index) => (
                     <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">

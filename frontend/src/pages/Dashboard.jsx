@@ -3,7 +3,7 @@ import {
   Briefcase, Code, Globe, Building2, TrendingUp
 } from 'lucide-react'
 import { useSummaryStats, useSkillDemand } from '../hooks/useData'
-import { Card, StatCard, ChartLoading, EmptyState } from '../components/ui'
+import { Card, StatCard, ChartLoading, EmptyState, ErrorState } from '../components/ui'
 import { SkillBarChart, CategoryPieChart } from '../components/charts/Charts'
 import { formatNumber } from '../utils/helpers'
 
@@ -12,7 +12,12 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   const { data: stats, isLoading: statsLoading } = useSummaryStats()
-  const { data: skillDemand, isLoading: skillsLoading } = useSkillDemand(
+  const {
+    data: skillDemand,
+    isLoading: skillsLoading,
+    isError: skillsError,
+    refetch: refetchSkills,
+  } = useSkillDemand(
     selectedRole,
     selectedCountry || null,
     20
@@ -72,6 +77,11 @@ export default function Dashboard() {
         >
           {skillsLoading ? (
             <ChartLoading height={340} />
+          ) : skillsError ? (
+            <ErrorState
+              message="Could not reach the API — this is a connection problem, not missing data."
+              onRetry={refetchSkills}
+            />
           ) : skillDemand?.data?.length > 0 ? (
             <SkillBarChart data={skillDemand.data} height={340} />
           ) : (
