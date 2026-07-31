@@ -158,12 +158,12 @@ export default function Layout() {
           {/* First-visit onboarding bubble pointing at the filters */}
           {showFilterHint && (
             <div className="relative mb-3 animate-hint-in">
-              <div className="rounded-lg bg-primary-600 text-white text-[11px] leading-snug px-3 py-2 shadow-lg">
+              <div className="rounded-lg bg-black border border-white/[0.08] text-white text-[11px] leading-snug px-3 py-2 shadow-lg">
                 Currently showing skills for{' '}
-                <span className="font-semibold">{selectedRole || 'this role'}</span>. Change the
+                <span className="font-semibold text-primary-400">{selectedRole || 'this role'}</span>. Change the
                 role or country here to explore other markets.
               </div>
-              <div className="absolute left-6 -bottom-1 h-2.5 w-2.5 rotate-45 bg-primary-600" />
+              <div className="absolute left-6 -bottom-1 h-2.5 w-2.5 rotate-45 bg-black border-r border-b border-white/[0.08]" />
             </div>
           )}
 
