@@ -190,9 +190,35 @@ def extract_text_from_bytes(content: bytes, filename: str) -> str:
         )
 
 
+async def _read_capped(file: UploadFile) -> bytes:
+    """Read an upload, refusing anything over the configured cap.
+
+    Read in chunks rather than file.read(): an unbounded read would pull the
+    whole body into memory before we could reject it, so a large upload could
+    exhaust the instance.
+    """
+    from ..config import get_settings
+
+    max_bytes = get_settings().max_upload_bytes
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size is {max_bytes // (1024 * 1024)} MB.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 async def extract_text_from_file(file: UploadFile) -> tuple:
     """Read file bytes and extract text. Returns (bytes, text)."""
-    content = await file.read()
+    content = await _read_capped(file)
     text = extract_text_from_bytes(content, file.filename)
     return content, text
 
@@ -221,8 +247,18 @@ async def _persist_analysis(
 
     Runs best-effort in a single DB transaction — any failure is logged but
     never propagates to the user response.
+
+    Only ever called for signed-in users. Anonymous analyses are not stored at
+    all: a row with user_id = NULL is invisible to the RLS policies (which key
+    on auth.uid() = user_id), so nobody — including the person who uploaded the
+    resume — could ever read or delete it. Callers already check, and this
+    guard keeps the invariant if a future caller forgets.
     """
     from ..storage import upload_resume_file, is_storage_configured
+
+    if not user_id:
+        logger.debug("Anonymous analysis — nothing persisted.")
+        return
 
     storage_path = None
     storage_url = None
@@ -482,24 +518,26 @@ async def analyze_resume(
         for s in skills_you_need
     ]
 
-    # Persist the full analysis to Supabase (reliable background task, best-effort)
-    background_tasks.add_task(
-        _persist_analysis,
-        db=db,
-        filename=file.filename,
-        file_size=len(file_bytes),
-        file_bytes=file_bytes,
-        analysis_type="gap_analysis",
-        target_role=target_role,
-        country=country,
-        extracted_skills=[
-            {'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']}
-            for s in resume_skills
-        ],
-        match_score=round(match_percentage, 1),
-        gap_rows=gap_rows,
-        user_id=user.id if user else None,
-    )
+    # Persist only for signed-in users (best-effort background task). Anonymous
+    # uploads are analyzed and discarded — see _persist_analysis.
+    if user:
+        background_tasks.add_task(
+            _persist_analysis,
+            db=db,
+            filename=file.filename,
+            file_size=len(file_bytes),
+            file_bytes=file_bytes,
+            analysis_type="gap_analysis",
+            target_role=target_role,
+            country=country,
+            extracted_skills=[
+                {'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']}
+                for s in resume_skills
+            ],
+            match_score=round(match_percentage, 1),
+            gap_rows=gap_rows,
+            user_id=user.id,
+        )
 
     return ResumeAnalysisResponse(
         target_role=target_role,
@@ -651,24 +689,26 @@ async def match_resume_to_roles(
     top_role = top_matches[0]['role'] if top_matches else None
     top_score = top_matches[0]['match_score'] if top_matches else None
 
-    # Persist the full analysis to Supabase (reliable background task, best-effort)
-    background_tasks.add_task(
-        _persist_analysis,
-        db=db,
-        filename=file.filename,
-        file_size=len(file_bytes),
-        file_bytes=file_bytes,
-        analysis_type="role_match",
-        target_role=top_role,
-        country=country,
-        extracted_skills=[
-            {'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']}
-            for s in resume_skills
-        ],
-        match_score=top_score,
-        role_rows=role_rows,
-        user_id=user.id if user else None,
-    )
+    # Persist only for signed-in users (best-effort background task). Anonymous
+    # uploads are analyzed and discarded — see _persist_analysis.
+    if user:
+        background_tasks.add_task(
+            _persist_analysis,
+            db=db,
+            filename=file.filename,
+            file_size=len(file_bytes),
+            file_bytes=file_bytes,
+            analysis_type="role_match",
+            target_role=top_role,
+            country=country,
+            extracted_skills=[
+                {'skill_name': s['skill_name'], 'category': s['category'], 'mention_count': s['mention_count']}
+                for s in resume_skills
+            ],
+            match_score=top_score,
+            role_rows=role_rows,
+            user_id=user.id,
+        )
 
     return [RoleMatchResult(**r) for r in top_matches]
 

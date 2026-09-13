@@ -38,8 +38,15 @@ class Settings(BaseSettings):
     # API settings
     api_prefix: str = "/api/v1"
     
-    # Rate limiting (for future)
+    # Rate limiting (per client IP, sliding 60s window — see ratelimit.py)
     rate_limit_per_minute: int = 100
+    # Lower budget for endpoints that parse uploads or run several queries
+    # (/resume/*, /extension/*).
+    rate_limit_expensive_per_minute: int = 10
+
+    # Largest resume upload accepted, in bytes. Reads abort once this is
+    # exceeded, so an oversized file never lands in memory.
+    max_upload_bytes: int = 5 * 1024 * 1024  # 5 MB
     
     class Config:
         env_file = ".env"

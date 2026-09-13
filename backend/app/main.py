@@ -16,6 +16,7 @@ import time
 
 from .config import get_settings
 from .database import db
+from .ratelimit import rate_limit_middleware
 from .routers import (
     skills_router,
     companies_router,
@@ -75,8 +76,12 @@ app = FastAPI(
     - Data transformed using dbt
     """,
     version=settings.app_version,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # Interactive docs publish the full endpoint map, which only helps someone
+    # enumerating the API — this backend serves our own frontend and extension,
+    # not third-party developers. Available locally when DEBUG is set.
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
     lifespan=lifespan
 )
 
@@ -100,6 +105,12 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(round(process_time * 1000, 2)) + "ms"
     return response
+
+
+# Rate limiting. Registered last so it runs first: Starlette applies HTTP
+# middleware in reverse registration order, and a flood should be rejected
+# before any other work happens.
+app.middleware("http")(rate_limit_middleware)
 
 
 # Exception handlers
