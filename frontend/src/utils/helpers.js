@@ -131,6 +131,11 @@ const CATEGORY_SLOTS = {
   'Version Control': 7,
   'Soft Skills': 7,
   'Productivity': 7,
+  'Product Management': 7,
+  'Customer Support': 7,
+  'Business Applications': 7,
+  // design shares the app-layer slot (it sits next to Frontend work)
+  'Design': 6,
 }
 
 export function getCategoryColor(category, isDark = false) {
