@@ -20,6 +20,7 @@ CREATE TABLE staging.stg_jobs (
     search_role TEXT NOT NULL DEFAULT 'Data Engineer',
     country_code TEXT NOT NULL DEFAULT 'remote',
     title TEXT,
+    description TEXT,
     job_posted_at TIMESTAMP,
     extracted_at TIMESTAMP,
     processed_at TIMESTAMP DEFAULT NOW(),
@@ -34,4 +35,14 @@ CREATE TABLE staging.stg_job_skills (
     skill_id INTEGER,
     skill_name TEXT NOT NULL,
     mention_count INTEGER DEFAULT 1
+);
+
+CREATE TABLE staging.dim_skills (
+    skill_id SERIAL PRIMARY KEY,
+    skill_name TEXT UNIQUE NOT NULL,
+    skill_category TEXT,
+    skill_subcategory TEXT,
+    aliases TEXT[],
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );

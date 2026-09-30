@@ -30,6 +30,17 @@ M = RoleMatcher(CONFIG["roles"])
     ("Technical Support Engineer", "Technical Support Engineer"),
     ("Customer Success Engineer", "Technical Support Engineer"),
     ("IT Help Desk Specialist", "Technical Support Engineer"),
+    # found by the Phase 1a backfill review of real dropped titles
+    ("AI Automation Engineer", "AI Engineer"),
+    ("Artificial Intelligence (AI) Engineer", "AI Engineer"),
+    ("AI/ML Developer with Python (f/m/x)", "AI Engineer"),
+    ("DevSecOps Engineer", "DevOps Engineer"),
+    ("Advanced Cyber Sec Archt/Engr", "Cyber Security Engineer"),
+    ("Web Developer", "Full Stack Developer"),
+    ("Software Architect", "Software Engineer"),
+    ("Senior Python Data Scraping Engineer", "Data Engineer"),
+    ("Data Governance Analyst", "Data Analyst"),
+    ("Software Engineer, iOS", "Mobile Developer"),
 ])
 def test_role_precedence(title, role):
     assert M.match(title) == role
