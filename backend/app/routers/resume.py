@@ -261,12 +261,11 @@ async def _persist_analysis(
         return
 
     storage_path = None
-    storage_url = None
 
     # 1) Upload the file to Supabase Storage (optional).
     if is_storage_configured():
         try:
-            storage_path, storage_url = await upload_resume_file(file_bytes, filename)
+            storage_path = await upload_resume_file(file_bytes, filename)
             logger.info(f"Resume saved to storage: {storage_path}")
         except Exception as e:
             logger.warning(f"Storage upload failed (non-fatal): {e}")
@@ -290,7 +289,7 @@ async def _persist_analysis(
                     """,
                     filename, file_size, analysis_type, target_role, country,
                     len(extracted_skills), json.dumps(extracted_skills), match_score,
-                    storage_path, storage_url, user_id,
+                    storage_path, None, user_id,  # storage_url: never stored (private bucket)
                 )
 
                 if extracted_skills:
