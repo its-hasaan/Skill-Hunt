@@ -506,6 +506,7 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
         FROM raw.jobs r
         LEFT JOIN staging.stg_jobs s ON r.id = s.raw_job_id
         WHERE s.job_id IS NULL
+          AND NOT (r.raw_data ? '_stripped')  -- payload removed by ops.retention; nothing to parse
         ORDER BY r.extracted_at
         LIMIT %s
         """,
@@ -761,7 +762,10 @@ def main():
         sys.exit(1)
     
     if args.reprocess:
-        confirm = input("WARNING: This will delete all staging data. Type 'YES' to confirm: ")
+        confirm = input(
+            "WARNING: This will delete all staging data. Jobs whose raw payload was "
+            "stripped by ops.retention cannot be rebuilt and will be lost. Type 'YES' to confirm: "
+        )
         if confirm != 'YES':
             logger.info("Aborted.")
             return
