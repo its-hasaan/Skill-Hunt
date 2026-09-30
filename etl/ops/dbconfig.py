@@ -16,9 +16,22 @@ import argparse
 import os
 import sys
 import urllib.parse as urlparse
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 TRANSACTION_POOLER_PORT = 6543
 SESSION_POOLER_PORT = 5432
+LOCAL_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+
+
+def load_local_env(path: Path = LOCAL_ENV_FILE) -> None:
+    """Fill missing env vars from etl/.env for local CLI runs.
+
+    Called only from `__main__` blocks, never on import, so tests can't
+    silently pick up the production database URL. Existing variables win
+    (CI sets everything explicitly and has no .env file)."""
+    load_dotenv(path, override=False)
 
 
 def session_pooler_url(url: str | None) -> str | None:
@@ -70,4 +83,5 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    load_local_env()
     sys.exit(main())

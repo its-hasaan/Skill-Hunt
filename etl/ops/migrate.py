@@ -20,7 +20,7 @@ from pathlib import Path
 
 import psycopg2
 
-from ops.dbconfig import session_pooler_url
+from ops.dbconfig import load_local_env, session_pooler_url
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "database" / "migrations"
 NAME_RE = re.compile(r"^(\d{3})_[\w-]+\.sql$")
@@ -139,4 +139,5 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    load_local_env()
     sys.exit(main())
