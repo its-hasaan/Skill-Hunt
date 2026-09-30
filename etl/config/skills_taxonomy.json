@@ -2391,7 +2391,8 @@
       "type": "Tool/Platform",
       "case_sensitive": [
         "Excel"
-      ]
+      ],
+      "not_followed_by": "\\s+(?:at|in)\\b"
     },
     {
       "name": "Jira",

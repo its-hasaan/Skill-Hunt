@@ -52,7 +52,8 @@ def test_english_words_are_only_case_sensitive():
 def test_common_words_do_not_match():
     text = ("We go further and go live soon. The rest of the team will excel at next steps. "
             "Express interest in our company image. Less is more; spring season sparks joy. "
-            "Glue code, lambda functions and a superset of R&D ideas.")
+            "Glue code, lambda functions and a superset of R&D ideas. "
+            "Excel at client relations. Excel in a fast-paced office.")
     assert skill_counts(text) == {}
 
 

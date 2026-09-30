@@ -220,9 +220,11 @@ RULES = {
     "Go": {"case_sensitive": ["Go"], "not_followed_by": GO_NOT_FOLLOWED},
     "R": {"case_sensitive": ["R"], "not_followed_by": r"\s*[&+']|\.\s?[A-Z]", "not_preceded_by": r"&\s*$"},
     "AWS Glue": {"case_sensitive": ["Glue"], "not_followed_by": r"\s+(?:code|logic|layer)\b"},
+    # sentence-start "Excel at/in ..." is the verb, not the spreadsheet
+    "Excel": {"case_sensitive": ["Excel"], "not_followed_by": r"\s+(?:at|in)\b"},
     **{skill: {"case_sensitive": [term]} for skill, term in [
         ("REST API", "REST"), ("Apache Spark", "Spark"), ("Swift", "Swift"), ("Rust", "Rust"),
-        ("Dart", "Dart"), ("Excel", "Excel"), ("Spring Boot", "Spring"), ("Apache Airflow", "Airflow"),
+        ("Dart", "Dart"), ("Spring Boot", "Spring"), ("Apache Airflow", "Airflow"),
         ("Superset", "Superset"), ("AWS Lambda", "Lambda"), ("Azure Synapse", "Synapse"),
         ("AWS Athena", "Athena"), ("Apache Hive", "Hive"), ("Prefect", "Prefect"), ("Luigi", "Luigi"),
         ("Presto", "Presto"), ("Stitch", "Stitch"), ("Puppet", "Puppet"), ("Windows", "Windows"),
