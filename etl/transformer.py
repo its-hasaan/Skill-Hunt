@@ -37,6 +37,7 @@ from typing import List, Dict, Set, Tuple, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from skill_patterns import build_patterns  # noqa: E402  (shared with the API)
+from connectors.utils import RoleMatcher  # noqa: E402
 
 # Set up logging
 logging.basicConfig(
@@ -380,6 +381,27 @@ def parse_raw_job(raw_data: dict, raw_job_id: int, search_role: str, country_cod
     }
 
 
+EXTRACTION_CONFIG_PATH = Path(__file__).parent / "config" / "extraction_config.json"
+
+# Sources searched by keyword ("Data Engineer" -> whatever the search engine
+# returns). Their search_role is only a hint; the job title decides.
+KEYWORD_SOURCES = {"adzuna", "jooble"}
+
+
+def validated_role(source: str, search_role: str, title: str, matcher: RoleMatcher) -> Optional[str]:
+    """Keyword search is fuzzy ("Data Engineer" returns warehouse jobs), so
+    for keyword-searched sources the TITLE decides the role. Feed sources
+    were already classified by title in their connector."""
+    if source not in KEYWORD_SOURCES:
+        return search_role
+    return matcher.match(title)
+
+
+def load_role_matcher() -> RoleMatcher:
+    with open(EXTRACTION_CONFIG_PATH, "r", encoding="utf-8") as f:
+        return RoleMatcher(json.load(f)["roles"])
+
+
 def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
     """
     Get raw jobs that haven't been processed yet.
@@ -399,6 +421,7 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
         LEFT JOIN staging.stg_jobs s ON r.id = s.raw_job_id
         WHERE s.job_id IS NULL
           AND NOT (r.raw_data ? '_stripped')  -- payload removed by ops.retention; nothing to parse
+          AND r.skip_reason IS NULL           -- e.g. title matched no tracked role
         ORDER BY r.extracted_at
         LIMIT %s
         """,
@@ -448,10 +471,13 @@ def transform_and_load(
         cursor.execute("TRUNCATE staging.stg_jobs CASCADE")
         conn.commit()
     
+    role_matcher = load_role_matcher()
+
     # Statistics
     total_processed = 0
     total_skills_extracted = 0
     total_failed = 0
+    total_skipped = 0
     start_time = datetime.now()
 
     while True:
@@ -488,6 +514,18 @@ def transform_and_load(
                     source=raw_job.get('source', 'adzuna'),
                     job_platform_id=raw_job.get('job_platform_id')
                 )
+
+                role = validated_role(parsed_job['source'], parsed_job['search_role'],
+                                      parsed_job['title'] or '', role_matcher)
+                if role is None:
+                    # Not a tracked tech role: mark it so it isn't re-fetched.
+                    cursor.execute("UPDATE raw.jobs SET skip_reason = 'role_mismatch' WHERE id = %s",
+                                   (raw_job['id'],))
+                    cursor.execute("RELEASE SAVEPOINT job_sp")
+                    total_skipped += 1
+                    batch_succeeded += 1  # progress: the row leaves the queue
+                    continue
+                parsed_job['search_role'] = role
 
                 # Insert into stg_jobs
                 cursor.execute(
@@ -594,6 +632,7 @@ def transform_and_load(
     logger.info(f"{'='*60}")
     logger.info(f"Jobs processed: {total_processed}")
     logger.info(f"Jobs failed: {total_failed}")
+    logger.info(f"Jobs skipped (title matched no tracked role): {total_skipped}")
     logger.info(f"Skills extracted: {total_skills_extracted}")
     logger.info(f"Time elapsed: {elapsed:.2f} seconds")
     
@@ -623,6 +662,7 @@ def transform_and_load(
     return {
         "jobs_processed": total_processed,
         "jobs_failed": total_failed,
+        "jobs_skipped": total_skipped,
         "skills_extracted": total_skills_extracted,
         "elapsed_seconds": elapsed,
         "extractor_stats": extractor_stats
