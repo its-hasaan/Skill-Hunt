@@ -16,7 +16,7 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Foundation fixes: CI ETL repair, daily schedule, run ledger + failure email, storage retention, private resumes, migration runner, keep-warm on Cloudflare | **In progress** |
+| 0 | Foundation fixes: CI ETL repair, daily schedule, run ledger + failure email, storage retention, private resumes, migration runner, keep-warm on Cloudflare | **Code done; waiting on owner's manual steps below** |
 | 1 | Remote job data engine: job-board API connectors, career-page crawler, dedup, job lifecycle, eligibility enrichment, 20 roles | Not started |
 | 2 | Web copilot core → free beta | Not started |
 | 3 | Extension 2.0 | Not started |
@@ -31,7 +31,10 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 - **dbt:** `dbt_project/` builds `staging_marts.mart_*`, which is what the API reads.
 - **Backend:** `backend/app/routers/*` (stats, skills, salary, companies, career, resume, user, extension). Auth is Supabase JWT (`app/auth.py`). Rate limiting is in `app/ratelimit.py`.
 - **DB schemas:** `raw`, `staging`, `staging_marts`, `archive`, `public` (user tables, RLS), `ops` (pipeline ops, from Phase 0).
-- **CI:** `.github/workflows/etl_pipeline.yml`.
+- **Pipeline ops (`etl/ops/`):** `dbconfig` (derives everything from `SUPABASE_URL`), `preflight` (credentials check that names the fix), `migrate` (versioned migrations), `ledger` + `run_step` (every step recorded in `ops.pipeline_runs`), `retention` (400-day window; strips raw payloads after processing), `archive`, `notify` (Resend failure email). CLIs: `python -m ops.<name>` from `etl/`. They read `etl/.env` only when run as a CLI, never on import.
+- **CI:** `.github/workflows/etl_pipeline.yml` is **one daily job**: Adzuna on Mondays, other sources daily, preflight first, each source independent, and a summary/alert at the end. `migrate.yml` applies new migrations on push. `tests.yml` runs pytest against a Postgres service.
+- **Keep-warm:** Cloudflare Worker in `infra/keepwarm/` (cron every 10 min → `/health`).
+- **DB `ops` schema:** `schema_migrations` (runner bookkeeping; 001–005 baselined, 006–008 applied), `pipeline_runs` (step ledger).
 
 ## Conventions
 
@@ -40,7 +43,8 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 - **AI (Phase 1+):** anything with personal data (resumes) → Groq. Public job postings → Gemini. Everything goes through one gateway layer.
 - **UI:** premium dark design system (a single blue accent, monochrome surfaces, `border-white/[0.08]` hairlines).
 - **Money:** the API serves USD everywhere. Salaries are normalised using `staging.currency_rates`.
-- **Tests:** pytest in `etl/tests/` and `backend/tests/`. New logic is written test-first.
+- **Tests:** pytest in `etl/tests/` and `backend/tests/`. New logic is written test-first. ETL database tests need Docker Desktop running locally (they start a throwaway `postgres:16-alpine`); CI uses `TEST_DATABASE_URL`. Run with `cd etl && ../venv/Scripts/python -m pytest` and `cd backend && ./venv/Scripts/python -m pytest`. Never import a module that calls `load_dotenv()` at import time in tests without patching it (see `tests/test_transformer_guard.py`), because `etl/.env` points at production.
+- **Migrations:** `database/migrations/NNN_name.sql`, each wrapped in `BEGIN; … COMMIT;`, idempotent where possible. Apply with `cd etl && ../venv/Scripts/python -m ops.migrate up` (CI also does it on push once the secret works). Never edit an applied migration; add a new one.
 
 ## Gotchas
 
@@ -48,11 +52,21 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 - dbt must run with **`--target dev`** so the output lands in `staging_marts`. Target `prod` produces a wrong `marts_marts`.
 - Adzuna descriptions are cut at **500 characters** (a hard limit). Its API terms restrict commercial analytics; a licence has been requested.
 - Marts only count jobs from the **last 60 days** (`COALESCE(job_posted_at, extracted_at)`).
-- Schema changes live in `database/migrations/NNN_*.sql`.
+- The **skill-trend chart** (`/skills/trend`) is computed from `staging.stg_jobs`, not from the archive. Retention is 400 days so it keeps a year; shortening it cuts the chart.
+- Raw payloads of processed jobs are stripped after 7 days (Adzuna native payloads become `{"_stripped": true}`), so `transformer.py --reprocess` can no longer rebuild those rows from raw.
+- The CI ETL failed on every run from Jan to Sep 2026 because the `SUPABASE_URL` GitHub secret didn't work. Local preflight with `etl/.env` passes, so the local URL is the right value.
 
 ## Pending manual steps (owner)
 
-- [ ] Make the GitHub repo private. Before doing so, keep-warm must move off GitHub Actions (Phase 0).
-- [ ] Send the Adzuna commercial-licence enquiry (draft provided in Phase 0).
-- [ ] Create Cloudflare and Resend accounts. Get free Groq and Gemini API keys (Phase 1).
+Phase 0, in this order:
+- [ ] **Fix the CI secret:** GitHub → Settings → Secrets and variables → Actions → set `SUPABASE_URL` to the exact value in `etl/.env` (host `aws-1-ap-south-1.pooler.supabase.com`). The old `SUPABASE_HOST/USER/PASSWORD/DB` secrets are unused and can be deleted.
+- [ ] **Failure emails:** create a free Resend account → API key → add the secrets `RESEND_API_KEY` and `ALERT_EMAIL` (the email you signed up to Resend with).
+- [ ] **First run:** Actions → ETL Pipeline → Run workflow with **adzuna = true** (the first run must include Adzuna, or the marts rebuild on thin data). Check that it goes green.
+- [ ] **Keep-warm:** `cd infra/keepwarm && npx wrangler login && npx wrangler deploy` (free Cloudflare account). Then ask Claude to delete `.github/workflows/keep_warm.yml`.
+- [ ] **Only after keep-warm moves:** make the GitHub repo private.
+- [ ] **Adzuna:** send the email in `docs/ops/adzuna-licence-request.md`.
+- [ ] Optional: 4 orphan files in the `resumes` bucket have no database row (pre-existing). Delete them in the Supabase dashboard if they aren't needed.
+
+Later:
+- [ ] Get free Groq and Gemini API keys (Phase 1 enrichment).
 - [ ] Choose the final product name and domain before the Phase 2 beta.
