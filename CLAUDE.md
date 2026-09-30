@@ -17,7 +17,7 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundation fixes: CI ETL repair, daily schedule, run ledger + failure email, storage retention, private resumes, migration runner, keep-warm on Cloudflare | **Code done; waiting on owner's manual steps below** |
-| 1 | Remote job data engine: job-board API connectors, career-page crawler, dedup, job lifecycle, eligibility enrichment, 20 roles | Not started |
+| 1 | Remote job data engine: 1a roles & skill quality → 1b company job-board connectors → 1c dedup + eligibility + feed mart → 1d career-page crawler | **1a done** (20 roles, curated taxonomy, shared matcher, backfill); 1b next |
 | 2 | Web copilot core → free beta | Not started |
 | 3 | Extension 2.0 | Not started |
 | 4 | AI assistance + Pro + Paddle → paid launch | Not started |
@@ -28,6 +28,8 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 `sources → etl/ (Python) → Supabase Postgres (raw → staging → staging_marts via dbt) → backend/ (FastAPI on Render) → frontend/ (React+Vite) + skillhunt-extension/ (MV3, gitignored)`
 
 - **ETL:** `etl/extractor.py` (Adzuna), `etl/ingest_sources.py` + `etl/connectors/*` (every source outputs `NormalizedJob`), `etl/transformer.py` (skills via the taxonomy regex), `etl/fetch_currency_rates.py`, `etl/refresh_all.py` (local full refresh). Config lives in `etl/config/*.json`.
+- **Skills:** `etl/skill_patterns.py` is the ONE skill matcher, used by the ETL (`FastPathExtractor`, transformer fallback) and the API (`ResumeSkillExtractor` imports it via `sys.path`). Taxonomy entries can carry `case_sensitive`, `not_followed_by`, `not_preceded_by` for terms that are also English words ("Go", "REST", "Spark"). `etl/tests/test_taxonomy.py` lints the taxonomy (no term owned by two skills, English words only case-sensitive, false-positive sentences don't match).
+- **Roles:** 20 roles in `etl/connectors/utils.py` (`_ROLE_PATTERNS`, order matters, `Software Engineer` is the catch-all and must stay last). `extraction_config.json` has `roles` (20) and `adzuna_roles` (15, quota). For keyword-searched sources (Adzuna, Jooble) the TITLE decides the role (`transformer.validated_role`); titles matching no role get `raw.jobs.skip_reason='role_mismatch'`.
 - **dbt:** `dbt_project/` builds `staging_marts.mart_*`, which is what the API reads.
 - **Backend:** `backend/app/routers/*` (stats, skills, salary, companies, career, resume, user, extension). Auth is Supabase JWT (`app/auth.py`). Rate limiting is in `app/ratelimit.py`.
 - **DB schemas:** `raw`, `staging`, `staging_marts`, `archive`, `public` (user tables, RLS), `ops` (pipeline ops, from Phase 0).
@@ -44,6 +46,7 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 - **UI:** premium dark design system (a single blue accent, monochrome surfaces, `border-white/[0.08]` hairlines).
 - **Money:** the API serves USD everywhere. Salaries are normalised using `staging.currency_rates`.
 - **Tests:** pytest in `etl/tests/` and `backend/tests/`. New logic is written test-first. ETL database tests need Docker Desktop running locally (they start a throwaway `postgres:16-alpine`); CI uses `TEST_DATABASE_URL`. Run with `cd etl && ../venv/Scripts/python -m pytest` and `cd backend && ./venv/Scripts/python -m pytest`. Never import a module that calls `load_dotenv()` at import time in tests without patching it (see `tests/test_transformer_guard.py`), because `etl/.env` points at production.
+- **Taxonomy changes:** never hand-edit `skills_taxonomy.json` for curation. Write a declarative script in `etl/tools/` (see `curate_taxonomy_2026_10.py`), keep `test_taxonomy.py` green, then run `python -m ops.reextract --dry-run` / `--apply` to re-apply roles and skills to stored jobs (it refuses when it would drop more than 25%).
 - **Migrations:** `database/migrations/NNN_name.sql`, each wrapped in `BEGIN; … COMMIT;`, idempotent where possible. Apply with `cd etl && ../venv/Scripts/python -m ops.migrate up` (CI also does it on push once the secret works). Never edit an applied migration; add a new one.
 
 ## Gotchas
@@ -54,6 +57,7 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 - Marts only count jobs from the **last 60 days** (`COALESCE(job_posted_at, extracted_at)`).
 - The **skill-trend chart** (`/skills/trend`) is computed from `staging.stg_jobs`, not from the archive. Retention is 400 days so it keeps a year; shortening it cuts the chart.
 - Raw payloads of processed jobs are stripped after 7 days (Adzuna native payloads become `{"_stripped": true}`), so `transformer.py --reprocess` can no longer rebuild those rows from raw.
+- **Render only redeploys the API when its watched paths change** (`rootDir: backend` + `buildFilter` in `render.yaml`: `backend/**`, `etl/skill_patterns.py`, `etl/config/skills_taxonomy.json`). If the Render service isn't blueprint-synced, set the same Build Filters in the dashboard. Otherwise taxonomy changes never reach the live resume analyzer or extension.
 - The CI ETL failed on every run from Jan to Sep 2026 because the `SUPABASE_URL` GitHub secret didn't work. Local preflight with `etl/.env` passes, so the local URL is the right value.
 
 ## Pending manual steps (owner)

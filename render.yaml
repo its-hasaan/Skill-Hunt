@@ -9,6 +9,13 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     rootDir: backend
+    # The API also reads the shared skill matcher and taxonomy from etl/
+    # (see backend/README.md), so changes there must redeploy it too.
+    buildFilter:
+      paths:
+        - backend/**
+        - etl/skill_patterns.py
+        - etl/config/skills_taxonomy.json
     envVars:
       - key: SUPABASE_URL
         sync: false  # Set manually in Render dashboard

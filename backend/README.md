@@ -2,6 +2,11 @@
 
 FastAPI backend for the Job Script job market analysis dashboard.
 
+> **Shared with the ETL:** the resume analyzer and `/extension/analyze` match skills with
+> `etl/skill_patterns.py` against `etl/config/skills_taxonomy.json` (read at runtime from the
+> repo checkout). Changing either must redeploy this service; `render.yaml`'s `buildFilter`
+> covers both paths.
+
 ## Setup
 
 1. Create virtual environment:
