@@ -1,0 +1,9 @@
+name = "jobwise-keepwarm"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["*/10 * * * *"]  # Render sleeps after 15 idle minutes
+
+[vars]
+HEALTH_URL = "https://skill-hunt.onrender.com/health"
