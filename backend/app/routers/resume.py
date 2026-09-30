@@ -16,6 +16,7 @@ import re
 import json
 from pathlib import Path
 import io
+import sys
 
 from ..database import Database, get_db
 from ..auth import AuthUser, get_optional_user
@@ -30,7 +31,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/resume", tags=["Resume Analysis"])
 
 # Load skills taxonomy for extraction
-TAXONOMY_PATH = Path(__file__).parent.parent.parent.parent / "etl" / "config" / "skills_taxonomy.json"
+ETL_DIR = Path(__file__).resolve().parents[3] / "etl"
+TAXONOMY_PATH = ETL_DIR / "config" / "skills_taxonomy.json"
+
+# The skill matcher is shared with the ETL so resumes, job posts and the
+# dashboard always agree on what counts as a skill.
+if str(ETL_DIR) not in sys.path:
+    sys.path.insert(0, str(ETL_DIR))
+from skill_patterns import build_patterns  # noqa: E402
 
 
 class ResumeSkillExtractor:
@@ -39,15 +47,16 @@ class ResumeSkillExtractor:
     Same approach as the ETL transformer but optimized for single document.
     """
     
-    def __init__(self):
-        self.skills = {}  # skill_name -> {category, subcategory}
-        self.patterns = []  # List of (pattern, canonical_name, category, subcategory)
+    def __init__(self, taxonomy_path: Path = TAXONOMY_PATH):
+        self.taxonomy_path = taxonomy_path
+        self.skills = {}  # skill_name_lower -> {name, category, subcategory}
+        self.patterns = []  # List[SkillPattern]
         self._load_taxonomy()
     
     def _load_taxonomy(self):
         """Load skills taxonomy from JSON file."""
         try:
-            with open(TAXONOMY_PATH, 'r', encoding='utf-8') as f:
+            with open(self.taxonomy_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
             for skill in data.get('skills', []):
@@ -63,20 +72,10 @@ class ResumeSkillExtractor:
                     'subcategory': subcategory
                 }
                 
-                # Create regex patterns for skill and all aliases
-                all_terms = [name] + aliases
-                for term in all_terms:
-                    escaped_term = re.escape(term)
-                    # Handle special cases like C++, C#, .NET
-                    if term in ['C++', 'C#', '.NET']:
-                        pattern = re.compile(rf'(?<![a-zA-Z]){escaped_term}(?![a-zA-Z])', re.IGNORECASE)
-                    else:
-                        pattern = re.compile(rf'\b{escaped_term}\b', re.IGNORECASE)
-                    self.patterns.append((pattern, name, category, subcategory))
-            
+            self.patterns = build_patterns(data.get('skills', []))
             logger.info(f"Loaded {len(self.skills)} skills with {len(self.patterns)} patterns")
         except FileNotFoundError:
-            logger.error(f"Skills taxonomy not found at {TAXONOMY_PATH}")
+            logger.error(f"Skills taxonomy not found at {self.taxonomy_path}")
             # Fallback to empty - will still work but extract no skills
             self.skills = {}
             self.patterns = []
@@ -93,16 +92,16 @@ class ResumeSkillExtractor:
         
         found_skills = {}  # canonical_name -> {category, subcategory, count}
         
-        for pattern, canonical_name, category, subcategory in self.patterns:
-            matches = pattern.findall(text)
-            if matches:
-                if canonical_name not in found_skills:
-                    found_skills[canonical_name] = {
-                        'category': category,
-                        'subcategory': subcategory,
-                        'count': 0
-                    }
-                found_skills[canonical_name]['count'] += len(matches)
+        for pattern in self.patterns:
+            n = pattern.count(text)
+            if n:
+                info = self.skills.get(pattern.canonical.lower(), {})
+                entry = found_skills.setdefault(pattern.canonical, {
+                    'category': info.get('category', 'Unknown'),
+                    'subcategory': info.get('subcategory', ''),
+                    'count': 0,
+                })
+                entry['count'] += n
         
         # Build result
         results = []

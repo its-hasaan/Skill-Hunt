@@ -12,7 +12,14 @@ import re
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Set, Tuple, Optional
+import sys
+from typing import List, Dict, Set, Optional
+
+# skill_patterns lives in etl/ and is shared with the API's resume extractor.
+_ETL_DIR = str(Path(__file__).resolve().parents[1])
+if _ETL_DIR not in sys.path:
+    sys.path.insert(0, _ETL_DIR)
+from skill_patterns import SkillPattern, build_patterns  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +44,7 @@ class FastPathExtractor:
             taxonomy_data: Pre-loaded taxonomy dict (alternative to file)
         """
         self.skills: Dict[str, dict] = {}  # skill_name_lower -> {name, category, subcategory}
-        self.patterns: List[Tuple[re.Pattern, str]] = []  # (compiled_pattern, canonical_name)
+        self.patterns: List[SkillPattern] = []
         self.known_skill_names: Set[str] = set()  # For quick membership testing
         
         if taxonomy_path:
@@ -76,39 +83,9 @@ class FastPathExtractor:
             }
             self.known_skill_names.add(name.lower())
             
-            # Compile patterns for skill name and all aliases
-            all_terms = [name] + aliases
-            for term in all_terms:
-                pattern = self._compile_pattern(term)
-                self.patterns.append((pattern, name))
-        
+        self.patterns = build_patterns(skills_list)
+
         logger.info(f"FastPath: Loaded {len(self.skills)} skills with {len(self.patterns)} patterns")
-    
-    def _compile_pattern(self, term: str) -> re.Pattern:
-        """
-        Compile a regex pattern for a skill term.
-        Handles special cases like C++, C#, .NET, etc.
-        """
-        escaped = re.escape(term)
-        
-        # Special handling for programming language edge cases
-        special_terms = {
-            'C++': r'(?<![a-zA-Z])C\+\+(?![a-zA-Z])',
-            'C#': r'(?<![a-zA-Z])C#(?![a-zA-Z])',
-            '.NET': r'(?<![a-zA-Z])\.NET(?![a-zA-Z0-9])',
-            'Node.js': r'\bNode\.?js\b',
-            'Vue.js': r'\bVue\.?js\b',
-            'Next.js': r'\bNext\.?js\b',
-            'Nuxt.js': r'\bNuxt\.?js\b',
-            'D3.js': r'\bD3\.?js\b',
-            'Three.js': r'\bThree\.?js\b',
-        }
-        
-        if term in special_terms:
-            return re.compile(special_terms[term], re.IGNORECASE)
-        
-        # Standard word boundary pattern
-        return re.compile(rf'\b{escaped}\b', re.IGNORECASE)
     
     def extract_skills(self, text: str) -> List[Dict]:
         """
@@ -125,12 +102,10 @@ class FastPathExtractor:
         
         found_skills: Dict[str, int] = {}  # canonical_name -> count
         
-        for pattern, canonical_name in self.patterns:
-            matches = pattern.findall(text)
-            if matches:
-                if canonical_name not in found_skills:
-                    found_skills[canonical_name] = 0
-                found_skills[canonical_name] += len(matches)
+        for pattern in self.patterns:
+            n = pattern.count(text)
+            if n:
+                found_skills[pattern.canonical] = found_skills.get(pattern.canonical, 0) + n
         
         # Build results with metadata
         results = []
@@ -170,10 +145,7 @@ class FastPathExtractor:
         }
         self.known_skill_names.add(name.lower())
         
-        # Compile and add patterns
-        for term in [name] + aliases:
-            pattern = self._compile_pattern(term)
-            self.patterns.append((pattern, name))
+        self.patterns.extend(build_patterns([{"name": name, "aliases": aliases}]))
         
         logger.debug(f"FastPath: Added new skill '{name}' with {len(aliases)} aliases")
     

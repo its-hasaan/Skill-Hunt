@@ -35,6 +35,9 @@ from pathlib import Path
 import logging
 from typing import List, Dict, Set, Tuple, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from skill_patterns import build_patterns  # noqa: E402  (shared with the API)
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -139,15 +142,7 @@ class LegacySkillExtractor:
                 'subcategory': subcategory
             }
             
-            all_terms = [name] + aliases
-            for term in all_terms:
-                escaped_term = re.escape(term)
-                if term in ['C++', 'C#', '.NET']:
-                    pattern = re.compile(rf'(?<![a-zA-Z]){escaped_term}(?![a-zA-Z])', re.IGNORECASE)
-                else:
-                    pattern = re.compile(rf'\b{escaped_term}\b', re.IGNORECASE)
-                self.patterns.append((pattern, name))
-        
+        self.patterns = build_patterns(data.get('skills', []))
         logger.info(f"LegacyExtractor: Loaded {len(self.skills)} skills")
     
     def extract_skills(self, text: str, context: str = "") -> List[Dict]:
@@ -155,12 +150,10 @@ class LegacySkillExtractor:
             return []
         
         found_skills = {}
-        for pattern, canonical_name in self.patterns:
-            matches = pattern.findall(text)
-            if matches:
-                if canonical_name not in found_skills:
-                    found_skills[canonical_name] = 0
-                found_skills[canonical_name] += len(matches)
+        for pattern in self.patterns:
+            n = pattern.count(text)
+            if n:
+                found_skills[pattern.canonical] = found_skills.get(pattern.canonical, 0) + n
         
         results = []
         for skill_name, count in found_skills.items():
@@ -181,107 +174,6 @@ class LegacySkillExtractor:
     
     def get_known_skills_count(self) -> int:
         return len(self.skills)
-
-
-class SkillExtractor:
-    """
-    DEPRECATED: Legacy class kept for backward compatibility.
-    Use create_skill_extractor() instead.
-    """
-    """
-    Extracts skills from text using a taxonomy-based approach.
-    Uses regex patterns with word boundaries for accurate matching.
-    """
-    
-    def __init__(self, taxonomy_path: Path):
-        """
-        Initialize the skill extractor with a taxonomy file.
-        
-        Args:
-            taxonomy_path: Path to skills_taxonomy.json
-        """
-        self.skills = {}  # skill_name -> {category, subcategory, pattern}
-        self.patterns = []  # List of (pattern, canonical_name)
-        self._load_taxonomy(taxonomy_path)
-    
-    def _load_taxonomy(self, taxonomy_path: Path):
-        """Load and compile skill patterns from taxonomy file."""
-        try:
-            with open(taxonomy_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        except FileNotFoundError:
-            logger.error(f"Skills taxonomy not found: {taxonomy_path}")
-            sys.exit(1)
-        
-        for skill in data.get('skills', []):
-            name = skill['name']
-            category = skill.get('category', 'Unknown')
-            subcategory = skill.get('subcategory', '')
-            aliases = skill.get('aliases', [])
-            
-            # Store skill info
-            self.skills[name.lower()] = {
-                'name': name,
-                'category': category,
-                'subcategory': subcategory
-            }
-            
-            # Create regex patterns for skill and all aliases
-            all_terms = [name] + aliases
-            for term in all_terms:
-                # Escape special regex characters
-                escaped_term = re.escape(term)
-                # Create word boundary pattern (case-insensitive)
-                # Handle special cases like C++, C#, .NET
-                if term in ['C++', 'C#', '.NET']:
-                    pattern = re.compile(rf'(?<![a-zA-Z]){escaped_term}(?![a-zA-Z])', re.IGNORECASE)
-                else:
-                    pattern = re.compile(rf'\b{escaped_term}\b', re.IGNORECASE)
-                self.patterns.append((pattern, name))
-        
-        logger.info(f"Loaded {len(self.skills)} skills with {len(self.patterns)} patterns")
-    
-    def extract_skills(self, text: str) -> List[Dict]:
-        """
-        Extract skills from text.
-        
-        Args:
-            text: Job description or other text to analyze
-        
-        Returns:
-            List of dicts: [{'skill_name': 'Python', 'category': 'Programming Language', 'count': 3}, ...]
-        """
-        if not text:
-            return []
-        
-        # Normalize text (keep for matching)
-        text_lower = text.lower()
-        
-        # Track found skills and counts
-        found_skills = {}  # canonical_name -> count
-        
-        for pattern, canonical_name in self.patterns:
-            matches = pattern.findall(text)
-            if matches:
-                if canonical_name not in found_skills:
-                    found_skills[canonical_name] = 0
-                found_skills[canonical_name] += len(matches)
-        
-        # Build result
-        results = []
-        for skill_name, count in found_skills.items():
-            skill_info = self.skills.get(skill_name.lower(), {})
-            results.append({
-                'skill_name': skill_name,
-                'category': skill_info.get('category', 'Unknown'),
-                'subcategory': skill_info.get('subcategory', ''),
-                'mention_count': count
-            })
-        
-        # Sort by count descending
-        results.sort(key=lambda x: x['mention_count'], reverse=True)
-        
-        return results
 
 
 def get_db_connection():
