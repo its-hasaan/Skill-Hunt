@@ -12,8 +12,10 @@ from __future__ import annotations
 import argparse
 import collections
 import os
+import re
 import subprocess
 import sys
+import urllib.parse as urlparse
 from datetime import datetime, timezone
 
 import psycopg2
@@ -32,6 +34,24 @@ METRICS = {
     "stg_processed": "SELECT count(*) FROM staging.stg_jobs WHERE processed_at >= %(since)s",
     "db_size_bytes": "SELECT pg_database_size(current_database())",
 }
+
+
+# Env vars whose values must never reach the ledger or the alert email.
+# GitHub masks secrets in its own log, but not in output we capture:
+# Adzuna, for one, puts app_key in request URLs that end up in tracebacks.
+SECRET_NAME = re.compile(r"(KEY|SECRET|TOKEN|PASSWORD|_URL|APP_ID)$")
+MIN_SECRET_LEN = 6
+
+
+def redact(text: str, env=os.environ) -> str:
+    secrets = {v for k, v in env.items() if SECRET_NAME.search(k) and v and len(v) >= MIN_SECRET_LEN}
+    db_url = env.get("SUPABASE_URL")
+    if db_url:
+        encoded = urlparse.urlparse(db_url).password or ""
+        secrets |= {pw for pw in (encoded, urlparse.unquote(encoded)) if len(pw) >= MIN_SECRET_LEN}
+    for secret in sorted(secrets, key=len, reverse=True):  # whole URL before its password
+        text = text.replace(secret, "***")
+    return text
 
 
 def _query_one(url, sql, params=None):
@@ -81,7 +101,7 @@ def main(argv=None) -> int:
             url, run_id=ledger.current_run_id(), step=args.step,
             status="success" if exit_code == 0 else "failure",
             started_at=started, finished_at=finished, exit_code=exit_code,
-            rows_out=value, error=None if exit_code == 0 else tail,
+            rows_out=value, error=None if exit_code == 0 else redact(tail),
             details={"metric": args.metric} if args.metric else None,
         )
     return exit_code

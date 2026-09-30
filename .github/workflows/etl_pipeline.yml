@@ -93,17 +93,26 @@ jobs:
         continue-on-error: true
         run: python -m ops.run_step --step fx -- python fetch_currency_rates.py
 
-      - name: Configure dbt connection
+      - name: Enough fresh data to rebuild marts?
+        id: guard
         if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        continue-on-error: true
+        run: python -m ops.run_step --step marts_guard -- python -m ops.marts_guard
+
+      - name: Configure dbt connection
+        if: steps.guard.outcome == 'success'
         run: python -m ops.dbconfig --github-env
 
       - name: Build marts (dbt)
         id: dbt
-        if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        if: steps.guard.outcome == 'success'
         working-directory: dbt_project
         env:
           PYTHONPATH: ../etl
         run: |
+          # profiles.yml is gitignored locally; the example is identical and
+          # reads every connection value from the DB_* env set above.
+          cp profiles.yml.example profiles.yml
           dbt deps --profiles-dir .
           python -m ops.run_step --step dbt -- dbt run --profiles-dir . --target dev --full-refresh
           python -m ops.run_step --step dbt_test -- dbt test --profiles-dir . --target dev
@@ -131,4 +140,4 @@ jobs:
         if: always()
         run: >-
           python -m ops.notify --results
-          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"
+          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},marts_guard=${{ steps.guard.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"

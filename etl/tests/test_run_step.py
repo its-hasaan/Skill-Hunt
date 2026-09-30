@@ -58,3 +58,30 @@ def test_fetch_run_returns_rows_for_one_run(pipeline_db, monkeypatch):
     rows = ledger.fetch_run(pipeline_db, "t-4")
     assert [r["step"] for r in rows] == ["a"]
     assert ledger.fetch_run("postgresql://u:p@127.0.0.1:1/none", "t-4") == []
+
+
+def test_redact_masks_secret_env_values_and_db_password():
+    env = {
+        "ADZUNA_APP_KEY": "adzkey-1234567890",
+        "SUPABASE_URL": "postgresql://u:VeryS3cret%40Pw@h:5432/db",
+        "PATH": "/usr/bin:/bin/something-long",
+    }
+    text = ("url https://api.adzuna.com/x?app_key=adzkey-1234567890 "
+            "db postgresql://u:VeryS3cret%40Pw@h:5432/db pw VeryS3cret@Pw path /usr/bin:/bin/something-long")
+    out = run_step.redact(text, env)
+    assert "adzkey-1234567890" not in out
+    assert "VeryS3cret" not in out
+    assert "app_key=***" in out
+    assert "/usr/bin:/bin/something-long" in out  # non-secret values untouched
+
+
+def test_failure_tail_is_redacted_before_it_is_stored(pipeline_db, monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", pipeline_db)
+    monkeypatch.setenv("PIPELINE_RUN_ID", "t-5")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "adzkey-1234567890")
+    code = run_step.main(["--step", "adzuna", "--", sys.executable, "-c",
+                          "import sys; print('401 for url: https://api.adzuna.com/x?app_key=adzkey-1234567890'); sys.exit(1)"])
+    assert code == 1
+    (_, _, _, _, error), = ledger_rows(pipeline_db)
+    assert "adzkey-1234567890" not in error
+    assert "app_key=***" in error
