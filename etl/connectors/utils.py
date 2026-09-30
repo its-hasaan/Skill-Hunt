@@ -147,7 +147,7 @@ def parse_salary_range(text: Optional[str]) -> tuple[Optional[float], Optional[f
 # ---------------------------------------------------------------------------
 # Role classification
 # ---------------------------------------------------------------------------
-# The platform tracks a fixed set of 15 roles. Feed-style sources (RemoteOK,
+# The platform tracks a fixed set of 20 roles. Feed-style sources (RemoteOK,
 # WeWorkRemotely, ...) return everything, so we classify each job title into
 # one of those roles — or None (which the orchestrator drops). Ordering is
 # deliberate: more specific roles are tested before the generic ones so a
@@ -162,24 +162,44 @@ _ROLE_PATTERNS: List[tuple[str, List[str]]] = [
                      r"generative ai", r"\bgen ?ai", r"\bllm\b", r"\bnlp engineer"]),
     ("Data Scientist", [r"data scientist", r"data science"]),
     ("Data Engineer", [r"data engineer", r"data engineering", r"\betl developer",
-                       r"big data engineer"]),
+                       r"big data engineer", r"data architect"]),
     ("Business Intelligence Developer", [r"business intelligence", r"\bbi developer",
                                          r"\bbi engineer", r"power ?bi", r"tableau developer"]),
-    ("Data Analyst", [r"data analyst", r"data analytics", r"business analyst.*data"]),
+    ("Data Analyst", [r"data analyst", r"data analist", r"data analytics", r"business analyst.*data"]),
     ("Full Stack Developer", [r"full[\s\-]?stack"]),
-    ("Mobile Developer", [r"mobile developer", r"mobile engineer", r"\bios (developer|engineer)",
-                          r"android (developer|engineer)", r"react native", r"\bflutter\b"]),
+    ("Mobile Developer", [r"mobile developer", r"mobile engineer", r"mobile (app|application)",
+                          r"\bios (developer|engineer)", r"android (developer|engineer)",
+                          r"react native", r"\bflutter\b"]),
+    # Designer before Frontend: "UI Designer" is design, "UI Developer" is frontend.
+    ("UI/UX Designer", [r"\bux\b", r"ui ?/ ?ux", r"ux ?/ ?ui", r"\bui designer", r"user experience",
+                        r"product designer", r"interaction designer", r"visual designer",
+                        r"web designer"]),
     ("Frontend Developer", [r"front[\s\-]?end", r"\bui engineer", r"\bui developer",
                             r"react(\.js)? developer", r"angular developer", r"vue(\.js)? developer"]),
+    ("QA Engineer", [r"\bqa\b", r"quality assurance", r"\bsqa\b", r"\bsdet\b", r"test automation",
+                     r"automation (test|qa)", r"software test", r"test engineer", r"\btester\b"]),
     ("Backend Developer", [r"back[\s\-]?end", r"server[\s\-]?side",
                            r"\b(node|java|python|php|go|ruby|\.net)\b.*developer.*api"]),
     ("DevOps Engineer", [r"devops", r"site reliability", r"\bsre\b", r"platform engineer",
                          r"infrastructure engineer"]),
-    ("Cloud Architect", [r"cloud architect", r"solutions? architect", r"aws architect",
+    ("Cloud Architect", [r"cloud architect", r"cloud .*architect", r"architecte cloud",
+                         r"solutions? architect", r"systems architect", r"aws architect",
                          r"azure architect", r"gcp architect", r"cloud engineer"]),
     ("Cyber Security Engineer", [r"cyber ?security", r"security engineer", r"\binfosec\b",
                                  r"application security", r"security analyst", r"soc analyst",
                                  r"penetration test"]),
+    ("Product Manager", [r"product manager", r"product owner", r"product management",
+                         r"\btechnical pm\b"]),
+    ("Technical Support Engineer", [r"(technical|tech|it|application|product|customer) support",
+                                    r"support engineer", r"help ?desk", r"service desk",
+                                    r"customer success engineer", r"technical account manager",
+                                    r"support specialist", r"desktop support"]),
+    # Catch-all for generic engineering titles: must stay LAST so every
+    # specific role above wins ("Software Engineer - Backend" -> Backend).
+    ("Software Engineer", [r"software (engineer|developer|development engineer)", r"\bswe\b",
+                           r"\bsde\b", r"application (developer|engineer)",
+                           r"(^|[\s(])(java|python|golang|c\+\+|c#|\.net|ruby|php|rust|scala|kotlin|typescript|javascript) (developer|engineer)\b",
+                           r"\bprogrammer\b"]),
 ]
 
 _COMPILED_ROLE_PATTERNS = [

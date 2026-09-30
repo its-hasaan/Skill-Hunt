@@ -223,7 +223,9 @@ def extract_all(roles: list = None, countries: dict = None, max_pages: int = 2, 
     """
     config = load_config()
     
-    roles = roles or config['roles']
+    # Adzuna has a request quota, so it searches only its own role list;
+    # the newer roles come from sources without a query budget.
+    roles = roles or config.get('adzuna_roles', config['roles'])
     countries = countries or config['countries']
     max_pages = max_pages or config['api']['max_pages_per_role_country']
     delay = delay or config['api']['rate_limit_delay_seconds']
@@ -317,7 +319,7 @@ def main():
     config = load_config()
     
     # Determine roles and countries
-    roles = [args.role] if args.role else config['roles']
+    roles = [args.role] if args.role else config.get('adzuna_roles', config['roles'])
     countries = {args.country: config['countries'].get(args.country, args.country)} if args.country else config['countries']
     
     # Validate inputs
