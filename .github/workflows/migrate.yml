@@ -1,0 +1,29 @@
+name: Database migrations
+
+on:
+  push:
+    branches: [main]
+    paths: ['database/migrations/**']
+  workflow_dispatch:
+
+concurrency:
+  group: db-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: etl
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install psycopg2-binary python-dotenv requests
+      - run: python -m ops.preflight
+      - run: python -m ops.migrate status
+      - run: python -m ops.migrate up

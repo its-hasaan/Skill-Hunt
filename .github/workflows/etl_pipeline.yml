@@ -1,319 +1,134 @@
 name: ETL Pipeline
 
+# One job, many steps: per-job setup counts against the 2,000 Actions
+# minutes a private repo gets, and steps can gate each other on outcome.
 on:
-  # Run every 2 weeks (1st and 15th of each month at 3 AM UTC)
   schedule:
-    - cron: '0 3 1,15 * *'
-  
-  # Allow manual trigger
+    - cron: '0 3 * * 1'        # Monday: everything incl. Adzuna (weekly, fits its quota)
+    - cron: '0 3 * * 0,2-6'    # Other days: every non-Adzuna source
   workflow_dispatch:
     inputs:
-      run_extraction:
-        description: 'Run data extraction'
+      adzuna:
+        description: 'Include Adzuna extraction'
         type: boolean
-        default: true
-      run_transformation:
-        description: 'Run data transformation'
-        type: boolean
-        default: true
-      run_dbt:
-        description: 'Run dbt models'
-        type: boolean
-        default: true
+        default: false
       test_mode:
         description: 'Test mode (limited data)'
         type: boolean
         default: false
+      vacuum_full:
+        description: 'VACUUM FULL after retention'
+        type: boolean
+        default: false
+
+concurrency:
+  group: etl-pipeline
+  cancel-in-progress: false
 
 env:
   PYTHON_VERSION: '3.11'
+  PYTHONUNBUFFERED: '1'
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
   ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
   ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
-  SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
-  SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
-  SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
-  # Multi-source ingestion keys (optional — each source auto-skips if blank)
   JOOBLE_API_KEY: ${{ secrets.JOOBLE_API_KEY }}
   THEMUSE_API_KEY: ${{ secrets.THEMUSE_API_KEY }}
   USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
   USAJOBS_USER_AGENT: ${{ secrets.USAJOBS_USER_AGENT }}
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
 
 jobs:
-  extract:
-    name: Extract Job Data
+  pipeline:
+    name: Daily pipeline
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'schedule' || github.event.inputs.run_extraction == 'true' }}
-    
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: etl
+    env:
+      WEEKLY: ${{ github.event.schedule == '0 3 * * 1' || github.event.inputs.adzuna == 'true' }}
+      TEST_FLAG: ${{ github.event.inputs.test_mode == 'true' && '--test' || '' }}
+      FULL_VACUUM: ${{ (github.event.schedule == '0 3 * * 1' || github.event.inputs.vacuum_full == 'true') && '--vacuum-full' || '' }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r etl/requirements.txt
-      
-      - name: Run extraction (Adzuna)
-        run: |
-          cd etl
-          if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
-            python extractor.py --test
-          else
-            # Extract jobs from last 60 days only
-            python extractor.py --days 60 --pages 3 --delay 1.5
-          fi
+          pip install -r requirements.txt
 
-      - name: Run multi-source ingestion (RemoteOK, WWR, Jooble, ...)
-        run: |
-          cd etl
-          if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
-            python ingest_sources.py --test
-          else
-            python ingest_sources.py
-          fi
+      - name: Preflight (credentials + connectivity)
+        id: preflight
+        run: python -m ops.run_step --step preflight -- python -m ops.preflight ${{ env.WEEKLY == 'true' && '--adzuna' || '' }}
 
-      - name: Upload extraction log
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: extraction-log
-          path: |
-            etl/extraction.log
-            etl/ingestion.log
-          retention-days: 7
+      - name: Extract (Adzuna, weekly)
+        id: adzuna
+        if: steps.preflight.outcome == 'success' && env.WEEKLY == 'true'
+        continue-on-error: true
+        run: python -m ops.run_step --step adzuna --metric raw_inserted_adzuna -- python extractor.py --days 60 --pages 3 --delay 1.5 $TEST_FLAG
 
-  transform:
-    name: Transform & Extract Skills (Hybrid)
-    runs-on: ubuntu-latest
-    needs: extract
-    if: ${{ always() && (github.event_name == 'schedule' || github.event.inputs.run_transformation == 'true') }}
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-      
-      - name: Install dependencies
+      - name: Ingest (remote boards, Jooble, ...)
+        id: ingest
+        if: steps.preflight.outcome == 'success'
+        continue-on-error: true
+        run: python -m ops.run_step --step ingest --metric raw_inserted_other -- python ingest_sources.py $TEST_FLAG
+
+      - name: Transform (taxonomy skill extraction)
+        id: transform
+        if: steps.adzuna.outcome == 'success' || steps.ingest.outcome == 'success'
         run: |
-          python -m pip install --upgrade pip
-          pip install -r etl/requirements.txt
-      
-      - name: Run transformation (Taxonomy-based Skill Extraction)
+          SUPABASE_URL="$(python -c 'import os; from ops.dbconfig import session_pooler_url; print(session_pooler_url(os.environ["SUPABASE_URL"]))')"
+          export SUPABASE_URL
+          python -m ops.run_step --step transform --metric stg_processed -- python transformer.py --batch-size 500 --fast-only
+
+      - name: Currency rates
+        id: fx
+        if: steps.transform.outcome == 'success'
+        continue-on-error: true
+        run: python -m ops.run_step --step fx -- python fetch_currency_rates.py
+
+      - name: Configure dbt connection
+        if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        run: python -m ops.dbconfig --github-env
+
+      - name: Build marts (dbt)
+        id: dbt
+        if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        working-directory: dbt_project
         env:
-          # SUPABASE_URL (transaction pooler, port 6543) drops long-lived
-          # connections after ~20 min — this step can run that long once the
-          # taxonomy or raw-job backlog grows. Force the session pooler
-          # (same host, port 5432) so the connection survives the whole run.
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          PYTHONPATH: ../etl
         run: |
-          cd etl
-          export SUPABASE_URL=$(python -c "import os,re; print(re.sub(r':6543/', ':5432/', os.environ['SUPABASE_URL']))")
-          # Use fast-only mode: regex/taxonomy-based extraction only (no GLiNER/LLM)
-          echo "Running in FAST MODE (Taxonomy-based extraction only)"
-          python transformer.py --batch-size 500 --fast-only
+          dbt deps --profiles-dir .
+          python -m ops.run_step --step dbt -- dbt run --profiles-dir . --target dev --full-refresh
+          python -m ops.run_step --step dbt_test -- dbt test --profiles-dir . --target dev
 
-      - name: Upload transformation log
-        uses: actions/upload-artifact@v4
+      - name: Archive skill-demand snapshot
+        id: archive
+        if: steps.dbt.outcome == 'success' && github.event_name == 'schedule'
+        run: python -m ops.run_step --step archive -- python -m ops.archive
+
+      - name: Retention (storage budget)
+        id: retention
+        if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        continue-on-error: true
+        run: python -m ops.run_step --step retention --metric db_size_bytes -- python -m ops.retention $FULL_VACUUM
+
+      - name: Upload logs
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: transformation-log
-          path: etl/transformation.log
+          name: pipeline-logs
+          path: etl/*.log
           retention-days: 7
 
-  fx_rates:
-    name: Fetch Currency Rates
-    runs-on: ubuntu-latest
-    needs: transform
-    # Runs when transform succeeded OR was deliberately skipped (manual
-    # dispatch) — only a transform FAILURE blocks it.
-    if: ${{ always() && needs.transform.result != 'failure' && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r etl/requirements.txt
-
-      - name: Fetch live currency exchange rates
-        run: |
-          cd etl
-          # Live rates so salary comparisons across countries stay correct
-          # (each mart row is one country/currency; the API blends rows for
-          # the "All Countries" view using these USD-normalized figures).
-          python fetch_currency_rates.py
-
-      - name: Upload currency rates log
-        uses: actions/upload-artifact@v4
+      - name: Summary and failure alert
         if: always()
-        with:
-          name: currency-rates-log
-          path: etl/currency_rates.log
-          retention-days: 7
-
-  dbt:
-    name: Run dbt Models
-    runs-on: ubuntu-latest
-    needs: [transform, fx_rates]
-    # always() lets this run when upstream jobs were SKIPPED (manual dispatch
-    # with extraction/transform toggled off), but a FAILED transform must
-    # block the mart rebuild: rebuilding on a half-transformed staging layer
-    # publishes inconsistent numbers to the dashboard. fx_rates failing is
-    # non-fatal (cached rates stay in effect).
-    if: >-
-      ${{ always()
-          && needs.transform.result != 'failure'
-          && (github.event_name == 'schedule' || github.event.inputs.run_dbt == 'true') }}
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r etl/requirements.txt
-      
-      - name: Setup dbt profile
-        run: |
-          mkdir -p ~/.dbt
-          # Profile name MUST match dbt_project.yml's `profile: job_script`.
-          # schema MUST be `staging`: the mart models set config(schema='marts'),
-          # and dbt's default schema-name macro prefixes it -> `staging_marts.*`,
-          # which is exactly the schema the FastAPI backend reads. Using
-          # schema `marts` here would build `marts_marts.*` and the API would
-          # see stale/empty data.
-          cat > ~/.dbt/profiles.yml << EOF
-          job_script:
-            outputs:
-              prod:
-                type: postgres
-                host: ${{ secrets.SUPABASE_HOST }}
-                port: 5432
-                user: ${{ secrets.SUPABASE_USER }}
-                password: ${{ secrets.SUPABASE_PASSWORD }}
-                dbname: ${{ secrets.SUPABASE_DB }}
-                schema: staging
-                threads: 4
-                connect_timeout: 30
-                sslmode: require
-            target: prod
-          EOF
-      
-      - name: Test dbt connection
-        working-directory: dbt_project
-        run: dbt debug
-      
-      - name: Run dbt models
-        working-directory: dbt_project
-        run: |
-          dbt deps
-          dbt run --full-refresh
-      
-      - name: Run dbt tests
-        working-directory: dbt_project
-        run: dbt test
-      
-      - name: Generate dbt docs
-        working-directory: dbt_project
-        run: dbt docs generate
-      
-      - name: Upload dbt artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dbt-artifacts
-          path: |
-            dbt_project/target/manifest.json
-            dbt_project/target/run_results.json
-            dbt_project/target/catalog.json
-          retention-days: 7
-
-  archive:
-    name: Archive Historical Data
-    runs-on: ubuntu-latest
-    needs: dbt
-    # Only archive marts that were just rebuilt successfully — archiving
-    # after a failed dbt run would snapshot (and, since migration 005,
-    # overwrite today's snapshot with) stale data.
-    if: ${{ github.event_name == 'schedule' && needs.dbt.result == 'success' }}
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r etl/requirements.txt
-      
-      - name: Archive skill demand snapshot
-        run: |
-          python -c "
-          import psycopg2
-          import os
-          
-          conn = psycopg2.connect(os.getenv('SUPABASE_URL'))
-          cursor = conn.cursor()
-          cursor.execute('SELECT archive_skill_demand()')
-          conn.commit()
-          cursor.close()
-          conn.close()
-          print('Historical snapshot archived successfully')
-          "
-
-  notify:
-    name: Send Notification
-    runs-on: ubuntu-latest
-    needs: [extract, transform, fx_rates, dbt, archive]
-    if: always()
-
-    steps:
-      - name: Check job results
-        run: |
-          echo "Extract: ${{ needs.extract.result }}"
-          echo "Transform: ${{ needs.transform.result }}"
-          echo "FX Rates: ${{ needs.fx_rates.result }}"
-          echo "dbt: ${{ needs.dbt.result }}"
-          echo "Archive: ${{ needs.archive.result }}"
-
-          if [ "${{ needs.extract.result }}" == "failure" ] || \
-             [ "${{ needs.transform.result }}" == "failure" ] || \
-             [ "${{ needs.dbt.result }}" == "failure" ]; then
-            echo "::error::One or more jobs failed!"
-            exit 1
-          fi
-
-          echo "All jobs completed successfully!"
+        run: >-
+          python -m ops.notify --results
+          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"
