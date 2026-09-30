@@ -45,11 +45,12 @@ import sys
 import argparse
 import logging
 import subprocess
-import urllib.parse as urlparse
 from pathlib import Path
 
 import psycopg2
 from dotenv import load_dotenv
+
+from ops.dbconfig import dbt_env_vars, session_pooler_url
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,16 +65,6 @@ DBT_DIR = REPO_ROOT / "dbt_project"
 
 load_dotenv(ETL_DIR / ".env")
 DB_URL = os.getenv("SUPABASE_URL")
-
-
-def session_pooler_url(url: str) -> str:
-    """Supabase's transaction pooler (port 6543) kills long-lived connections,
-    which breaks the multi-minute transform. The session pooler (port 5432,
-    same host) keeps the connection alive for the whole session. Rewrite 6543
-    -> 5432 so the long-running steps don't get dropped mid-run."""
-    if url and ":6543/" in url:
-        return url.replace(":6543/", ":5432/")
-    return url
 
 
 def run_step(name: str, cmd: list, cwd: Path, env: dict = None, dry_run: bool = False) -> bool:
@@ -113,20 +104,11 @@ def snapshot(label: str, dry_run: bool = False) -> None:
 
 
 def dbt_env() -> dict:
-    """Build the environment dbt needs, deriving DB_* from SUPABASE_URL.
-
-    Uses the SESSION pooler port (5432) regardless of what the URL says:
-    --full-refresh runs long CREATE TABLE AS statements, and the transaction
-    pooler (6543) drops long-lived connections mid-build (same failure mode
-    as the transform step — see session_pooler_url). CI already builds dbt
-    on 5432 for this reason."""
+    """Environment for dbt: DB_* derived from SUPABASE_URL on the session
+    pooler (--full-refresh runs long CREATE TABLE AS statements that the
+    transaction pooler would drop mid-build)."""
     env = dict(os.environ)
-    u = urlparse.urlparse(session_pooler_url(DB_URL))
-    env["DB_HOST"] = u.hostname or ""
-    env["DB_PORT"] = str(u.port or 5432)
-    env["DB_USER"] = u.username or ""
-    env["DB_PASSWORD"] = urlparse.unquote(u.password or "")
-    env["DB_NAME"] = (u.path or "/postgres").lstrip("/")
+    env.update(dbt_env_vars(DB_URL))
     return env
 
 
