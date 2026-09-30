@@ -9,9 +9,15 @@ import shutil
 import subprocess
 import time
 import uuid
+from pathlib import Path
 
 import psycopg2
 import pytest
+
+from tests.dbutil import run_sql
+
+_TESTS = Path(__file__).resolve().parent
+_REPO = _TESTS.parents[1]
 
 
 def _wait_for(url, timeout=90):
@@ -68,3 +74,11 @@ def fresh_db(pg_url):
         with admin.cursor() as cur:
             cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
         admin.close()
+
+
+@pytest.fixture
+def pipeline_db(fresh_db):
+    """A database with the raw/staging tables the ops tools touch plus the ledger."""
+    run_sql(fresh_db, (_TESTS / "fixtures" / "pipeline_schema.sql").read_text(encoding="utf-8"))
+    run_sql(fresh_db, (_REPO / "database" / "migrations" / "007_ops_pipeline_runs.sql").read_text(encoding="utf-8"))
+    return fresh_db

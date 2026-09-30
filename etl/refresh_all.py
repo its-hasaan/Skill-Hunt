@@ -45,11 +45,13 @@ import sys
 import argparse
 import logging
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import psycopg2
 from dotenv import load_dotenv
 
+from ops import ledger
 from ops.dbconfig import dbt_env_vars, session_pooler_url
 
 logging.basicConfig(
@@ -68,7 +70,7 @@ DB_URL = os.getenv("SUPABASE_URL")
 
 
 def run_step(name: str, cmd: list, cwd: Path, env: dict = None, dry_run: bool = False) -> bool:
-    """Run a subprocess step, streaming output. Returns True on success."""
+    """Run a subprocess step, streaming output, and record it in the ledger."""
     logger.info("=" * 64)
     logger.info("STEP: %s", name)
     logger.info("  $ %s   (cwd=%s)", " ".join(cmd), cwd)
@@ -76,7 +78,15 @@ def run_step(name: str, cmd: list, cwd: Path, env: dict = None, dry_run: bool = 
     if dry_run:
         logger.info("  [dry-run] skipped")
         return True
+    started = datetime.now(timezone.utc)
     result = subprocess.run(cmd, cwd=str(cwd), env=env)
+    ledger.record(
+        session_pooler_url(DB_URL), run_id=os.environ["PIPELINE_RUN_ID"], step=name,
+        status="success" if result.returncode == 0 else "failure",
+        started_at=started, finished_at=datetime.now(timezone.utc),
+        exit_code=result.returncode,
+        error=None if result.returncode == 0 else f"exit {result.returncode}; see refresh.log",
+    )
     if result.returncode != 0:
         logger.error("STEP FAILED: %s (exit %d)", name, result.returncode)
         return False
@@ -123,6 +133,7 @@ def main():
     parser.add_argument("--skip-dbt", action="store_true", help="Skip the dbt rebuild step")
     parser.add_argument("--dry-run", action="store_true", help="Print the plan; run nothing")
     args = parser.parse_args()
+    os.environ.setdefault("PIPELINE_RUN_ID", ledger.current_run_id())
 
     if not DB_URL:
         logger.error("SUPABASE_URL not set in etl/.env")
