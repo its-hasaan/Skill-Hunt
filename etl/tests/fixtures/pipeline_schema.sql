@@ -10,7 +10,11 @@ CREATE TABLE raw.jobs (
     raw_data JSONB NOT NULL,
     source TEXT NOT NULL DEFAULT 'adzuna',
     extracted_at TIMESTAMP DEFAULT NOW(),
+    extraction_batch_id UUID,
     skip_reason TEXT,
+    first_seen_at TIMESTAMP DEFAULT NOW(),
+    last_seen_at TIMESTAMP DEFAULT NOW(),
+    closed_at TIMESTAMP,
     CONSTRAINT raw_jobs_unique UNIQUE (job_platform_id, country_code)
 );
 

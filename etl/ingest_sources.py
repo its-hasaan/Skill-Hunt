@@ -39,6 +39,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, str(Path(__file__).parent))
 from connectors import CONNECTOR_REGISTRY  # noqa: E402
 from connectors.utils import RoleMatcher  # noqa: E402
+from ops import lifecycle  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,6 +53,10 @@ load_dotenv()
 DB_URL = os.getenv("SUPABASE_URL")
 CONFIG_DIR = Path(__file__).parent / "config"
 SOURCES_CONFIG_PATH = CONFIG_DIR / "sources_config.json"
+# Sources that return a company's full open-job list (closed by absence);
+# every other source is closed after FEED_STALE_DAYS without a sighting.
+ATS_SOURCES = {"greenhouse", "lever", "ashby", "smartrecruiters"}
+FEED_STALE_DAYS = 14
 
 
 def load_json(path: Path) -> dict:
@@ -70,45 +75,51 @@ def load_roles(sources_config: dict) -> list:
 
 
 def save_to_database(records: list, source: str, batch_id: str) -> int:
-    """Batch-insert normalized jobs into raw.jobs (idempotent).
+    """Upsert normalized jobs into raw.jobs and record the sighting.
 
-    `records` is a list of NormalizedJob. We store the namespaced
-    job_platform_id, the `source` tag, and the normalized+raw envelope.
+    New jobs are inserted; jobs already known get last_seen_at = now() (and
+    are re-opened if they had been closed). Returns the number of NEW jobs.
     """
     if not records:
         return 0
+    rows = [
+        (job.job_platform_id, job.search_role, job.country_code,
+         json.dumps(job.to_raw_envelope()), batch_id, source)
+        for job in records
+    ]
     conn = psycopg2.connect(DB_URL)
     try:
-        cursor = conn.cursor()
-        rows = [
-            (
-                job.job_platform_id,
-                job.search_role,
-                job.country_code,
-                json.dumps(job.to_raw_envelope()),
-                batch_id,
-                source,
-            )
-            for job in records
-        ]
-        query = """
-            INSERT INTO raw.jobs
-                (job_platform_id, search_role, country_code, raw_data, extraction_batch_id, source)
-            VALUES %s
-            ON CONFLICT (job_platform_id, country_code) DO NOTHING
-        """
-        # page_size must cover the whole list: cursor.rowcount only reflects
-        # the LAST page execute_values ran, so the default page_size=100
-        # under-reports inserts for batches larger than 100.
-        execute_values(cursor, query, rows, page_size=max(1, len(rows)))
-        inserted = cursor.rowcount
-        conn.commit()
-        cursor.close()
+        inserted, seen = lifecycle.save_jobs(conn, rows)
+        logger.info("[%s] %d new, %d already known (sighting recorded)", source, inserted, seen - inserted)
         return inserted
     except Exception as e:  # noqa: BLE001
         logger.error("[%s] DB error: %s", source, e)
-        conn.rollback()
         return 0
+    finally:
+        conn.close()
+
+
+def db_now():
+    conn = psycopg2.connect(DB_URL)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT now()")
+            return cur.fetchone()[0]
+    finally:
+        conn.close()
+
+
+def close_unseen_for(connector, source_key: str, since) -> None:
+    """Company job boards return their FULL open list: jobs missing from a
+    board fetched successfully this run are closed. Failed boards are not in
+    seen_boards, so an outage closes nothing."""
+    boards = getattr(connector, "seen_boards", None)
+    if boards is None:
+        return
+    conn = psycopg2.connect(DB_URL)
+    try:
+        closed = lifecycle.close_unseen(conn, source_key, sorted(boards), since)
+        logger.info("[%s] closed %d jobs no longer listed on %d fetched boards", source_key, closed, len(boards))
     finally:
         conn.close()
 
@@ -178,6 +189,7 @@ def run(source_filter: str = None, test_mode: bool = False, dry_run: bool = Fals
             continue
 
         logger.info("\n--- Source: %s ---", source_key)
+        source_started = db_now() if not dry_run else None
         try:
             fetched = list(connector.fetch())
         except Exception as e:  # one bad source never kills the run
@@ -204,9 +216,18 @@ def run(source_filter: str = None, test_mode: bool = False, dry_run: bool = Fals
             continue
 
         inserted = save_to_database(fetched, source_key, batch_id)
+        close_unseen_for(connector, source_key, source_started)
         grand_inserted += inserted
         summary[source_key] = f"{len(fetched)} fetched / {inserted} new"
         logger.info("[%s] %d fetched, %d new inserted (dupes skipped).", source_key, len(fetched), inserted)
+
+    if not dry_run and not source_filter:
+        conn = psycopg2.connect(DB_URL)
+        try:
+            aged = lifecycle.age_out_feed_jobs(conn, FEED_STALE_DAYS, ATS_SOURCES)
+            logger.info("Closed %d feed/search jobs unseen for %d days", aged, FEED_STALE_DAYS)
+        finally:
+            conn.close()
 
     logger.info("\n%s", "=" * 60)
     logger.info("INGESTION COMPLETE — batch %s", batch_id)
