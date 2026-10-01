@@ -1,9 +1,10 @@
 {
   "_comment": "Config for the multi-source ingestion bots (ingest_sources.py). Roles are inherited from extraction_config.json unless overridden here. Toggle sources with `enabled`. Sources with `requires_key` are auto-skipped (with a log line) until their env var is set.",
-
   "roles_from": "extraction_config.json",
-  "target_local_countries": ["pk", "in"],
-
+  "target_local_countries": [
+    "pk",
+    "in"
+  ],
   "sources": {
     "remoteok": {
       "enabled": true,
@@ -38,7 +39,10 @@
       "connector": "jobicy",
       "requires_key": false,
       "count": 50,
-      "geos": ["anywhere", "apac"],
+      "geos": [
+        "anywhere",
+        "apac"
+      ],
       "delay_seconds": 2
     },
     "himalayas": {
@@ -54,7 +58,10 @@
       "connector": "jooble",
       "requires_key": true,
       "env_key": "JOOBLE_API_KEY",
-      "locations": ["Pakistan", "India"],
+      "locations": [
+        "Pakistan",
+        "India"
+      ],
       "pages_per_query": 3,
       "max_requests_per_run": 450,
       "delay_seconds": 2
@@ -65,8 +72,16 @@
       "requires_key": false,
       "env_key": "THEMUSE_API_KEY",
       "max_pages": 15,
-      "categories": ["Software Engineering", "Data Science", "Data and Analytics", "IT"],
-      "locations": ["Flexible / Remote", "India"],
+      "categories": [
+        "Software Engineering",
+        "Data Science",
+        "Data and Analytics",
+        "IT"
+      ],
+      "locations": [
+        "Flexible / Remote",
+        "India"
+      ],
       "delay_seconds": 2
     },
     "usajobs": {
@@ -79,7 +94,6 @@
       "max_pages": 3,
       "delay_seconds": 2
     },
-
     "_example_local_scraper": {
       "enabled": false,
       "connector": "generic_scraper",
@@ -98,6 +112,42 @@
         "link": "a.job-link",
         "description": ".job-desc"
       }
+    },
+    "greenhouse": {
+      "_comment": "Company job board via the hiring system's public API; boards come from ops.companies (seed + Common Crawl discovery).",
+      "enabled": true,
+      "connector": "greenhouse",
+      "requires_key": false,
+      "concurrency": 4,
+      "max_boards": 400,
+      "delay_seconds": 0
+    },
+    "lever": {
+      "_comment": "Company job board via the hiring system's public API; boards come from ops.companies (seed + Common Crawl discovery).",
+      "enabled": true,
+      "connector": "lever",
+      "requires_key": false,
+      "concurrency": 4,
+      "max_boards": 400,
+      "delay_seconds": 0
+    },
+    "ashby": {
+      "_comment": "Company job board via the hiring system's public API; boards come from ops.companies (seed + Common Crawl discovery).",
+      "enabled": true,
+      "connector": "ashby",
+      "requires_key": false,
+      "concurrency": 4,
+      "max_boards": 400,
+      "delay_seconds": 0
+    },
+    "smartrecruiters": {
+      "_comment": "Company job board via the hiring system's public API; boards come from ops.companies (seed + Common Crawl discovery).",
+      "enabled": true,
+      "connector": "smartrecruiters",
+      "requires_key": false,
+      "concurrency": 4,
+      "max_boards": 400,
+      "delay_seconds": 0
     }
   }
 }

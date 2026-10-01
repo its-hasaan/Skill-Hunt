@@ -16,6 +16,10 @@ from .jooble import JoobleConnector
 from .themuse import TheMuseConnector
 from .usajobs import USAJobsConnector
 from .generic_scraper import GenericScraperConnector
+from .greenhouse import GreenhouseConnector
+from .lever import LeverConnector
+from .ashby import AshbyConnector
+from .smartrecruiters import SmartRecruitersConnector
 
 CONNECTOR_REGISTRY = {
     "remoteok": RemoteOKConnector,
@@ -27,6 +31,11 @@ CONNECTOR_REGISTRY = {
     "themuse": TheMuseConnector,
     "usajobs": USAJobsConnector,
     "generic_scraper": GenericScraperConnector,
+    # company job boards (public hiring-system APIs; boards from ops.companies)
+    "greenhouse": GreenhouseConnector,
+    "lever": LeverConnector,
+    "ashby": AshbyConnector,
+    "smartrecruiters": SmartRecruitersConnector,
 }
 
 __all__ = [

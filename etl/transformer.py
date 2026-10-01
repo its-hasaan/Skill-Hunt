@@ -291,6 +291,7 @@ def parse_normalized_job(raw_data: dict, raw_job_id: int, search_role: str,
         'job_posted_at': _parse_datetime(n.get('job_posted_at')),
         'raw_job_id': raw_job_id,
         'source': source,
+        'workplace_type': n.get('workplace_type') or None,
     }
 
 
@@ -378,7 +379,8 @@ def parse_raw_job(raw_data: dict, raw_job_id: int, search_role: str, country_cod
         'redirect_url': raw_data.get('redirect_url', ''),
         'job_posted_at': job_posted_at,
         'raw_job_id': raw_job_id,
-        'source': source
+        'source': source,
+        'workplace_type': None,  # Adzuna has no structured workplace field
     }
 
 
@@ -536,7 +538,7 @@ def transform_and_load(
                         description, location_display, location_areas, category_tag,
                         category_label, salary_min, salary_max, salary_is_predicted,
                         salary_currency, contract_type, contract_time, redirect_url,
-                        job_posted_at, extracted_at, raw_job_id, source
+                        job_posted_at, extracted_at, raw_job_id, source, workplace_type
                     ) VALUES (
                         %(job_platform_id)s, %(search_role)s, %(country_code)s, %(title)s,
                         %(company_name)s, %(description)s, %(location_display)s,
@@ -544,7 +546,7 @@ def transform_and_load(
                         %(salary_min)s, %(salary_max)s, %(salary_is_predicted)s,
                         %(salary_currency)s, %(contract_type)s, %(contract_time)s,
                         %(redirect_url)s, %(job_posted_at)s, %(extracted_at)s, %(raw_job_id)s,
-                        %(source)s
+                        %(source)s, %(workplace_type)s
                     )
                     ON CONFLICT (job_platform_id, country_code) DO UPDATE SET
                         processed_at = NOW()

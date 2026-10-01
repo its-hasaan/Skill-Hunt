@@ -59,6 +59,7 @@ class NormalizedJob:
     contract_type: str = ""           # 'full_time' | 'part_time' | 'contract'
     contract_time: str = ""           # 'permanent' | 'temporary'
     job_posted_at: Optional[str] = None  # ISO 8601 string, or None
+    workplace_type: str = ""          # 'remote' | 'hybrid' | 'onsite' | '' (unknown)
     raw: Dict[str, Any] = field(default_factory=dict)  # original payload
 
     @property

@@ -145,6 +145,7 @@ def apply_test_overrides(cfg: dict) -> dict:
     cfg["max_records"] = 20
     cfg["pages_per_query"] = 1
     cfg["count"] = 15
+    cfg["max_boards"] = 3  # company job-board connectors
     return cfg
 
 
