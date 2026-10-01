@@ -2,6 +2,20 @@
 
 Long-term context for this repo. Keep it current: update "Roadmap status" and "Pending manual steps" whenever a feature lands.
 
+## Session protocol (every chat)
+
+1. **Start:** read [docs/PROGRESS.md](docs/PROGRESS.md). Its §1 "Where we are right now" lists the exact next actions. Then read the current phase's plan in `docs/superpowers/plans/`.
+2. **While working:** after each finished task, update `docs/PROGRESS.md` (§1 and the phase section) and the status table below, and commit them together with the feature (git rules under Conventions).
+3. **Before stopping:** make sure PROGRESS.md §1 "Next actions" is accurate and nothing is left uncommitted, half-written, or failing on `main`.
+
+## Current focus (keep in sync with docs/PROGRESS.md §1)
+
+Phase 1b follow-ups, then Phase 1c:
+1. Transform backlog of 1,792 company-board jobs; implement batched transformer writes first (PIPELINE_REVIEW Part 2 #12).
+2. Common Crawl retry/backoff in `ops/discover_companies.http_fetch`.
+3. Phase 1b self-review and close-out.
+4. Write the Phase 1c plan (duplicate removal + eligibility tagging + `mart_job_feed`; needs the owner's Gemini key).
+
 ## Product
 
 A **remote job copilot for South Asian (Pakistan/India) tech professionals** looking for international remote jobs. It gives users a daily feed of remote jobs they are actually eligible for from their country, a match score explained with real market data (skill demand, salary premium), AI help with applications, an application tracker, and a Chrome extension on job sites. The market analytics are the free way people discover the product.
@@ -17,7 +31,7 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundation fixes: CI ETL repair, daily schedule, run ledger + failure email, storage retention, private resumes, migration runner, keep-warm on Cloudflare | **Code done; waiting on owner's manual steps below** |
-| 1 | Remote job data engine: 1a roles & skill quality → 1b company job-board connectors → 1c dedup + eligibility + feed mart → 1d career-page crawler | **1a done** (20 roles, curated taxonomy 487→338, shared matcher with 20× prefilter, prod backfill: 9,999 off-role jobs dropped, Go/R false positives −56%/−77%); **1b done** (company job boards: Greenhouse/Lever/Ashby/SmartRecruiters, job lifecycle, `ops.companies` registry + Common Crawl discovery); 1c next |
+| 1 | Remote job data engine: 1a roles & skill quality → 1b company job-board connectors → 1c dedup + eligibility + feed mart → 1d career-page crawler | **1a done** (20 roles, curated taxonomy 487→338, shared matcher with 20× prefilter, prod backfill: 9,999 off-role jobs dropped, Go/R false positives −56%/−77%); **1b code done, 3 follow-ups open** (company job boards: Greenhouse/Lever/Ashby/SmartRecruiters, job lifecycle, `ops.companies` registry + Common Crawl discovery; 99 active boards, 2,246 jobs ingested); 1c next. Details: docs/PROGRESS.md |
 | 2 | Web copilot core → free beta | Not started |
 | 3 | Extension 2.0 | Not started |
 | 4 | AI assistance + Pro + Paddle → paid launch | Not started |
