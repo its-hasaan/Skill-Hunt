@@ -17,7 +17,7 @@ A **remote job copilot for South Asian (Pakistan/India) tech professionals** loo
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundation fixes: CI ETL repair, daily schedule, run ledger + failure email, storage retention, private resumes, migration runner, keep-warm on Cloudflare | **Code done; waiting on owner's manual steps below** |
-| 1 | Remote job data engine: 1a roles & skill quality → 1b company job-board connectors → 1c dedup + eligibility + feed mart → 1d career-page crawler | **1a done** (20 roles, curated taxonomy, shared matcher, backfill); 1b next |
+| 1 | Remote job data engine: 1a roles & skill quality → 1b company job-board connectors → 1c dedup + eligibility + feed mart → 1d career-page crawler | **1a done** (20 roles, curated taxonomy 487→338, shared matcher with 20× prefilter, prod backfill: 9,999 off-role jobs dropped, Go/R false positives −56%/−77%); 1b next |
 | 2 | Web copilot core → free beta | Not started |
 | 3 | Extension 2.0 | Not started |
 | 4 | AI assistance + Pro + Paddle → paid launch | Not started |
