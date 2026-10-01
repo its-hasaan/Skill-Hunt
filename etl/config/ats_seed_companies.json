@@ -1,0 +1,24 @@
+{
+  "_comment": "Starting set of company boards on public hiring-system APIs. Tokens are each board's slug (e.g. boards.greenhouse.io/<token>). Unverified tokens are fine: `python -m ops.companies validate` deactivates boards that don't answer. Common Crawl discovery (ops.discover_companies) adds many more.",
+  "greenhouse": [
+    "gitlab", "figma", "discord", "cloudflare", "datadog", "mongodb", "twilio", "coinbase",
+    "robinhood", "instacart", "reddit", "pinterest", "lyft", "okta", "grafanalabs", "canonical",
+    "airbnb", "stripe", "dropbox", "elastic", "hashicorp", "gusto", "asana", "airtable",
+    "duolingo", "doordash", "brex", "chime", "affirm", "webflow", "contentful", "newrelic",
+    "databricks", "samsara", "toast", "wikimedia", "mozilla", "unity3d", "epicgames",
+    "squarespace", "wealthsimple", "anthropic", "remotecom", "sentry", "fivetran", "confluent"
+  ],
+  "lever": [
+    "spotify", "palantir", "kraken", "1password", "outreach", "attentive", "eventbrite",
+    "toptal", "crossover", "zoox", "mistral", "binance", "bitpanda", "veeva", "jumpcloud"
+  ],
+  "ashby": [
+    "ramp", "notion", "linear", "vercel", "supabase", "deel", "posthog", "replit", "openai",
+    "cohere", "zapier", "retool", "mercury", "airbyte", "dbtlabs", "sourcegraph", "multiplier",
+    "langchain", "perplexity", "elevenlabs", "modal", "clickhouse", "neon", "resend", "cal"
+  ],
+  "smartrecruiters": [
+    "smartrecruiters", "BoschGroup", "Visa", "Ubisoft2", "IKEA", "ServiceNow", "Wix2",
+    "Canva", "DeliveryHero", "Equinix"
+  ]
+}
