@@ -30,6 +30,11 @@ SPECIAL_TERMS = {
     "D3.js": r"\bD3\.?js\b",
     "Three.js": r"\bThree\.?js\b",
 }
+# Lowercase literal every match of a special term must contain (prefilter).
+SPECIAL_NEEDLES = {
+    "C++": "c++", "C#": "c#", ".NET": ".net", "Node.js": "node", "Vue.js": "vue",
+    "Next.js": "next", "Nuxt.js": "nuxt", "D3.js": "d3", "Three.js": "three",
+}
 PRECEDING_WINDOW = 20
 
 
@@ -38,8 +43,13 @@ class SkillPattern:
     canonical: str
     regex: re.Pattern
     not_preceded: re.Pattern | None = None
+    # A literal (lowercase) that must occur in the lowercased text for any
+    # match to be possible. Checking it first skips ~99% of regex calls.
+    needle: str = ""
 
-    def count(self, text: str) -> int:
+    def count(self, text: str, lowered: str | None = None) -> int:
+        if lowered is not None and self.needle and self.needle not in lowered:
+            return 0
         if self.not_preceded is None:
             return sum(1 for _ in self.regex.finditer(text))
         return sum(
@@ -71,5 +81,6 @@ def build_patterns(skills: list[dict]) -> list[SkillPattern]:
                 regex = _term_regex(exact[key], True, guard)
             else:
                 regex = _term_regex(term, False, guard)
-            patterns.append(SkillPattern(skill["name"], regex, before))
+            needle = SPECIAL_NEEDLES.get(exact.get(key, term), key)
+            patterns.append(SkillPattern(skill["name"], regex, before, needle))
     return patterns

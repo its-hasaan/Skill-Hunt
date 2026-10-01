@@ -102,8 +102,9 @@ class FastPathExtractor:
         
         found_skills: Dict[str, int] = {}  # canonical_name -> count
         
+        lowered = text.lower()  # once per text: cheap prefilter for every pattern
         for pattern in self.patterns:
-            n = pattern.count(text)
+            n = pattern.count(text, lowered)
             if n:
                 found_skills[pattern.canonical] = found_skills.get(pattern.canonical, 0) + n
         

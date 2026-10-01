@@ -140,6 +140,7 @@ def reextract_skills(conn, taxonomy: list[dict], batch: int = BATCH) -> dict:
         jobs += len(chunk)
         skill_rows += len(rows)
         last_id = chunk[-1][0]
+        print(f"  re-extracted {jobs} jobs ({skill_rows} skill rows)", flush=True)
     return {"jobs": jobs, "skill_rows": skill_rows}
 
 

@@ -44,3 +44,22 @@ def test_symbol_edged_terms_match():
 def test_terms_do_not_match_inside_other_words():
     skills = [{"name": "Git"}, {"name": "SQL"}]
     assert counts(skills, "digital MySQL") == {}
+
+
+def test_prefilter_never_changes_counts():
+    import json
+    from pathlib import Path
+    taxonomy = json.loads((Path(__file__).resolve().parents[1] / "config" / "skills_taxonomy.json")
+                          .read_text(encoding="utf-8"))["skills"]
+    texts = ["Senior Data Engineer: Python, SQL, Apache Spark, AWS Glue, Airflow; C++ and C# a plus.",
+             "We go further. REST APIs with Node.js, Next.js, Vue.js, .NET 8 and D3.js charts.",
+             "Excel at client relations. R, Go, golang, TS/TypeScript, CI/CD on Kubernetes (EKS)."]
+    for p in build_patterns(taxonomy):
+        for text in texts:
+            assert p.count(text, text.lower()) == p.count(text), (p.canonical, p.regex.pattern, text)
+
+
+def test_needle_skips_regex_when_literal_absent():
+    (p,) = build_patterns([{"name": "Kubernetes"}])
+    assert p.needle == "kubernetes"
+    assert p.count("we use docker", "we use docker") == 0

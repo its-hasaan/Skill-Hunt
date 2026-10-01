@@ -92,8 +92,9 @@ class ResumeSkillExtractor:
         
         found_skills = {}  # canonical_name -> {category, subcategory, count}
         
+        lowered = text.lower()  # once per text: cheap prefilter for every pattern
         for pattern in self.patterns:
-            n = pattern.count(text)
+            n = pattern.count(text, lowered)
             if n:
                 info = self.skills.get(pattern.canonical.lower(), {})
                 entry = found_skills.setdefault(pattern.canonical, {
