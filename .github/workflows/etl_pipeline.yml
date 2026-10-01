@@ -73,7 +73,13 @@ jobs:
         continue-on-error: true
         run: python -m ops.run_step --step adzuna --metric raw_inserted_adzuna -- python extractor.py --days 60 --pages 3 --delay 1.5 $TEST_FLAG
 
-      - name: Ingest (remote boards, Jooble, ...)
+      - name: Discover company job boards (weekly)
+        id: discover
+        if: steps.preflight.outcome == 'success' && env.WEEKLY == 'true'
+        continue-on-error: true
+        run: python -m ops.run_step --step discover -- python -m ops.discover_companies --max-pages 2 --validate-limit 150
+
+      - name: Ingest (remote boards, Jooble, company job boards, ...)
         id: ingest
         if: steps.preflight.outcome == 'success'
         continue-on-error: true
@@ -140,4 +146,4 @@ jobs:
         if: always()
         run: >-
           python -m ops.notify --results
-          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},marts_guard=${{ steps.guard.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"
+          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},discover=${{ steps.discover.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},marts_guard=${{ steps.guard.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"
