@@ -19,6 +19,7 @@ _Last updated: 2026-10-01 (end of session 1)._
    - Why it's slow: `transformer.py` writes row by row, about 13 min per 500 jobs now that descriptions are full length.
    - Recommended fix first: implement batched writes (PIPELINE_REVIEW.md Part 2 #12): insert jobs with `execute_values … RETURNING job_id, raw_job_id`, then bulk-insert skills.
    - Then run: `cd etl && SUPABASE_URL=<session pooler 5432 URL> ../venv/Scripts/python transformer.py --batch-size 500 --fast-only`. If it runs as a background task, give it a 2-hour timeout; the default background limit is 60 min.
+   - The last run (2026-10-01) died at 09:59 local time with `server closed the connection unexpectedly`, followed by a DNS failure (a local network blip). The transformer has **no reconnect**: one dropped connection ends the whole run. Re-running is safe, because it only picks up jobs not yet in staging. While adding batched writes, also add a reconnect-and-continue on `psycopg2.OperationalError` per batch.
 2. **Common Crawl retries.** `ops/discover_companies.crawl` gives up on a host after one failed page. The CDX index often answers 503/504, so the first production run found only Lever boards (27 tokens, 26 new). Add retries with backoff to `http_fetch(url, attempts=3, get=requests.get, sleep=time.sleep)`, test first:
    - 504 → 503 → 200 returns the body after 2 waits.
    - All 504s return `None`.
