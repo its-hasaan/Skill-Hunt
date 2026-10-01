@@ -1,0 +1,54 @@
+{
+ "jobs": [
+  {
+   "id": 8556658002,
+   "title": "AI Engineer",
+   "absolute_url": "https://job-boards.greenhouse.io/gitlab/jobs/8556658002",
+   "location": {
+    "name": "Remote, Bangalore"
+   },
+   "offices": [
+    {
+     "id": 4112140002,
+     "name": "India",
+     "location": null,
+     "child_ids": [],
+     "parent_id": 4019590002
+    }
+   ],
+   "updated_at": "2026-09-29T10:38:50-04:00",
+   "first_published": "2026-05-22T09:16:29-04:00",
+   "company_name": "GitLab",
+   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;GitLab is the intelligent orchestration platform for DevSecOps. GitLab enables organizations to increase developer productivity, improve operational efficiency, reduce security and compliance risk, and accelerate digital transformation. More than 50 million registered users and more than 50% of the Fortune 100* trust GitLab to ship better, more secure software faster.&lt;/p&gt;\n&lt;p&gt;The same principles built into our products are reflected in how our team works: we embrace AI as a core productivity multiplier, with all team members expect"
+  },
+  {
+   "id": 8638232002,
+   "title": "AI Transformation Owner, CRO",
+   "absolute_url": "https://job-boards.greenhouse.io/gitlab/jobs/8638232002",
+   "location": {
+    "name": "Remote, United States"
+   },
+   "offices": [],
+   "updated_at": "2026-09-29T10:38:50-04:00",
+   "first_published": "2026-07-22T13:38:40-04:00",
+   "company_name": "GitLab",
+   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;GitLab is the intelligent orchestration platform for DevSecOps. GitLab enables organizations to increase developer productivity, improve operational efficiency, reduce security and compliance risk, and accelerate digital transformation. More than 50 million registered users and more than 50% of the Fortune 100* trust GitLab to ship better, more secure software faster.&lt;/p&gt;\n&lt;p&gt;The same principles built into our products are reflected in how our team works: we embrace AI as a core productivity multiplier, with all team members expect"
+  },
+  {
+   "id": 8716179002,
+   "title": "AI Transformation Owner, Product & Design",
+   "absolute_url": "https://job-boards.greenhouse.io/gitlab/jobs/8716179002",
+   "location": {
+    "name": "Remote, Canada; Remote, United Kingdom; Remote, United States"
+   },
+   "offices": [],
+   "updated_at": "2026-09-29T10:38:50-04:00",
+   "first_published": "2026-08-19T16:52:27-04:00",
+   "company_name": "GitLab",
+   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;GitLab is the intelligent orchestration platform for DevSecOps. GitLab enables organizations to increase developer productivity, improve operational efficiency, reduce security and compliance risk, and accelerate digital transformation. More than 50 million registered users and more than 50% of the Fortune 100* trust GitLab to ship better, more secure software faster.&lt;/p&gt;\n&lt;p&gt;The same principles built into our products are reflected in how our team works: we embrace AI as a core productivity multiplier, with all team members expect"
+  }
+ ],
+ "meta": {
+  "total": 3
+ }
+}
