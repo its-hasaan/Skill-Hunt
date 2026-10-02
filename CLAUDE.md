@@ -4,7 +4,7 @@ Long-term context for this repo. Keep it current: update "Roadmap status" and "P
 
 ## Session protocol (every chat)
 
-1. **Start:** read [docs/PROGRESS.md](docs/PROGRESS.md). Its §1 "Where we are right now" lists the exact next actions. Then read the current phase's plan in `docs/superpowers/plans/`.
+1. **Start:** read [docs/HANDOVER.md](docs/HANDOVER.md) (scope + autonomy rules), then [docs/PROGRESS.md](docs/PROGRESS.md). Its §1 "Where we are right now" lists the exact next actions. Then read the current phase's plan in `docs/superpowers/plans/`.
 2. **While working:** after each finished task, update `docs/PROGRESS.md` (§1 and the phase section) and the status table below, and commit them together with the feature (git rules under Conventions).
 3. **Before stopping:** make sure PROGRESS.md §1 "Next actions" is accurate and nothing is left uncommitted, half-written, or failing on `main`.
 
