@@ -149,6 +149,16 @@
       "max_boards": 400,
       "delay_seconds": 0
     },
+    "careerpage": {
+      "_comment": "Company career pages publishing schema.org JobPosting JSON-LD; sites come from ops.career_sites. robots.txt required, 2 s between requests per site, page budget per site per run.",
+      "enabled": true,
+      "connector": "careerpage",
+      "requires_key": false,
+      "concurrency": 4,
+      "max_sites": 200,
+      "page_budget": 25,
+      "delay_seconds": 2
+    },
     "smartrecruiters": {
       "_comment": "Company job board via the hiring system's public API; boards come from ops.companies (seed + Common Crawl discovery).",
       "enabled": true,

@@ -21,6 +21,7 @@ from .lever import LeverConnector
 from .ashby import AshbyConnector
 from .smartrecruiters import SmartRecruitersConnector
 from .workable import WorkableConnector
+from .careerpage import CareerPageConnector
 
 CONNECTOR_REGISTRY = {
     "remoteok": RemoteOKConnector,
@@ -38,6 +39,8 @@ CONNECTOR_REGISTRY = {
     "ashby": AshbyConnector,
     "smartrecruiters": SmartRecruitersConnector,
     "workable": WorkableConnector,
+    # company career pages (schema.org JobPosting JSON-LD; sites from ops.career_sites)
+    "careerpage": CareerPageConnector,
 }
 
 __all__ = [

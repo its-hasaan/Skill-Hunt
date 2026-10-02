@@ -61,3 +61,15 @@ def age_out_feed_jobs(conn, days: int = 14, exclude_sources: set[str] = frozense
             (days, list(exclude_sources)),
         )
         return cur.rowcount
+
+
+def touch_board(conn, source: str, board: str) -> int:
+    """A board whose listing page is unchanged (HTTP 304) still lists the same
+    jobs: record a sighting for its open jobs without re-reading them."""
+    with conn, conn.cursor() as cur:
+        cur.execute(
+            """UPDATE raw.jobs SET last_seen_at = now()
+               WHERE source = %s AND split_part(job_platform_id, ':', 2) = %s AND closed_at IS NULL""",
+            (source, board),
+        )
+        return cur.rowcount
