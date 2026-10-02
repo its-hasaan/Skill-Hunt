@@ -20,7 +20,16 @@ def test_extract_tokens_by_system():
         "lever": {"spotify"},
         "ashby": {"ramp"},
         "smartrecruiters": {"BoschGroup"},
+        "workable": set(),
     }
+
+
+def test_extract_workable_tokens():
+    urls = ["https://apply.workable.com/HuggingFace/j/F4C096B22E/",
+            "https://apply.workable.com/j/F4C096B22E",
+            "https://apply.workable.com/api/v1/widget/accounts/x",
+            "https://apply.workable.com/arbisoft/"]
+    assert dc.extract_tokens(urls)["workable"] == {"huggingface", "arbisoft"}
 
 
 def test_crawl_pages_until_empty_with_one_request_per_page():

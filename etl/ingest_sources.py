@@ -55,7 +55,7 @@ CONFIG_DIR = Path(__file__).parent / "config"
 SOURCES_CONFIG_PATH = CONFIG_DIR / "sources_config.json"
 # Sources that return a company's full open-job list (closed by absence);
 # every other source is closed after FEED_STALE_DAYS without a sighting.
-ATS_SOURCES = {"greenhouse", "lever", "ashby", "smartrecruiters"}
+ATS_SOURCES = {"greenhouse", "lever", "ashby", "smartrecruiters", "workable"}
 FEED_STALE_DAYS = 14
 
 

@@ -33,8 +33,9 @@ HOSTS = {
     "jobs.lever.co": "lever",
     "jobs.ashbyhq.com": "ashby",
     "jobs.smartrecruiters.com": "smartrecruiters",
+    "apply.workable.com": "workable",
 }
-RESERVED = {"", "embed", "api", "assets", "static", "js", "css", "favicon.ico", "robots.txt"}
+RESERVED = {"", "embed", "api", "j", "assets", "static", "js", "css", "favicon.ico", "robots.txt"}
 TOKEN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,79}$")
 CASE_SENSITIVE = {"smartrecruiters"}
 

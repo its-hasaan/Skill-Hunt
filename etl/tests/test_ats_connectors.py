@@ -96,3 +96,33 @@ def test_connector_tracks_seen_boards_and_skips_failed():
     assert conn.seen_boards == {"ok"}
     outcomes = {a[0][1]: a[1]["ok"] for a in conn.recorded}
     assert outcomes == {"ok": True, "down": False}
+
+
+def test_workable_maps_real_sample():
+    from connectors import workable
+    item = load("workable_huggingface.json")["jobs"][0]
+    job = workable.map_job("huggingface", item)
+    assert job["title"] == "Low-level Senior Software Engineer, Xet Storage - EMEA Remote"
+    assert job["id"] == "F4C096B22E"
+    assert job["redirect_url"] == "https://apply.workable.com/j/F4C096B22E"
+    assert job["remote_flag"] is True
+    assert job["locations"] == []  # Workable hides the office of remote roles; it isn't a requirement
+    assert "<" not in job["description"] and len(job["description"]) > 50
+    assert job["job_posted_at"] == "2026-07-30"
+    assert (job["contract_type"], job["contract_time"]) == ("full_time", "permanent")
+
+
+def test_workable_keeps_visible_locations():
+    from connectors import workable
+    item = {"title": "Data Engineer", "shortcode": "X1", "telecommuting": False, "url": "https://w/j/X1",
+            "locations": [{"country": "Pakistan", "city": "Lahore", "region": "Punjab", "hidden": False}],
+            "description": "<p>Build pipelines</p>", "published_on": "2026-09-01"}
+    job = workable.map_job("acme", item)
+    assert job["locations"] == ["Lahore, Punjab, Pakistan"] and job["remote_flag"] is False
+
+
+def test_workable_payload_shape():
+    from connectors.ats_endpoints import job_items, list_url
+    assert job_items("workable", load("workable_huggingface.json"))[0]["shortcode"] == "F4C096B22E"
+    assert job_items("workable", {"error": "x"}) is None
+    assert list_url("workable", "acme") == "https://apply.workable.com/api/v1/widget/accounts/acme?details=true"

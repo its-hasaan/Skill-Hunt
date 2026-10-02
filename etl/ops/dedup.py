@@ -28,7 +28,7 @@ WITH ranked AS (
            first_value(s.job_id) OVER (
                PARTITION BY s.fingerprint
                ORDER BY CASE
-                            WHEN s.source IN ('greenhouse', 'lever', 'ashby', 'smartrecruiters') THEN 1
+                            WHEN s.source IN ('greenhouse', 'lever', 'ashby', 'smartrecruiters', 'workable') THEN 1
                             WHEN s.source = 'careerpage' THEN 2
                             WHEN s.source = 'adzuna' THEN 4
                             ELSE 3

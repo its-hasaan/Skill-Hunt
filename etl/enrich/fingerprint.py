@@ -39,7 +39,7 @@ class _Priority(dict):
 
 
 SOURCE_PRIORITY = _Priority({
-    "greenhouse": 1, "lever": 1, "ashby": 1, "smartrecruiters": 1,
+    "greenhouse": 1, "lever": 1, "ashby": 1, "smartrecruiters": 1, "workable": 1,
     "careerpage": 2,
     "default": 3,
     "adzuna": 4,

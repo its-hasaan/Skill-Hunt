@@ -20,6 +20,7 @@ from .greenhouse import GreenhouseConnector
 from .lever import LeverConnector
 from .ashby import AshbyConnector
 from .smartrecruiters import SmartRecruitersConnector
+from .workable import WorkableConnector
 
 CONNECTOR_REGISTRY = {
     "remoteok": RemoteOKConnector,
@@ -36,6 +37,7 @@ CONNECTOR_REGISTRY = {
     "lever": LeverConnector,
     "ashby": AshbyConnector,
     "smartrecruiters": SmartRecruitersConnector,
+    "workable": WorkableConnector,
 }
 
 __all__ = [

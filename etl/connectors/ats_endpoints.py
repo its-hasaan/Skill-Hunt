@@ -15,6 +15,7 @@ LIST_URLS = {
     "lever": "https://api.lever.co/v0/postings/{board}?mode=json",
     "ashby": "https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true",
     "smartrecruiters": "https://api.smartrecruiters.com/v1/companies/{board}/postings?limit=100&offset={offset}",
+    "workable": "https://apply.workable.com/api/v1/widget/accounts/{board}?details=true",
 }
 ATS_SYSTEMS = tuple(LIST_URLS)
 
@@ -36,4 +37,6 @@ def job_items(ats: str, payload: Any) -> Optional[list]:
         return payload.get("jobs") if isinstance(payload.get("jobs"), list) else None
     if ats == "smartrecruiters":
         return payload.get("content") if isinstance(payload.get("content"), list) else None
+    if ats == "workable":
+        return payload.get("jobs") if isinstance(payload.get("jobs"), list) else None
     raise ValueError(f"unknown ats: {ats}")

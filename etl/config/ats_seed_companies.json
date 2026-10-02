@@ -1,24 +1,69 @@
 {
-  "_comment": "Starting set of company boards on public hiring-system APIs. Tokens are each board's slug (e.g. boards.greenhouse.io/<token>). Unverified tokens are fine: `python -m ops.companies validate` deactivates boards that don't answer. Common Crawl discovery (ops.discover_companies) adds many more.",
+  "_comment": "Starting set of company boards on public hiring-system APIs. Tokens are each board's slug (e.g. boards.greenhouse.io/<token>). Unverified tokens are fine: `python -m ops.companies validate` deactivates boards that don't answer. Common Crawl discovery (ops.discover_companies) adds many more. 2026-10 additions favour remote-first employers and companies with Pakistan/India engineering teams.",
   "greenhouse": [
     "gitlab", "figma", "discord", "cloudflare", "datadog", "mongodb", "twilio", "coinbase",
     "robinhood", "instacart", "reddit", "pinterest", "lyft", "okta", "grafanalabs", "canonical",
     "airbnb", "stripe", "dropbox", "elastic", "hashicorp", "gusto", "asana", "airtable",
     "duolingo", "doordash", "brex", "chime", "affirm", "webflow", "contentful", "newrelic",
     "databricks", "samsara", "toast", "wikimedia", "mozilla", "unity3d", "epicgames",
-    "squarespace", "wealthsimple", "anthropic", "remotecom", "sentry", "fivetran", "confluent"
+    "squarespace", "wealthsimple", "anthropic", "remotecom", "sentry", "fivetran", "confluent",
+    "gomotive", "afiniti", "securitiai", "i2cinc", "andela", "turing", "postman", "browserstack",
+    "phonepe", "thoughtspot", "rubrik", "cohesity", "hackerrank", "innovaccer", "druva", "zeta",
+    "sprinklr", "mindtickle", "whatfix", "highradius", "clevertap", "chargebee", "nutanix",
+    "chainlinklabs", "consensys", "alchemy", "opensea", "ledger", "chainalysis", "fireblocks",
+    "anchorage", "paxos", "ripple", "gemini", "phantom", "offchainlabs", "aptoslabs", "avalabs",
+    "dfinity", "parity", "circle", "kraken", "bitgo", "blockchain", "moonpay",
+    "cockroachlabs", "yugabyte", "singlestore", "starburst", "dremio", "imply", "pinecone",
+    "scaleai", "labelbox", "snorkelai", "anyscale", "togetherai", "astronomer", "census",
+    "hightouch", "amplitude", "mixpanel", "heap", "fullstory", "launchdarkly", "pagerduty",
+    "honeycomb", "chronosphere", "kong", "apollographql", "netlify", "fastly", "digitalocean",
+    "miro", "loom", "calendly", "typeform", "hotjar", "intercom", "frontapp", "gorgias",
+    "productboard", "pendo", "appcues", "mural", "lucidsoftware", "smartsheet", "clickup",
+    "nexhealth", "zocdoc", "oscar", "circleci", "mattermost", "dataiku", "invisionapp",
+    "helpscout", "articulate", "aha", "close", "toggl", "hubstaff", "safetywing", "oysterhr",
+    "papayaglobal", "velocityglobal", "globalizationpartners", "planetscale", "redis",
+    "couchbase", "neo4j", "timescale", "clickhouse", "databento", "jumpcloud", "1password",
+    "bitwarden", "tailscale", "teleport", "snyk", "wiz", "lacework", "sysdig", "aquasec",
+    "crowdstrike", "sentinelone", "rapid7", "tanium", "arcticwolf", "huntress", "abnormalsecurity",
+    "vanta", "drata", "secureframe", "onetrust", "bugcrowd", "hackerone", "synack"
   ],
   "lever": [
     "spotify", "palantir", "kraken", "1password", "outreach", "attentive", "eventbrite",
-    "toptal", "crossover", "zoox", "mistral", "binance", "bitpanda", "veeva", "jumpcloud"
+    "toptal", "crossover", "zoox", "mistral", "binance", "bitpanda", "veeva", "jumpcloud",
+    "careem", "educative", "venturedive", "razorpay", "meesho", "sharechat", "unacademy",
+    "inmobi", "hasura", "atlan", "cred", "groww", "swiggy", "zomato", "dunzo", "slice",
+    "jupiter", "fampay", "khatabook", "zepto", "urbancompany", "lenskart", "upgrad",
+    "simplilearn", "freshworks", "zoho", "netflix", "plaid", "shopify", "wealthfront",
+    "kpmg", "deloitte", "gojek", "grab", "traveloka", "xendit", "tokopedia", "shopee",
+    "ninjavan", "carousell", "aspire", "nium", "wise", "revolut", "n26", "monzo",
+    "bolt", "glovo", "getyourguide", "taxfix", "personio", "celonis", "contentsquare",
+    "algolia", "aircall", "doctolib", "qonto", "alan", "backmarket", "mirakl",
+    "pipedrive", "veriff", "wolt", "supercell", "rovio", "unity", "canva", "atlassian",
+    "safetyculture", "cultureamp", "employmenthero", "deputy", "airwallex", "immutable"
   ],
   "ashby": [
     "ramp", "notion", "linear", "vercel", "supabase", "deel", "posthog", "replit", "openai",
     "cohere", "zapier", "retool", "mercury", "airbyte", "dbtlabs", "sourcegraph", "multiplier",
-    "langchain", "perplexity", "elevenlabs", "modal", "clickhouse", "neon", "resend", "cal"
+    "langchain", "perplexity", "elevenlabs", "modal", "clickhouse", "neon", "resend", "cal",
+    "anysphere", "cursor", "sierra", "decagon", "hebbia", "harvey", "runway", "pika", "suno",
+    "character", "glean", "writer", "jasper", "copy.ai", "descript", "synthesia", "deepgram",
+    "assemblyai", "weaviate", "qdrant", "chroma", "lancedb", "llamaindex", "vellum", "baseten",
+    "fireworks", "lambda", "coreweave", "crusoe", "groq", "cerebras", "sambanova",
+    "railway", "render", "fly", "warp", "raycast", "zed", "tuple", "graphite", "linearb",
+    "temporal", "prefect", "dagster", "hex", "mode", "metabase", "lightdash", "evidence",
+    "browserbase", "e2b", "inngest", "trigger.dev", "convex", "clerk", "stytch", "workos",
+    "knock", "novu", "loops", "customerio", "attio", "folk", "twenty", "plain",
+    "oyster", "remote", "rippling", "lattice", "gem", "ashby", "dover", "paraform",
+    "brex", "mercor", "turing", "andela", "toptal", "arc", "gun.io", "braintrust"
   ],
   "smartrecruiters": [
     "smartrecruiters", "BoschGroup", "Visa", "Ubisoft2", "IKEA", "ServiceNow", "Wix2",
-    "Canva", "DeliveryHero", "Equinix"
+    "Canva", "DeliveryHero", "Equinix", "Freshworks", "Infosys", "Wipro", "HCLTech",
+    "TechMahindra", "LTIMindtree", "Mphasis", "Persistent", "Zensar", "Cognizant",
+    "Capgemini", "NTTDATA", "Sopra", "Atos", "EPAM", "Globant", "Endava", "LuxoftCareers",
+    "Experian", "AVEVA", "Sartorius", "Siemens", "Continental"
+  ],
+  "workable": [
+    "huggingface", "arbisoft", "10pearls", "venturedive", "devsinc", "tkxel", "folio3", "emumba", "xgrid", "confiz", "contour-software", "techlogix", "datics", "codeninja", "cubix", "nextbridge", "vaival", "programmers-force", "sastaticket", "bazaar", "tajir", "sadapay", "abhi", "zameen", "educative", "remotebase", "turing", "toggl", "doist", "taxjar", "hotjar", "invision", "testgorilla", "beat", "skroutz", "blueground", "workable", "persado", "hackthebox", "vivawallet", "plum", "zenhub", "omnipresent", "lemonade", "payhawk", "tide", "zego", "moneybox", "papercup", "cleo", "bitpanda", "smartly", "miro", "typeform", "landbot", "factorial", "travelperk", "kaleyra", "hevodata", "chargebee", "leena-ai", "sprinto", "zenduty", "scalefusion", "sarvam", "krutrim", "nector", "zluri", "spyne", "wingify", "moengage", "netcore", "plivo", "exotel", "haptik"
   ]
 }

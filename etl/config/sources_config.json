@@ -140,6 +140,15 @@
       "max_boards": 400,
       "delay_seconds": 0
     },
+    "workable": {
+      "_comment": "Company job board via Workable's public job widget; boards come from ops.companies (seed + Common Crawl discovery).",
+      "enabled": true,
+      "connector": "workable",
+      "requires_key": false,
+      "concurrency": 4,
+      "max_boards": 400,
+      "delay_seconds": 0
+    },
     "smartrecruiters": {
       "_comment": "Company job board via the hiring system's public API; boards come from ops.companies (seed + Common Crawl discovery).",
       "enabled": true,
