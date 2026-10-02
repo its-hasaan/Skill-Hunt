@@ -20,8 +20,21 @@ LIST_URLS = {
 ATS_SYSTEMS = tuple(LIST_URLS)
 
 
+# Lighter variants for the board validator: it only needs to know the board
+# exists (and roughly how many jobs it has), not every description.
+PROBE_URLS = {
+    "greenhouse": "https://boards-api.greenhouse.io/v1/boards/{board}/jobs",
+    "lever": "https://api.lever.co/v0/postings/{board}?mode=json&limit=1",
+    "workable": "https://apply.workable.com/api/v1/widget/accounts/{board}",
+}
+
+
 def list_url(ats: str, board: str, offset: int = 0) -> str:
     return LIST_URLS[ats].format(board=board, offset=offset)
+
+
+def probe_url(ats: str, board: str) -> str:
+    return PROBE_URLS[ats].format(board=board) if ats in PROBE_URLS else list_url(ats, board)
 
 
 def job_items(ats: str, payload: Any) -> Optional[list]:

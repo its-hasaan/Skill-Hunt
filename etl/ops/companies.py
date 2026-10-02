@@ -24,7 +24,7 @@ from ops.dbconfig import load_local_env, session_pooler_url
 ETL_DIR = Path(__file__).resolve().parents[1]
 if str(ETL_DIR) not in sys.path:
     sys.path.insert(0, str(ETL_DIR))
-from connectors.ats_endpoints import ATS_SYSTEMS, job_items, list_url  # noqa: E402
+from connectors.ats_endpoints import ATS_SYSTEMS, job_items, probe_url  # noqa: E402
 
 SEED_PATH = ETL_DIR / "config" / "ats_seed_companies.json"
 MAX_FAILS = 3
@@ -67,7 +67,10 @@ def record_check(conn, ats: str, token: str, ok: bool, job_count: Optional[int] 
 
 def active_boards(conn, ats: str) -> list[str]:
     with conn.cursor() as cur:
-        cur.execute("SELECT board_token FROM ops.companies WHERE ats = %s AND active ORDER BY board_token", (ats,))
+        # Least recently fetched first: with max_boards per run, the connectors
+        # rotate through every board instead of re-reading the same ones.
+        cur.execute("""SELECT board_token FROM ops.companies WHERE ats = %s AND active
+                       ORDER BY last_checked_at NULLS FIRST, board_token""", (ats,))
         boards = [r[0] for r in cur.fetchall()]
     conn.rollback()
     return boards
@@ -117,7 +120,7 @@ def http_probe(session=None) -> Probe:
 
     def probe(ats: str, token: str) -> Optional[int]:
         try:
-            resp = session.get(list_url(ats, token), timeout=20)
+            resp = session.get(probe_url(ats, token), timeout=20)
             payload = resp.json() if resp.status_code == 200 else None
             return interpret(ats, resp.status_code, payload)
         except (requests.RequestException, ValueError):

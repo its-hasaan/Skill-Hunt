@@ -67,3 +67,22 @@ def test_interpret_probe_responses():
     assert companies.interpret("smartrecruiters", 200, {"content": [], "totalFound": 0}) is None
     assert companies.interpret("smartrecruiters", 200, {"content": [{"id": 1}], "totalFound": 1}) == 1
     assert companies.interpret("ashby", 200, {"error": "x"}) is None
+
+
+def test_active_boards_rotate_least_recently_checked_first(conn):
+    companies.upsert_candidates(conn, "greenhouse", ["a", "b", "c"], "seed")
+    for token in ("a", "b", "c"):
+        companies.record_check(conn, "greenhouse", token, ok=True, job_count=1)
+    with conn, conn.cursor() as cur:
+        cur.execute("UPDATE ops.companies SET last_checked_at = now() - interval '1 day' WHERE board_token = 'c'")
+    assert companies.active_boards(conn, "greenhouse")[0] == "c"
+    companies.record_check(conn, "greenhouse", "c", ok=True, job_count=1)  # fetched today: goes to the back
+    assert companies.active_boards(conn, "greenhouse")[-1] == "c"
+
+
+def test_probe_urls_skip_descriptions():
+    from connectors.ats_endpoints import list_url, probe_url
+    assert "content=true" not in probe_url("greenhouse", "acme")
+    assert probe_url("workable", "acme") == "https://apply.workable.com/api/v1/widget/accounts/acme"
+    assert probe_url("lever", "acme").endswith("&limit=1")
+    assert probe_url("ashby", "acme") == list_url("ashby", "acme")
