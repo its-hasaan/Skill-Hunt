@@ -58,6 +58,13 @@ PAY = ("Below is the annual On Target Compensation (OTE) range for candidates lo
     (job("Remote", description="Requirements: US work authorization and 5 years of Python."), False, False, "countries"),
     (job("Remote", description="We are hiring across APAC, including India."), True, True, "regions"),
     (job("Remote", description="We are hiring in London and Berlin."), False, False, "countries"),
+    # place suffixes in titles are scope statements too (Workable hides remote roles' offices)
+    (job("", areas=[], title="Senior Software Engineer, Xet Storage - EMEA Remote"), None, False, "regions"),
+    (job("Remote", title="Data Engineer (US Remote)"), False, False, "countries"),
+    (job("Remote", title="Backend Engineer | Remote - India"), False, True, "countries"),
+    (job("Remote - Canada", title="Data Engineer (US/Canada)"), False, False, "countries"),
+    (job("Remote", title="Software Engineer, Payments"), None, None, "unclear"),
+    (job("Remote", title="Data Engineer - Worldwide"), True, True, "worldwide"),
 ])
 def test_classify_cases(j, pk, inn, scope):
     result = classify(j)

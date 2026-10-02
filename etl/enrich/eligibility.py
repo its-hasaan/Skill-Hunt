@@ -29,9 +29,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
+from .fingerprint import title_place_text
 from .geo import Places, membership, merge, parse_places
 
-RULES_VERSION = 1
+RULES_VERSION = 2  # 2: place suffixes in titles count as location evidence
 
 COUNTRIES_OF_INTEREST = ("pk", "in")
 
@@ -223,6 +224,8 @@ def classify(job: dict) -> Eligibility:
         places = merge(*(p for _, p in restrictions))
         return _labelled(places, 0.85, restrictions[0][0])
 
+    # "Data Engineer (US Remote)", "... - EMEA Remote": the title's place suffix counts as a location
+    location = "; ".join(p for p in (location, title_place_text(job.get("title"))) if p)
     location_places = parse_places(location)
 
     # 3. worldwide statements, unless the location fields name countries

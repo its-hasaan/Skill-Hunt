@@ -81,6 +81,18 @@ def normalise_title(title: Optional[str]) -> str:
     return _clean(text)
 
 
+def title_place_text(title: Optional[str]) -> str:
+    """The parts of a title that say where the job is: "(US Remote)",
+    "- EMEA Remote", "| India", ", Bangalore" -> "US Remote; ..."."""
+    text = title or ""
+    found = [m.group(0)[1:-1] for m in _BRACKETS.finditer(text) if _place_like(m.group(0)[1:-1])]
+    segments = _SEPARATORS.split(_BRACKETS.sub(" ", text))
+    found += [s for s in segments[1:] if _place_like(s)]
+    for segment in [segments[0]] + [s for s in segments[1:] if not _place_like(s)]:
+        found += [p for p in segment.split(",")[1:] if _place_like(p)]
+    return "; ".join(p.strip() for p in found if p.strip())
+
+
 def location_key(location_text: Optional[str]) -> str:
     places = parse_places(location_text or "")
     # "Remote" and "Worldwide" describe the same listing; only named places separate jobs.
