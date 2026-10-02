@@ -126,6 +126,83 @@ def enrich_rules(conn, rates: dict[str, float], rules_version: int = RULES_VERSI
     return {"enriched": enriched}
 
 
+LLM_CANDIDATES_SQL = f"""
+    SELECT s.job_id, s.title, s.company_name, s.location_display, s.location_areas, s.description,
+           e.content_hash, e.eligible_pk, e.eligible_in, e.eligibility_evidence, e.remote_scope
+    FROM staging.stg_jobs s
+    JOIN raw.jobs r ON r.id = s.raw_job_id
+    JOIN staging.job_enrichment e ON e.job_id = s.job_id
+    WHERE {FEED_CANDIDATE}
+      AND s.canonical_job_id = s.job_id
+      AND e.method = 'rules'
+      AND e.remote_scope NOT IN ('onsite', 'hybrid')
+      AND (e.eligible_pk IS NULL OR e.eligible_in IS NULL)
+      AND s.job_id > %(after)s
+    ORDER BY s.job_id
+    LIMIT %(limit)s
+"""
+
+LLM_UPDATE_SQL = """
+    UPDATE staging.job_enrichment e SET
+        eligible_pk = v.pk, eligible_in = v.inn, eligibility_evidence = v.evidence,
+        eligibility_confidence = v.confidence, remote_scope = v.scope,
+        method = 'llm', model = v.model, enriched_at = now()
+    FROM (VALUES %s) AS v(job_id, content_hash, pk, inn, evidence, confidence, scope, model)
+    WHERE e.job_id = v.job_id AND e.content_hash = v.content_hash
+"""
+LLM_UPDATE_TEMPLATE = "(%s::int, %s::text, %s::boolean, %s::boolean, %s::text, %s::numeric, %s::text, %s::text)"
+
+
+def llm_row(job: dict, label, model: str) -> tuple:
+    """Rules answers that were already decided are kept; the AI fills the gaps."""
+    pk = job["eligible_pk"] if job["eligible_pk"] is not None else label.eligible_pk
+    inn = job["eligible_in"] if job["eligible_in"] is not None else label.eligible_in
+    filled = (job["eligible_pk"] is None and label.eligible_pk is not None) or \
+             (job["eligible_in"] is None and label.eligible_in is not None)
+    evidence = label.evidence if filled else job["eligibility_evidence"]
+    scope = label.remote_scope if filled and label.remote_scope != "unclear" else job["remote_scope"]
+    confidence = label.confidence if filled else 0.3
+    return (job["job_id"], job["content_hash"], pk, inn, evidence, confidence, scope, model)
+
+
+def enrich_llm(conn, client, max_calls: int, batch_size: int = 20) -> dict:
+    """Send unclear canonical feed jobs to the AI, `batch_size` per call.
+
+    Every answered job is stored as method='llm' (even "unclear"), so it
+    isn't re-sent until its text changes. A batch whose answer can't be
+    parsed is left as it was and retried on a later run."""
+    from enrich.gemini import QuotaExhausted
+
+    result = {"calls": 0, "labelled": 0, "decided": 0, "stopped": None}
+    after = 0
+    while result["calls"] < max_calls:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(LLM_CANDIDATES_SQL, {"after": after, "limit": batch_size})
+            jobs = cur.fetchall()
+        conn.rollback()
+        if not jobs:
+            break
+        after = jobs[-1]["job_id"]
+        result["calls"] += 1
+        try:
+            labels = client.label(jobs)
+        except QuotaExhausted:
+            result["stopped"] = "quota"
+            break
+        rows = [llm_row(job, labels[job["job_id"]], client.model) for job in jobs if job["job_id"] in labels]
+        if rows:
+            with conn, conn.cursor() as cur:
+                execute_values(cur, LLM_UPDATE_SQL, rows, template=LLM_UPDATE_TEMPLATE)
+        result["labelled"] += len(rows)
+        result["decided"] += sum(1 for job in jobs if job["job_id"] in labels and
+                                 (labels[job["job_id"]].eligible_pk is not None or
+                                  labels[job["job_id"]].eligible_in is not None))
+        print(f"  llm: {result['calls']} calls, {result['labelled']} labelled", flush=True)
+    else:
+        result["stopped"] = "max_calls"
+    return result
+
+
 def summary(conn) -> dict:
     with conn.cursor() as cur:
         cur.execute(f"""
@@ -149,9 +226,19 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Enrich feed jobs with eligibility and attributes")
     parser.add_argument("--dedup", action="store_true", help="fingerprint + canonical jobs first")
     parser.add_argument("--rules", action="store_true", help="rule-based labels")
+    parser.add_argument("--llm", action="store_true", help="AI labels for unclear jobs (needs GEMINI_API_KEY)")
+    parser.add_argument("--max-calls", type=int, default=150, help="AI calls per run (20 jobs each)")
     args = parser.parse_args(argv)
-    if not (args.dedup or args.rules):
+    if not (args.dedup or args.rules or args.llm):
         args.dedup = args.rules = True
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if args.llm and not api_key:
+        print("GEMINI_API_KEY is not set: skipping the AI eligibility pass; unclear jobs stay unclear.",
+              flush=True)
+        args.llm = False
+        if not (args.dedup or args.rules):
+            return 0
 
     url = session_pooler_url(os.getenv("SUPABASE_URL"))
     if not url:
@@ -164,6 +251,10 @@ def main(argv=None) -> int:
             print(f"dedup: {dedup.run(conn)}", flush=True)
         if args.rules:
             print(f"rules: {enrich_rules(conn, load_rates(conn))}", flush=True)
+        if args.llm:
+            from enrich.gemini import DEFAULT_MODEL, GeminiClient
+            client = GeminiClient(api_key, os.getenv("GEMINI_MODEL") or DEFAULT_MODEL)
+            print(f"llm: {enrich_llm(conn, client, args.max_calls)}", flush=True)
         print(f"feed: {summary(conn)}", flush=True)
     finally:
         conn.close()
