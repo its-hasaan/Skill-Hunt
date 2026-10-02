@@ -27,6 +27,7 @@ import sys
 import re
 import json
 import argparse
+import time
 import psycopg2
 from psycopg2.extras import execute_values, RealDictCursor
 from dotenv import load_dotenv
@@ -435,199 +436,268 @@ def get_unprocessed_jobs(cursor, batch_size: int = 1000) -> List[dict]:
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
+STG_COLUMNS = (
+    "job_platform_id", "search_role", "country_code", "title", "company_name",
+    "description", "location_display", "location_areas", "category_tag",
+    "category_label", "salary_min", "salary_max", "salary_is_predicted",
+    "salary_currency", "contract_type", "contract_time", "redirect_url",
+    "job_posted_at", "extracted_at", "raw_job_id", "source", "workplace_type",
+)
+
+# DO NOTHING (not DO UPDATE): a key already in staging belongs to another raw
+# row, so this raw row is a duplicate. Rows missing from RETURNING are exactly
+# those duplicates (in-batch repeats included), and get marked so they leave
+# the queue instead of being re-fetched every batch.
+_INSERT_JOBS_SQL = f"""
+    INSERT INTO staging.stg_jobs ({', '.join(STG_COLUMNS)}) VALUES %s
+    ON CONFLICT (job_platform_id, country_code) DO NOTHING
+    RETURNING job_id, raw_job_id
+"""
+
+_INSERT_SKILLS_SQL = """
+    INSERT INTO staging.stg_job_skills (job_id, skill_id, skill_name, mention_count) VALUES %s
+    ON CONFLICT (job_id, skill_id) DO UPDATE SET mention_count = EXCLUDED.mention_count
+"""
+
+_CONNECTION_ERRORS = (psycopg2.OperationalError, psycopg2.InterfaceError)
+
+
+def prepare_batch(raw_jobs: List[dict], role_matcher: RoleMatcher, extractor):
+    """Parse, role-check and skill-extract a batch in memory (no DB writes).
+
+    Returns (ready, skipped_ids, failed_ids) where ready is a list of
+    (parsed_job, skills) pairs.
+    """
+    ready, skipped, failed = [], [], []
+    for raw_job in raw_jobs:
+        try:
+            raw_data = raw_job['raw_data']
+            if isinstance(raw_data, str):
+                raw_data = json.loads(raw_data)
+            parsed = parse_raw_job(
+                raw_data, raw_job['id'], raw_job['search_role'], raw_job['country_code'],
+                source=raw_job.get('source', 'adzuna'), job_platform_id=raw_job.get('job_platform_id'),
+            )
+            role = validated_role(parsed['source'], parsed['search_role'], parsed['title'] or '', role_matcher)
+            if role is None:
+                skipped.append(raw_job['id'])  # not a tracked tech role
+                continue
+            parsed['search_role'] = role
+            parsed['extracted_at'] = raw_job['extracted_at']
+            skills = extractor.extract_skills(f"{parsed['title']} {parsed['description']}",
+                                              context=f"{parsed['title']} @ {parsed['company_name']}")
+            ready.append((parsed, skills))
+        except _CONNECTION_ERRORS:
+            raise  # e.g. discovery persistence lost the connection: reconnect, don't blame the job
+        except Exception as e:
+            logger.error(f"Error preparing job {raw_job['id']}: {e}")
+            failed.append(raw_job['id'])
+    return ready, skipped, failed
+
+
+def resolve_skill_ids(cursor, ready) -> None:
+    """Make sure every extracted skill has a dim_skills id in the cache.
+
+    Runs before the batch savepoint, so a rolled-back job insert never
+    leaves the cache pointing at a skill row that doesn't exist.
+    """
+    for _, skills in ready:
+        for skill in skills:
+            get_or_create_skill(cursor, skill['skill_name'], skill['category'], skill.get('subcategory', ''))
+
+
+def write_jobs(cursor, ready) -> Tuple[Dict[int, int], int]:
+    """Bulk-insert jobs, then their skills. Returns ({raw_job_id: job_id}, skill_rows)."""
+    values = [tuple(parsed[c] for c in STG_COLUMNS) for parsed, _ in ready]
+    returned = execute_values(cursor, _INSERT_JOBS_SQL, values, page_size=500, fetch=True)
+    job_ids = {raw_id: job_id for job_id, raw_id in returned}
+
+    skill_rows = {}
+    for parsed, skills in ready:
+        job_id = job_ids.get(parsed['raw_job_id'])
+        if job_id is None:
+            continue
+        for skill in skills:
+            mention_count = skill.get('mention_count', 1)
+            if mention_count == 0 and 'confidence' in skill:
+                mention_count = 1  # LLM-extracted skills count as 1 mention
+            key = (job_id, _SKILL_CACHE[skill['skill_name']])
+            prev = skill_rows.get(key)
+            if prev is None or mention_count > prev[3]:
+                skill_rows[key] = (*key, skill['skill_name'], mention_count)
+    if skill_rows:
+        execute_values(cursor, _INSERT_SKILLS_SQL, list(skill_rows.values()), page_size=1000)
+    return job_ids, len(skill_rows)
+
+
+def _mark(cursor, raw_ids, reason: str) -> None:
+    if raw_ids:
+        cursor.execute("UPDATE raw.jobs SET skip_reason = %s WHERE id = ANY(%s)", (reason, list(raw_ids)))
+
+
+def process_batch(cursor, raw_jobs, role_matcher, extractor) -> Dict[str, int]:
+    """Transform one batch inside the caller's transaction (caller commits).
+
+    Every fetched row leaves the queue: it lands in staging, or is marked
+    role_mismatch / duplicate / transform_error (reversible: clear
+    skip_reason to retry).
+    """
+    ready, skipped, failed = prepare_batch(raw_jobs, role_matcher, extractor)
+    _mark(cursor, skipped, 'role_mismatch')
+    resolve_skill_ids(cursor, ready)
+
+    cursor.execute("SAVEPOINT batch_sp")
+    try:
+        job_ids, skill_rows = write_jobs(cursor, ready)
+        cursor.execute("RELEASE SAVEPOINT batch_sp")
+    except _CONNECTION_ERRORS:
+        raise
+    except psycopg2.Error as e:
+        # One bad row poisons a bulk statement; redo the batch row by row so
+        # only that row fails.
+        logger.warning(f"Bulk insert failed ({e.__class__.__name__}); retrying batch row by row")
+        cursor.execute("ROLLBACK TO SAVEPOINT batch_sp")
+        job_ids, skill_rows = {}, 0
+        for item in ready:
+            cursor.execute("SAVEPOINT job_sp")
+            try:
+                ids, n = write_jobs(cursor, [item])
+                cursor.execute("RELEASE SAVEPOINT job_sp")
+                job_ids.update(ids)
+                skill_rows += n
+            except _CONNECTION_ERRORS:
+                raise
+            except psycopg2.Error as row_error:
+                cursor.execute("ROLLBACK TO SAVEPOINT job_sp")
+                logger.error(f"Error writing job {item[0]['raw_job_id']}: {row_error}")
+                failed.append(item[0]['raw_job_id'])
+
+    failed_set = set(failed)
+    duplicates = [p['raw_job_id'] for p, _ in ready
+                  if p['raw_job_id'] not in job_ids and p['raw_job_id'] not in failed_set]
+    _mark(cursor, duplicates, 'duplicate')
+    _mark(cursor, failed, 'transform_error')
+    return {"processed": len(job_ids), "skipped": len(skipped), "failed": len(failed),
+            "duplicates": len(duplicates), "skills": skill_rows}
+
+
+def _close_quietly(conn) -> None:
+    try:
+        conn.close()
+    except Exception:
+        pass
+
+
 def transform_and_load(
     batch_size: int = 1000,
     reprocess: bool = False,
     discovery_mode: bool = False,
-    fast_only: bool = False
+    fast_only: bool = False,
+    connect=None,
+    extractor=None,
+    sleep=time.sleep,
+    max_reconnects: int = 5,
 ):
     """
     Main transformation function with hybrid skill extraction.
-    
+
+    Each batch is written with two bulk statements (jobs, then skills) and
+    committed. A dropped connection (Supabase pooler restarts, network
+    blips) reconnects with backoff and carries on from the next
+    unprocessed job; it gives up after `max_reconnects` failures in a row.
+
     Args:
         batch_size: Number of jobs to process per batch
         reprocess: If True, reprocess all jobs (truncates staging tables)
         discovery_mode: If True, use LLM for all jobs (expensive but thorough)
         fast_only: If True, disable LLM entirely (fast but no discovery)
+        connect: Connection factory (defaults to SUPABASE_URL)
+        extractor: Skill extractor (defaults to the hybrid extractor)
     """
     logger.info("Starting transformation process...")
     logger.info(f"Mode: {'discovery' if discovery_mode else 'fast-only' if fast_only else 'hybrid'}")
-    
-    conn = get_db_connection()
+
+    connect = connect or get_db_connection
+    conn = connect()
     cursor = conn.cursor()
 
     # Pre-warm the skill_id cache in one query so per-job skill lookups don't
-    # each round-trip to the DB (the main transform bottleneck).
+    # each round-trip to the DB.
     cached_skills = warm_skill_cache(cursor)
     logger.info(f"Warmed skill cache: {cached_skills} skills")
 
-    # Initialize HYBRID skill extractor
-    skill_extractor = create_skill_extractor(
+    skill_extractor = extractor or create_skill_extractor(
         discovery_mode=discovery_mode,
         fast_only=fast_only,
         db_connection=conn
     )
-    
+
     if reprocess:
         logger.warning("REPROCESS MODE: Truncating staging tables...")
         cursor.execute("TRUNCATE staging.stg_job_skills CASCADE")
         cursor.execute("TRUNCATE staging.stg_jobs CASCADE")
         conn.commit()
-    
+
     role_matcher = load_role_matcher()
 
-    # Statistics
-    total_processed = 0
-    total_skills_extracted = 0
-    total_failed = 0
-    total_skipped = 0
+    totals = {"processed": 0, "skipped": 0, "failed": 0, "duplicates": 0, "skills": 0}
+    reconnects = 0
+    failures_in_row = 0
     start_time = datetime.now()
 
     while True:
-        # Get batch of unprocessed jobs
-        raw_jobs = get_unprocessed_jobs(cursor, batch_size)
+        try:
+            if conn is None:
+                conn = connect()
+                cursor = conn.cursor()
+                reconnects += 1
+                warm_skill_cache(cursor)  # skills created in the lost transaction are gone
+                manager = getattr(skill_extractor, 'discovery_manager', None)
+                if manager is not None:
+                    manager.db_conn = conn
+                logger.info("Reconnected to the database")
 
-        if not raw_jobs:
-            logger.info("No more unprocessed jobs found.")
+            raw_jobs = get_unprocessed_jobs(cursor, batch_size)
+            if not raw_jobs:
+                logger.info("No more unprocessed jobs found.")
+                break
+
+            batch = process_batch(cursor, raw_jobs, role_matcher, skill_extractor)
+            conn.commit()
+            failures_in_row = 0
+        except _CONNECTION_ERRORS as e:
+            failures_in_row += 1
+            if failures_in_row > max_reconnects:
+                logger.error(f"Database unreachable after {max_reconnects} reconnect attempts: {e}")
+                raise
+            wait = min(60, 5 * 2 ** (failures_in_row - 1))
+            logger.warning(f"Lost database connection ({e.__class__.__name__}); reconnecting in {wait}s")
+            if conn is not None:
+                _close_quietly(conn)
+            conn = None
+            sleep(wait)
+            continue
+
+        for key in totals:
+            totals[key] += batch[key]
+        logger.info(f"Batch complete: {batch}. Total processed: {totals['processed']}")
+
+        if not (batch["processed"] or batch["skipped"] or batch["failed"] or batch["duplicates"]):
+            # Nothing left the queue, so the same rows would come back forever.
+            logger.error("Batch made no progress; aborting. Raw job ids (first 10): %s",
+                         [j['id'] for j in raw_jobs[:10]])
             break
 
-        logger.info(f"Processing batch of {len(raw_jobs)} jobs...")
-        batch_succeeded = 0
+    total_processed = totals["processed"]
+    total_failed = totals["failed"]
+    total_skipped = totals["skipped"]
+    total_skills_extracted = totals["skills"]
 
-        for raw_job in raw_jobs:
-            try:
-                # Per-job savepoint: without it, ONE failing job aborts the
-                # whole Postgres transaction — every later job in the batch
-                # then errors with InFailedSqlTransaction, the batch commit
-                # persists nothing, and get_unprocessed_jobs() returns the
-                # exact same batch on the next loop iteration => the run
-                # spins forever making zero progress. A savepoint confines
-                # each failure to its own job.
-                cursor.execute("SAVEPOINT job_sp")
-                raw_data = raw_job['raw_data']
-                if isinstance(raw_data, str):
-                    raw_data = json.loads(raw_data)
-                
-                # Parse raw job into staging format (dispatches on source)
-                parsed_job = parse_raw_job(
-                    raw_data,
-                    raw_job['id'],
-                    raw_job['search_role'],
-                    raw_job['country_code'],
-                    source=raw_job.get('source', 'adzuna'),
-                    job_platform_id=raw_job.get('job_platform_id')
-                )
-
-                role = validated_role(parsed_job['source'], parsed_job['search_role'],
-                                      parsed_job['title'] or '', role_matcher)
-                if role is None:
-                    # Not a tracked tech role: mark it so it isn't re-fetched.
-                    cursor.execute("UPDATE raw.jobs SET skip_reason = 'role_mismatch' WHERE id = %s",
-                                   (raw_job['id'],))
-                    cursor.execute("RELEASE SAVEPOINT job_sp")
-                    total_skipped += 1
-                    batch_succeeded += 1  # progress: the row leaves the queue
-                    continue
-                parsed_job['search_role'] = role
-
-                # Insert into stg_jobs
-                cursor.execute(
-                    """
-                    INSERT INTO staging.stg_jobs (
-                        job_platform_id, search_role, country_code, title, company_name,
-                        description, location_display, location_areas, category_tag,
-                        category_label, salary_min, salary_max, salary_is_predicted,
-                        salary_currency, contract_type, contract_time, redirect_url,
-                        job_posted_at, extracted_at, raw_job_id, source, workplace_type
-                    ) VALUES (
-                        %(job_platform_id)s, %(search_role)s, %(country_code)s, %(title)s,
-                        %(company_name)s, %(description)s, %(location_display)s,
-                        %(location_areas)s, %(category_tag)s, %(category_label)s,
-                        %(salary_min)s, %(salary_max)s, %(salary_is_predicted)s,
-                        %(salary_currency)s, %(contract_type)s, %(contract_time)s,
-                        %(redirect_url)s, %(job_posted_at)s, %(extracted_at)s, %(raw_job_id)s,
-                        %(source)s, %(workplace_type)s
-                    )
-                    ON CONFLICT (job_platform_id, country_code) DO UPDATE SET
-                        processed_at = NOW()
-                    RETURNING job_id
-                    """,
-                    {**parsed_job, 'extracted_at': raw_job['extracted_at']}
-                )
-                
-                job_id = cursor.fetchone()[0]
-                
-                # Extract skills from description + title using HYBRID extractor
-                text_to_analyze = f"{parsed_job['title']} {parsed_job['description']}"
-                context = f"{parsed_job['title']} @ {parsed_job['company_name']}"
-                skills = skill_extractor.extract_skills(text_to_analyze, context=context)
-                
-                # Insert skills
-                for skill in skills:
-                    # Handle both mention_count (fast path) and confidence (slow path)
-                    mention_count = skill.get('mention_count', 1)
-                    if mention_count == 0 and 'confidence' in skill:
-                        mention_count = 1  # LLM-extracted skills count as 1 mention
-                    
-                    skill_id = get_or_create_skill(
-                        cursor,
-                        skill['skill_name'],
-                        skill['category'],
-                        skill.get('subcategory', '')
-                    )
-                    
-                    cursor.execute(
-                        """
-                        INSERT INTO staging.stg_job_skills (job_id, skill_id, skill_name, mention_count)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (job_id, skill_id) DO UPDATE SET
-                            mention_count = EXCLUDED.mention_count
-                        """,
-                        (job_id, skill_id, skill['skill_name'], mention_count)
-                    )
-                    total_skills_extracted += 1
-
-                cursor.execute("RELEASE SAVEPOINT job_sp")
-                total_processed += 1
-                batch_succeeded += 1
-
-            except Exception as e:
-                logger.error(f"Error processing job {raw_job['id']}: {e}")
-                total_failed += 1
-                try:
-                    # Undo only this job's statements; the rest of the batch
-                    # keeps its work and the transaction stays healthy.
-                    cursor.execute("ROLLBACK TO SAVEPOINT job_sp")
-                except Exception:
-                    # Savepoint itself is gone (e.g. connection died) —
-                    # reset the transaction so the run can continue.
-                    conn.rollback()
-                continue
-
-        # Commit after each batch
-        conn.commit()
-        logger.info(f"Batch complete. Total processed: {total_processed}")
-
-        # Progress guard: if an entire batch failed, the same jobs would be
-        # re-fetched forever (they never land in stg_jobs, so the anti-join
-        # keeps returning them). Stop instead and surface the failure.
-        if batch_succeeded == 0:
-            logger.error(
-                "Entire batch of %d jobs failed — aborting to avoid an "
-                "infinite retry loop. Failing raw job ids (first 10): %s",
-                len(raw_jobs), [j['id'] for j in raw_jobs[:10]],
-            )
-            break
-
-    # Final commit
-    conn.commit()
-    
-    # Get extraction statistics from hybrid extractor
     extractor_stats = skill_extractor.get_stats() if hasattr(skill_extractor, 'get_stats') else {}
-    
+
     cursor.close()
     conn.close()
-    
+
     # Summary
     elapsed = (datetime.now() - start_time).total_seconds()
     logger.info(f"\n{'='*60}")
@@ -636,7 +706,9 @@ def transform_and_load(
     logger.info(f"Jobs processed: {total_processed}")
     logger.info(f"Jobs failed: {total_failed}")
     logger.info(f"Jobs skipped (title matched no tracked role): {total_skipped}")
+    logger.info(f"Duplicate staging keys: {totals['duplicates']}")
     logger.info(f"Skills extracted: {total_skills_extracted}")
+    logger.info(f"Reconnects: {reconnects}")
     logger.info(f"Time elapsed: {elapsed:.2f} seconds")
     
     # Hybrid extractor stats
@@ -666,7 +738,9 @@ def transform_and_load(
         "jobs_processed": total_processed,
         "jobs_failed": total_failed,
         "jobs_skipped": total_skipped,
+        "jobs_duplicate": totals["duplicates"],
         "skills_extracted": total_skills_extracted,
+        "reconnects": reconnects,
         "elapsed_seconds": elapsed,
         "extractor_stats": extractor_stats
     }
