@@ -68,3 +68,24 @@ models:
         description: "Market average salary"
       - name: salary_premium_percentage
         description: "Percentage above/below market"
+
+  - name: mart_job_feed
+    description: "Open, de-duplicated remote (or Pakistan/India) jobs with eligibility labels, attributes and skills"
+    columns:
+      - name: job_id
+        description: "stg_jobs.job_id of the canonical listing"
+        tests:
+          - unique
+          - not_null
+      - name: search_role
+        tests:
+          - not_null
+      - name: remote_scope
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['worldwide', 'regions', 'countries', 'hybrid', 'onsite', 'unclear']
+      - name: eligible_pk
+        description: "TRUE / FALSE / NULL = unclear"
+      - name: eligible_in
+        description: "TRUE / FALSE / NULL = unclear"

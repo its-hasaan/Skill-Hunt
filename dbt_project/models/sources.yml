@@ -109,6 +109,18 @@ sources:
           - name: is_active
             description: "Whether country is being tracked"
 
+      - name: job_enrichment
+        description: "Eligibility (Pakistan/India) and attributes per job, written by etl/ops/enrich.py (Phase 1c)"
+        columns:
+          - name: job_id
+            description: "Primary key; FK to stg_jobs"
+          - name: eligible_pk
+            description: "Can someone in Pakistan apply? TRUE / FALSE / NULL = unclear"
+          - name: eligible_in
+            description: "Can someone in India apply? TRUE / FALSE / NULL = unclear"
+          - name: method
+            description: "rules | llm"
+
       - name: currency_rates
         description: "Live exchange rates (units of currency per 1 USD), refreshed by etl/fetch_currency_rates.py — used to normalize salaries for cross-country comparisons"
         columns:

@@ -99,19 +99,27 @@ jobs:
         continue-on-error: true
         run: python -m ops.run_step --step fx -- python fetch_currency_rates.py
 
-      - name: Enough fresh data to rebuild marts?
-        id: guard
+      - name: Dedup + eligibility labels (rules)
+        id: enrich
         if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        run: python -m ops.run_step --step enrich -- python -m ops.enrich --dedup --rules
+
+      - name: Eligibility labels (AI fallback, needs GEMINI_API_KEY)
+        id: enrich_llm
+        if: steps.enrich.outcome == 'success'
         continue-on-error: true
-        run: python -m ops.run_step --step marts_guard -- python -m ops.marts_guard
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: python -m ops.run_step --step enrich_llm -- python -m ops.enrich --llm --max-calls 150
 
       - name: Configure dbt connection
-        if: steps.guard.outcome == 'success'
+        if: steps.preflight.outcome == 'success'
         run: python -m ops.dbconfig --github-env
 
-      - name: Build marts (dbt)
-        id: dbt
-        if: steps.guard.outcome == 'success'
+      - name: Build job feed (dbt, daily)
+        id: feed
+        if: steps.enrich.outcome == 'success'
         working-directory: dbt_project
         env:
           PYTHONPATH: ../etl
@@ -120,8 +128,26 @@ jobs:
           # reads every connection value from the DB_* env set above.
           cp profiles.yml.example profiles.yml
           dbt deps --profiles-dir .
-          python -m ops.run_step --step dbt -- dbt run --profiles-dir . --target dev --full-refresh
-          python -m ops.run_step --step dbt_test -- dbt test --profiles-dir . --target dev
+          python -m ops.run_step --step feed -- dbt run --profiles-dir . --target dev --select mart_job_feed
+          python -m ops.run_step --step feed_test -- dbt test --profiles-dir . --target dev --select mart_job_feed
+
+      - name: Enough fresh data to rebuild marts?
+        id: guard
+        if: steps.preflight.outcome == 'success' && steps.transform.outcome != 'failure'
+        continue-on-error: true
+        run: python -m ops.run_step --step marts_guard -- python -m ops.marts_guard
+
+      - name: Build marts (dbt)
+        id: dbt
+        if: steps.guard.outcome == 'success'
+        working-directory: dbt_project
+        env:
+          PYTHONPATH: ../etl
+        run: |
+          cp profiles.yml.example profiles.yml
+          dbt deps --profiles-dir .
+          python -m ops.run_step --step dbt -- dbt run --profiles-dir . --target dev --full-refresh --exclude mart_job_feed
+          python -m ops.run_step --step dbt_test -- dbt test --profiles-dir . --target dev --exclude mart_job_feed
 
       - name: Archive skill-demand snapshot
         id: archive
@@ -146,4 +172,4 @@ jobs:
         if: always()
         run: >-
           python -m ops.notify --results
-          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},discover=${{ steps.discover.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},marts_guard=${{ steps.guard.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"
+          "preflight=${{ steps.preflight.outcome }},adzuna=${{ steps.adzuna.outcome }},discover=${{ steps.discover.outcome }},ingest=${{ steps.ingest.outcome }},transform=${{ steps.transform.outcome }},fx=${{ steps.fx.outcome }},enrich=${{ steps.enrich.outcome }},enrich_llm=${{ steps.enrich_llm.outcome }},feed=${{ steps.feed.outcome }},marts_guard=${{ steps.guard.outcome }},dbt=${{ steps.dbt.outcome }},archive=${{ steps.archive.outcome }},retention=${{ steps.retention.outcome }}"
