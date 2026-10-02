@@ -47,14 +47,19 @@ def upsert_candidates(conn, ats: str, tokens, via: str) -> int:
         return len(cur.fetchall())
 
 
-def record_check(conn, ats: str, token: str, ok: bool, job_count: Optional[int] = None) -> None:
+def record_check(conn, ats: str, token: str, ok: bool, job_count: Optional[int] = None,
+                 kept: Optional[int] = None) -> None:
+    """kept is passed by connectors after reading a board (not by validation
+    probes): it stamps last_fetched_at and how many jobs the board yielded."""
     with conn, conn.cursor() as cur:
         if ok:
             cur.execute(
                 """UPDATE ops.companies SET active = TRUE, fail_count = 0,
-                          last_checked_at = now(), last_job_count = %s
+                          last_checked_at = now(), last_job_count = %s,
+                          last_fetched_at = CASE WHEN %s::int IS NULL THEN last_fetched_at ELSE now() END,
+                          last_kept = COALESCE(%s::int, last_kept)
                    WHERE ats = %s AND board_token = %s""",
-                (job_count, ats, token),
+                (job_count, kept, kept, ats, token),
             )
         else:
             cur.execute(
@@ -67,10 +72,14 @@ def record_check(conn, ats: str, token: str, ok: bool, job_count: Optional[int] 
 
 def active_boards(conn, ats: str) -> list[str]:
     with conn.cursor() as cur:
-        # Least recently fetched first: with max_boards per run, the connectors
-        # rotate through every board instead of re-reading the same ones.
-        cur.execute("""SELECT board_token FROM ops.companies WHERE ats = %s AND active
-                       ORDER BY last_checked_at NULLS FIRST, board_token""", (ats,))
+        # Never-fetched boards first, then least recently fetched: with
+        # max_boards per run the connectors rotate through every board.
+        # Boards whose last read kept no jobs are only re-read weekly.
+        cur.execute("""SELECT board_token FROM ops.companies
+                       WHERE ats = %s AND active
+                         AND (last_kept IS NULL OR last_kept > 0
+                              OR last_fetched_at < now() - interval '7 days')
+                       ORDER BY last_fetched_at NULLS FIRST, board_token""", (ats,))
         boards = [r[0] for r in cur.fetchall()]
     conn.rollback()
     return boards

@@ -84,10 +84,10 @@ class AtsConnector(BaseConnector):
             conn.close()
         return boards[: int(self.config.get("max_boards", DEFAULT_MAX_BOARDS))]
 
-    def _record(self, board: str, ok: bool, count: Optional[int]) -> None:
+    def _record(self, board: str, ok: bool, count: Optional[int], kept: Optional[int] = None) -> None:
         callback = self.config.get("record_check")
         if callback is not None:
-            callback(self.name, board, ok=ok, job_count=count)
+            callback(self.name, board, ok=ok, job_count=count, kept=kept)
             return
         from ops.companies import record_check
         from ops.dbconfig import session_pooler_url
@@ -95,7 +95,7 @@ class AtsConnector(BaseConnector):
 
         conn = psycopg2.connect(session_pooler_url(os.getenv("SUPABASE_URL")))
         try:
-            record_check(conn, self.name, board, ok=ok, job_count=count)
+            record_check(conn, self.name, board, ok=ok, job_count=count, kept=kept)
         finally:
             conn.close()
 
@@ -114,16 +114,19 @@ class AtsConnector(BaseConnector):
         with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
             results = list(pool.map(self._safe_fetch, boards))
         for board, items in results:
-            self._record(board, ok=items is not None, count=None if items is None else len(items))
             if items is None:
+                self._record(board, ok=False, count=None)
                 continue
             self.seen_boards.add(board)
+            board_kept = 0
             for item in items:
                 total += 1
                 job = self._to_job(board, item)
                 if job is not None:
-                    kept += 1
+                    board_kept += 1
                     yield job
+            kept += board_kept
+            self._record(board, ok=True, count=len(items), kept=board_kept)
         self.log.info("%s: %d boards fetched (%d failed), kept %d of %d jobs",
                       self.name, len(self.seen_boards), len(boards) - len(self.seen_boards), kept, total)
 

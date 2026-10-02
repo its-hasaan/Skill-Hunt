@@ -126,3 +126,11 @@ def test_workable_payload_shape():
     assert job_items("workable", load("workable_huggingface.json"))[0]["shortcode"] == "F4C096B22E"
     assert job_items("workable", {"error": "x"}) is None
     assert list_url("workable", "acme") == "https://apply.workable.com/api/v1/widget/accounts/acme?details=true"
+
+
+def test_connector_records_kept_jobs_per_board():
+    conn = FakeGreenhouse({"acme": [gh_item(1, "Data Engineer", "Remote"), gh_item(2, "Chef", "Remote")],
+                           "down": None})
+    list(conn.fetch())
+    kept = {args[1]: kwargs.get("kept") for args, kwargs in conn.recorded}
+    assert kept == {"acme": 1, "down": None}

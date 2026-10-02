@@ -72,7 +72,7 @@ class CareerPageConnector(AtsConnector):
         self._sites = {s["domain"]: s for s in sites}
         return list(self._sites)
 
-    def _record(self, board, ok, count):
+    def _record(self, board, ok, count, kept=None):
         """Board health lives in ops.career_sites (written by the crawl itself)."""
 
     def _record_site(self, domain: str, status: Optional[str], **kw) -> None:

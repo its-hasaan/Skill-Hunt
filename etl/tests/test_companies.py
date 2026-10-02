@@ -6,12 +6,13 @@ import pytest
 from ops import companies
 from tests.dbutil import run_sql
 
-MIGRATION = Path(__file__).resolve().parents[2] / "database" / "migrations" / "012_ats_companies.sql"
+MIGRATIONS = Path(__file__).resolve().parents[2] / "database" / "migrations"
 
 
 @pytest.fixture
 def conn(fresh_db):
-    run_sql(fresh_db, MIGRATION.read_text(encoding="utf-8"))
+    for name in ("012_ats_companies.sql", "016_board_fetch_stats.sql"):
+        run_sql(fresh_db, (MIGRATIONS / name).read_text(encoding="utf-8"))
     c = psycopg2.connect(fresh_db)
     yield c
     c.close()
@@ -69,15 +70,18 @@ def test_interpret_probe_responses():
     assert companies.interpret("ashby", 200, {"error": "x"}) is None
 
 
-def test_active_boards_rotate_least_recently_checked_first(conn):
-    companies.upsert_candidates(conn, "greenhouse", ["a", "b", "c"], "seed")
-    for token in ("a", "b", "c"):
-        companies.record_check(conn, "greenhouse", token, ok=True, job_count=1)
+def test_active_boards_prefer_never_fetched_and_skip_barren(conn):
+    companies.upsert_candidates(conn, "greenhouse", ["a", "b", "c", "d"], "seed")
+    for token, kept in (("a", 3), ("b", None), ("c", 0), ("d", 0)):
+        companies.record_check(conn, "greenhouse", token, ok=True, job_count=5, kept=kept)
     with conn, conn.cursor() as cur:
-        cur.execute("UPDATE ops.companies SET last_checked_at = now() - interval '1 day' WHERE board_token = 'c'")
-    assert companies.active_boards(conn, "greenhouse")[0] == "c"
-    companies.record_check(conn, "greenhouse", "c", ok=True, job_count=1)  # fetched today: goes to the back
-    assert companies.active_boards(conn, "greenhouse")[-1] == "c"
+        cur.execute("UPDATE ops.companies SET last_fetched_at = now() - interval '1 day' WHERE board_token IN ('a', 'c')")
+        cur.execute("UPDATE ops.companies SET last_fetched_at = now() - interval '8 days' WHERE board_token = 'd'")
+    # b was only validated (never fetched) so it goes first; c had no relevant jobs
+    # yesterday so it waits a week; d's week is up
+    assert companies.active_boards(conn, "greenhouse") == ["b", "d", "a"]
+    companies.record_check(conn, "greenhouse", "b", ok=True, job_count=5, kept=2)  # fetched now: to the back
+    assert companies.active_boards(conn, "greenhouse")[-1] == "b"
 
 
 def test_probe_urls_skip_descriptions():
