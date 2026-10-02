@@ -164,7 +164,15 @@ def apply_test_overrides(cfg: dict) -> dict:
     return cfg
 
 
-def run(source_filter: str = None, test_mode: bool = False, dry_run: bool = False):
+def with_max_boards(cfg: dict, max_boards) -> dict:
+    """One-off backfills (--max-boards) read more company boards than the
+    daily rotation; sources without boards are left alone."""
+    if max_boards is None or "max_boards" not in cfg:
+        return cfg
+    return {**cfg, "max_boards": int(max_boards)}
+
+
+def run(source_filter: str = None, test_mode: bool = False, dry_run: bool = False, max_boards: int = None):
     if not DB_URL and not dry_run:
         logger.error("SUPABASE_URL not set. Use --dry-run to test fetching without a DB.")
         sys.exit(1)
@@ -196,7 +204,7 @@ def run(source_filter: str = None, test_mode: bool = False, dry_run: bool = Fals
         if not source_cfg.get("enabled") and not source_filter:
             continue
 
-        cfg = apply_test_overrides(source_cfg) if test_mode else source_cfg
+        cfg = apply_test_overrides(source_cfg) if test_mode else with_max_boards(source_cfg, max_boards)
         connector = build_connector(source_key, cfg, roles, target_countries, role_matcher)
         if connector is None:
             continue
@@ -262,8 +270,9 @@ def main():
     parser.add_argument("--source", type=str, help="Run only this source key (also forces it on)")
     parser.add_argument("--test", action="store_true", help="Tiny smoke-test run")
     parser.add_argument("--dry-run", action="store_true", help="Fetch and print; do not write to DB")
+    parser.add_argument("--max-boards", type=int, help="Company job-board sources: boards to read this run")
     args = parser.parse_args()
-    run(source_filter=args.source, test_mode=args.test, dry_run=args.dry_run)
+    run(source_filter=args.source, test_mode=args.test, dry_run=args.dry_run, max_boards=args.max_boards)
 
 
 if __name__ == "__main__":

@@ -29,3 +29,9 @@ def test_successful_save_closes_unseen(ingest, monkeypatch):
     monkeypatch.setattr(ingest, "close_unseen_for", lambda *a: closed.append(a[1:]))
     assert ingest.persist(["job"], object(), "greenhouse", "b1", since="t0") == 3
     assert closed == [("greenhouse", "t0")]
+
+
+def test_max_boards_override_only_touches_board_sources(ingest):
+    assert ingest.with_max_boards({"max_boards": 400, "enabled": True}, 1500)["max_boards"] == 1500
+    assert "max_boards" not in ingest.with_max_boards({"enabled": True}, 1500)
+    assert ingest.with_max_boards({"max_boards": 400}, None) == {"max_boards": 400}
