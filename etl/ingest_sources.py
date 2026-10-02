@@ -74,11 +74,12 @@ def load_roles(sources_config: dict) -> list:
         return []
 
 
-def save_to_database(records: list, source: str, batch_id: str) -> int:
+def save_to_database(records: list, source: str, batch_id: str):
     """Upsert normalized jobs into raw.jobs and record the sighting.
 
     New jobs are inserted; jobs already known get last_seen_at = now() (and
-    are re-opened if they had been closed). Returns the number of NEW jobs.
+    are re-opened if they had been closed). Returns the number of NEW jobs,
+    or None when the write failed (so no sighting was recorded).
     """
     if not records:
         return 0
@@ -94,9 +95,23 @@ def save_to_database(records: list, source: str, batch_id: str) -> int:
         return inserted
     except Exception as e:  # noqa: BLE001
         logger.error("[%s] DB error: %s", source, e)
-        return 0
+        return None
     finally:
         conn.close()
+
+
+def persist(fetched: list, connector, source_key: str, batch_id: str, since):
+    """Save a source's jobs, then close board jobs that weren't listed.
+
+    Closing relies on this run's sightings, so it only happens after a
+    successful save: a failed write would otherwise close every open job on
+    every fetched board. Returns the new-job count, or None on failure.
+    """
+    inserted = save_to_database(fetched, source_key, batch_id)
+    if inserted is None:
+        return None
+    close_unseen_for(connector, source_key, since)
+    return inserted
 
 
 def db_now():
@@ -216,8 +231,10 @@ def run(source_filter: str = None, test_mode: bool = False, dry_run: bool = Fals
             summary[source_key] = f"{len(fetched)} fetched (dry-run)"
             continue
 
-        inserted = save_to_database(fetched, source_key, batch_id)
-        close_unseen_for(connector, source_key, source_started)
+        inserted = persist(fetched, connector, source_key, batch_id, source_started)
+        if inserted is None:
+            summary[source_key] = f"{len(fetched)} fetched / save failed"
+            continue
         grand_inserted += inserted
         summary[source_key] = f"{len(fetched)} fetched / {inserted} new"
         logger.info("[%s] %d fetched, %d new inserted (dupes skipped).", source_key, len(fetched), inserted)
