@@ -77,13 +77,28 @@ def crawl(index: str, max_pages: int, fetch: Callable[[str], Optional[str]],
     return found
 
 
-def http_fetch(url: str) -> Optional[str]:
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
+def http_fetch(url: str, attempts: int = 3, get=None, sleep: Callable[[float], None] = time.sleep,
+               backoff: float = 10.0) -> Optional[str]:
+    """GET a CDX page. The index often answers 503/504 under load, so those
+    (and 429s and timeouts) are retried with growing waits; other errors
+    return None at once."""
     import requests
-    try:
-        resp = requests.get(url, timeout=120, headers={"User-Agent": "JobwiseBot/1.0 (job-market research)"})
-        return resp.text if resp.status_code == 200 else None
-    except requests.RequestException:
-        return None
+    get = get or requests.get
+    for attempt in range(attempts):
+        try:
+            resp = get(url, timeout=120, headers={"User-Agent": "JobwiseBot/1.0 (job-market research)"})
+            if resp.status_code == 200:
+                return resp.text
+            if resp.status_code not in RETRY_STATUSES:
+                return None
+        except requests.RequestException:
+            pass
+        if attempt < attempts - 1:
+            sleep(backoff * (attempt + 1))
+    return None
 
 
 def latest_index() -> str:
